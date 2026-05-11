@@ -1,7 +1,7 @@
 # T001 Evidence Summary
 
 Task: T001 Scaffold Rust Crate And CLI Entrypoint  
-Status: Needs_Review  
+Status: Accepted  
 Date: 2026-05-11  
 Executor: Codex direct execution
 
@@ -65,6 +65,7 @@ Removed obsolete Python implementation artifacts:
 - Spec compliance: Passed. T001 now establishes a Rust Cargo binary crate and does not implement runtime commands beyond CLI skeleton behavior.
 - Bug/code-quality review: Passed. Help/version return success; planned commands return nonzero with explicit "not implemented yet" messaging.
 - QA acceptance review: Passed for T001 baseline. Runtime, Manifest, MCP and pack behavior remain correctly deferred to later tasks.
+- User acceptance: Accepted on 2026-05-11 by user instruction to proceed with T002 after T001 rereview passed.
 
 ## Diff Summary
 

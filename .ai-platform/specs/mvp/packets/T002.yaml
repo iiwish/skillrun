@@ -1,0 +1,157 @@
+schema_version: 1
+packet_id: EP-MVP-T002
+task_id: T002
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t001: Accepted after rereview on 2026-05-11
+
+work_unit:
+  title: Implement Python Action Capsule Init Templates
+  goal: Implement skillrun init refund --python in Rust so it creates a standard Python Action Skill Capsule with a runnable default example.
+  epic: E001 Capsule And Manifest
+  story: US-001
+  requirements:
+    - FR-001
+  priority: P0
+  depends_on:
+    - T001
+  blocks:
+    - T003
+    - T004
+    - T005
+    - T011
+  parallel: false
+  conflicts_with:
+    - T001
+    - T003
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - README.md
+    - README.zh-CN.md
+    - docs/mvp.md
+    - docs/ssot.md
+    - .ai-platform/docs/tasks.md
+    - .ai-platform/docs/test-strategy.md
+    - src/main.rs
+    - tests/cli.rs
+  existing_patterns:
+    - SkillRun is a Cargo binary crate named skillrun.
+    - T001 uses Rust stdlib command parsing and integration tests through CARGO_BIN_EXE_skillrun.
+    - Documentation distinguishes implemented behavior from planned MVP behavior.
+  interfaces_or_contracts:
+    - skillrun init refund --python --output tmp/e2e-init creates tmp/e2e-init/refund.
+    - Generated capsule includes SKILL.md, action.py, examples/default.input.json, and skillrun.config.json.
+    - Generated action.py contains Pydantic Input and Output models plus preflight and run functions.
+    - Re-running into an existing non-empty target fails clearly.
+  forbidden_changes:
+    - Do not implement manifest, inspect, runtime, MCP, pack, or adapter execution behavior in T002.
+    - Do not create a Python package for SkillRun.
+    - Do not rename the project or add a v2 suffix.
+    - Do not mark T002 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/cli.rs
+    - src/init.rs
+    - templates/python/SKILL.md
+    - templates/python/action.py
+    - templates/python/examples/default.input.json
+    - templates/python/skillrun.config.json
+    - tests/cli.rs
+    - tests/init.rs
+  test_targets:
+    - tests/cli.rs
+    - tests/init.rs
+  ownership_notes:
+    - Preserve user README additions while updating implemented/planned status accurately.
+    - Existing T001 files are accepted; only adjust them where T002 behavior requires it.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test init
+    expected_failure: Tests fail because init command and templates do not exist yet.
+  green:
+    command: cargo test --test init
+    expected_signal: init command creates the standard Python Action capsule and rejects non-empty targets.
+  refactor:
+    command: cargo test && cargo run -- init refund --python --output tmp/e2e-init
+    expected_signal: Full tests pass and the CLI creates tmp/e2e-init/refund.
+
+validation_loop:
+  commands:
+    - cargo test --test init
+    - cargo test
+    - cargo run -- init refund --python --output tmp/e2e-init
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to init command parsing, template writing, or overwrite guard.
+    second_failure: Determine whether T002 scope, filesystem assumptions, or test setup is blocking.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T002/summary.md
+  diff: .ai-platform/evidence/T002/diff.patch
+  test_results: .ai-platform/evidence/T002/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T002 Accepted.
+  review_focus:
+    - Generated files match the MVP capsule shape.
+    - init refuses unsafe or non-empty targets.
+    - README accurately distinguishes implemented init from planned downstream commands.
+    - T002 does not implement Manifest or runtime behavior.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep branch or current worktree for follow-up
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear allowed files
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

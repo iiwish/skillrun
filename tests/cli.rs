@@ -39,11 +39,11 @@ fn version_uses_approved_project_name() {
 }
 
 #[test]
-fn planned_commands_fail_until_implemented() {
-    let output = run_skillrun(&["init"]);
+fn unimplemented_planned_commands_fail_until_implemented() {
+    let output = run_skillrun(&["manifest"]);
 
     assert!(!output.status.success());
     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
 
-    assert!(stderr.contains("command not implemented yet: init"));
+    assert!(stderr.contains("command not implemented yet: manifest"));
 }

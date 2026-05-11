@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that 
 
 SkillRun is in the v0.1.0 MVP buildout.
 
-- Current implementation: `T001` Rust CLI skeleton.
-- Available today: `skillrun --help`, `skillrun --version`, and contract tests for the skeleton.
-- Planned MVP commands are listed by the CLI, but `init`, `manifest`, `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
+- Current implementation: through `T002` Rust `init --python` capsule skeleton.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, and contract tests for the skeleton/init path.
+- Planned MVP commands are listed by the CLI, but `manifest`, `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
 
@@ -94,12 +94,13 @@ The first hero example is `refund`: a refund decision capsule with policy limits
 
 ## What Works Today
 
-The repository currently contains the first Rust CLI skeleton:
+The repository currently contains the Rust CLI skeleton and `init --python` capsule generator:
 
 ```bash
 cargo test
 cargo run -- --help
 cargo run -- --version
+cargo run -- init refund --python --output tmp/e2e-init
 ```
 
 Example output:
@@ -108,7 +109,7 @@ Example output:
 skillrun 0.1.0
 ```
 
-Planned commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+Downstream planned commands intentionally fail with `command not implemented yet` until their implementation tasks land.
 
 ## Security Model
 

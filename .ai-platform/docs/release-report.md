@@ -21,7 +21,8 @@ No release scope has been accepted yet. This report is initialized as the releas
 
 ## Accepted Tasks
 
-None.
+- T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
+- T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
 
 ## Validation Summary
 
@@ -33,8 +34,7 @@ None.
 
 ## Known Limitations
 
-- No release task has been accepted.
-- T001 has been reworked as Rust crate skeleton and is waiting for user review.
+- T001 has been accepted.
 - T002-T011 are not packetized yet.
 - Test cases have been redesigned in documentation, but no automated tests have been created yet.
 - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
@@ -42,14 +42,12 @@ None.
 
 ## Unfinished Tasks
 
-- User reviews T001 evidence and implementation.
-- Keep T001 out of Accepted until user explicitly accepts it.
-- Keep T002-T011 Draft until their packets are generated and dependencies are satisfied.
+- T002 has been accepted.
+- Keep T003-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- User reviews T001 evidence.
-- After T001 acceptance, packetize the next dependency-ready task.
+- Packetize and execute T003.
 
 ## User Review Gate
 

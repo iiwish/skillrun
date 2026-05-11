@@ -2,7 +2,7 @@
 
 Version: v0.1
 Status: Clear
-Scope: SkillRun MVP planning artifacts and T001 execution readiness
+Scope: SkillRun MVP planning artifacts after T002 acceptance
 Last updated: 2026-05-11
 
 ## Inputs
@@ -20,8 +20,8 @@ Last updated: 2026-05-11
 - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
 - Requirements without task coverage: None.
 - Tasks without requirement/plan mapping: None.
-- Ready tasks without packet: None. T001 is the only Ready task and has `.ai-platform/specs/mvp/packets/T001.yaml`.
-- Packets missing required fields: None for T001.
+- Ready tasks without packet: None. T002 has `.ai-platform/specs/mvp/packets/T002.yaml` and is now Accepted.
+- Packets missing required fields: None for T002.
 
 ## Constitution Check
 
@@ -38,7 +38,7 @@ Last updated: 2026-05-11
 ## Non-Functional Requirements
 
 - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
-- Gaps: No blocking gaps for T001. Later tasks must create their own packets before becoming Ready.
+- Gaps: No blocking gaps for accepted T002. Later tasks must create their own packets before becoming Ready.
 
 ## Findings
 
@@ -49,10 +49,10 @@ Last updated: 2026-05-11
 
 ## Execute Gate
 
-- Result: Clear for T001.
-- Reason: T001 has confirmed governance inputs, no dependencies, complete allowed files, validation commands, TDD plan, packet, and no unresolved Critical or High analysis findings.
+- Result: Clear after T002 acceptance.
+- Reason: T001 and T002 are accepted; T003 is the next dependency-ready task but still needs its own packet before execution.
 
 ## Scope Guard
 
-- Only T001 is clear to execute.
-- T002-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
+- No further task is clear to execute until its packet is generated.
+- T003-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.

@@ -17,7 +17,7 @@ Last updated: 2026-05-11
 
 ## Current Gate
 
-T001 已按 Rust-first correction 重新执行，当前状态为 `Needs_Review`。T002-T011 仍为 `Draft`，需要在 T001 被用户接受后再逐一 packetize 和执行。
+T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -38,8 +38,8 @@ Validation:
 - `cargo run -- init refund --python --output tmp/e2e-init`
 
 Tasks:
-- [ ] T001 [US-001] Scaffold Rust crate and CLI entrypoint
-- [ ] T002 [US-001] Implement Python Action capsule init templates
+- [x] T001 [US-001] Scaffold Rust crate and CLI entrypoint
+- [x] T002 [US-001] Implement Python Action capsule init templates
 
 ## Story US-002: 生成并查看 Manifest 合同
 
@@ -154,7 +154,7 @@ Tasks:
 
 ### T001: Scaffold Rust Crate And CLI Entrypoint
 
-Status: Needs_Review
+Status: Accepted
 Priority: P0
 Depends on: None
 Blocks: T002, T003, T005, T009, T010, T011
@@ -212,7 +212,7 @@ Evidence required:
 
 ### T002: Implement Python Action Capsule Init Templates
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T001
 Blocks: T003, T004, T005, T011
@@ -224,6 +224,8 @@ Goal:
 Implement `skillrun init refund --python` in Rust so it creates a standard Python Action Skill Capsule with a runnable default example.
 
 Allowed files:
+- `README.md`
+- `README.zh-CN.md`
 - `src/main.rs`
 - `src/cli.rs`
 - `src/init.rs`
@@ -231,9 +233,11 @@ Allowed files:
 - `templates/python/action.py`
 - `templates/python/examples/default.input.json`
 - `templates/python/skillrun.config.json`
+- `tests/cli.rs`
 - `tests/init.rs`
 
 Test targets:
+- `tests/cli.rs`
 - `tests/init.rs`
 
 Deliverables:

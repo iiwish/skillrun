@@ -1,0 +1,938 @@
+﻿# Generated from working tree changes for T002 key files.
+
+
+diff --git a/README.md b/README.md
+index 9798615..569f247 100644
+--- a/README.md
++++ b/README.md
+@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: `T001` Rust CLI skeleton.
+-- Available today: `skillrun --help`, `skillrun --version`, and contract tests for the skeleton.
+-- Planned MVP commands are listed by the CLI, but `init`, `manifest`, `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
++- Current implementation: through `T002` Rust `init --python` capsule skeleton.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, and contract tests for the skeleton/init path.
++- Planned MVP commands are listed by the CLI, but `manifest`, `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -94,12 +94,13 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the first Rust CLI skeleton:
++The repository currently contains the Rust CLI skeleton and `init --python` capsule generator:
+ 
+ ```bash
+ cargo test
+ cargo run -- --help
+ cargo run -- --version
++cargo run -- init refund --python --output tmp/e2e-init
+ ```
+ 
+ Example output:
+@@ -108,7 +109,7 @@ Example output:
+ skillrun 0.1.0
+ ```
+ 
+-Planned commands intentionally fail with `command not implemented yet` until their implementation tasks land.
++Downstream planned commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+ 
+ ## Security Model
+ 
+
+
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 3e9821d..fbf2eef 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,9 +12,9 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：`T001` Rust CLI skeleton。
+-- 当前可用：`skillrun --help`、`skillrun --version`，以及 CLI skeleton 的 contract tests。
+-- CLI 已列出计划中的 MVP 命令，但 `init`、`manifest`、`inspect`、`test`、`run`、`serve` 和 `pack` 尚未实现。
++- 当前实现：已推进到 `T002` Rust `init --python` capsule skeleton。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`，以及 CLI/init 路径的 contract tests。
++- CLI 已列出计划中的 MVP 命令，但 `manifest`、`inspect`、`test`、`run`、`serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -94,12 +94,13 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含第一版 Rust CLI skeleton：
++仓库当前包含 Rust CLI skeleton 和 `init --python` capsule 生成器：
+ 
+ ```bash
+ cargo test
+ cargo run -- --help
+ cargo run -- --version
++cargo run -- init refund --python --output tmp/e2e-init
+ ```
+ 
+ 示例输出：
+@@ -108,7 +109,7 @@ cargo run -- --version
+ skillrun 0.1.0
+ ```
+ 
+-计划命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为 runtime 行为已经落地。
++后续计划命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为 runtime 行为已经落地。
+ 
+ ## 安全模型
+ 
+
+
+diff --git a/src/main.rs b/src/main.rs
+index 454d783..3e2a39d 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,56 +1,8 @@
+-use std::env;
+ use std::process::ExitCode;
+ 
+-const VERSION: &str = env!("CARGO_PKG_VERSION");
+-const PLANNED_COMMANDS: &[&str] = &[
+-    "init", "manifest", "inspect", "test", "run", "serve", "pack",
+-];
++mod cli;
++mod init;
+ 
+ fn main() -> ExitCode {
+-    let mut args = env::args().skip(1);
+-
+-    match args.next().as_deref() {
+-        None | Some("-h") | Some("--help") => {
+-            print_help();
+-            ExitCode::SUCCESS
+-        }
+-        Some("-V") | Some("--version") => {
+-            println!("skillrun {VERSION}");
+-            ExitCode::SUCCESS
+-        }
+-        Some(command) if PLANNED_COMMANDS.contains(&command) => {
+-            eprintln!("error: command not implemented yet: {command}");
+-            ExitCode::from(2)
+-        }
+-        Some(command) => {
+-            eprintln!("error: unknown command: {command}");
+-            eprintln!("run `skillrun --help` to see available commands");
+-            ExitCode::from(2)
+-        }
+-    }
+-}
+-
+-fn print_help() {
+-    println!(
+-        "\
+-SkillRun
+-
+-Rust CLI for turning one SOP and one action into a tested MCP skill package.
+-
+-Usage:
+-  skillrun [--help]
+-  skillrun [--version]
+-  skillrun <command> [options]
+-
+-Planned MVP commands:
+-  init       create a Python action capsule skeleton
+-  manifest   generate the Manifest from SOP, action metadata, config and examples
+-  inspect    show capsule contract, permissions and instruction-only status
+-  test       run the default example through the runtime contract
+-  run        run a capsule with an explicit input file
+-  serve      expose Manifest-driven MCP tools
+-  pack       create a .skr package
+-
+-T001 only provides this Rust CLI skeleton. Runtime behavior lands in later tasks."
+-    );
++    cli::run(std::env::args())
+ }
+
+
+diff --git "a/src\\cli.rs" "b/src\\cli.rs"
+new file mode 100644
+index 0000000..4f93e68
+--- /dev/null
++++ "b/src\\cli.rs"
+@@ -0,0 +1,119 @@
++use std::path::PathBuf;
++use std::process::ExitCode;
++
++use crate::init::{self, InitOptions};
++
++const VERSION: &str = env!("CARGO_PKG_VERSION");
++const UNIMPLEMENTED_COMMANDS: &[&str] = &["manifest", "inspect", "test", "run", "serve", "pack"];
++
++pub fn run<I>(args: I) -> ExitCode
++where
++    I: IntoIterator<Item = String>,
++{
++    let mut args = args.into_iter().skip(1);
++
++    match args.next().as_deref() {
++        None | Some("-h") | Some("--help") => {
++            print_help();
++            ExitCode::SUCCESS
++        }
++        Some("-V") | Some("--version") => {
++            println!("skillrun {VERSION}");
++            ExitCode::SUCCESS
++        }
++        Some("init") => match parse_init(args.collect()) {
++            Ok(options) => match init::create_python_capsule(&options) {
++                Ok(path) => {
++                    println!("created {}", path.display());
++                    ExitCode::SUCCESS
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun init <name> --python [--output <dir>]");
++                ExitCode::from(2)
++            }
++        },
++        Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
++            eprintln!("error: command not implemented yet: {command}");
++            ExitCode::from(2)
++        }
++        Some(command) => {
++            eprintln!("error: unknown command: {command}");
++            eprintln!("run `skillrun --help` to see available commands");
++            ExitCode::from(2)
++        }
++    }
++}
++
++fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
++    let mut name = None;
++    let mut python = false;
++    let mut output_dir = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--python" => {
++                python = true;
++                index += 1;
++            }
++            "--output" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--output requires a directory".to_string());
++                };
++                output_dir = PathBuf::from(value);
++                index += 2;
++            }
++            value if value.starts_with('-') => {
++                return Err(format!("unknown init option: {value}"));
++            }
++            value => {
++                if name.is_some() {
++                    return Err(format!("unexpected init argument: {value}"));
++                }
++                name = Some(value.to_string());
++                index += 1;
++            }
++        }
++    }
++
++    if !python {
++        return Err("init currently requires --python".to_string());
++    }
++
++    let name = name.ok_or_else(|| "init requires a capsule name".to_string())?;
++    Ok(InitOptions { name, output_dir })
++}
++
++fn print_help() {
++    println!(
++        "\
++SkillRun
++
++Rust CLI for turning one SOP and one action into a tested MCP skill package.
++
++Usage:
++  skillrun [--help]
++  skillrun [--version]
++  skillrun <command> [options]
++
++MVP commands:
++  init       create a Python action capsule skeleton
++  manifest   generate the Manifest from SOP, action metadata, config and examples
++  inspect    show capsule contract, permissions and instruction-only status
++  test       run the default example through the runtime contract
++  run        run a capsule with an explicit input file
++  serve      expose Manifest-driven MCP tools
++  pack       create a .skr package
++
++Implemented:
++  init --python
++
++Later tasks implement Manifest, runtime, MCP, and packaging behavior."
++    );
++}
+
+
+diff --git "a/src\\init.rs" "b/src\\init.rs"
+new file mode 100644
+index 0000000..9a2f056
+--- /dev/null
++++ "b/src\\init.rs"
+@@ -0,0 +1,96 @@
++use std::fs;
++use std::io;
++use std::path::{Path, PathBuf};
++
++const SKILL_TEMPLATE: &str = include_str!("../templates/python/SKILL.md");
++const ACTION_TEMPLATE: &str = include_str!("../templates/python/action.py");
++const DEFAULT_INPUT_TEMPLATE: &str =
++    include_str!("../templates/python/examples/default.input.json");
++const CONFIG_TEMPLATE: &str = include_str!("../templates/python/skillrun.config.json");
++
++pub struct InitOptions {
++    pub name: String,
++    pub output_dir: PathBuf,
++}
++
++pub fn create_python_capsule(options: &InitOptions) -> Result<PathBuf, String> {
++    validate_capsule_name(&options.name)?;
++
++    let target = options.output_dir.join(&options.name);
++    ensure_target_is_writable(&target)?;
++
++    fs::create_dir_all(target.join("examples")).map_err(|error| {
++        format!(
++            "failed to create capsule directories at {}: {error}",
++            target.display()
++        )
++    })?;
++
++    write_template(&target.join("SKILL.md"), SKILL_TEMPLATE, &options.name)?;
++    write_template(&target.join("action.py"), ACTION_TEMPLATE, &options.name)?;
++    write_template(
++        &target.join("examples").join("default.input.json"),
++        DEFAULT_INPUT_TEMPLATE,
++        &options.name,
++    )?;
++    write_template(
++        &target.join("skillrun.config.json"),
++        CONFIG_TEMPLATE,
++        &options.name,
++    )?;
++
++    Ok(target)
++}
++
++fn validate_capsule_name(name: &str) -> Result<(), String> {
++    let is_valid = !name.is_empty()
++        && name
++            .chars()
++            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_');
++
++    if is_valid {
++        Ok(())
++    } else {
++        Err(format!(
++            "invalid capsule name: {name}. Use only ASCII letters, numbers, '-' or '_'"
++        ))
++    }
++}
++
++fn ensure_target_is_writable(target: &Path) -> Result<(), String> {
++    if !target.exists() {
++        return Ok(());
++    }
++
++    let metadata = fs::metadata(target)
++        .map_err(|error| format!("failed to inspect {}: {error}", target.display()))?;
++
++    if !metadata.is_dir() {
++        return Err(format!(
++            "target path is not a directory: {}",
++            target.display()
++        ));
++    }
++
++    let mut entries = fs::read_dir(target)
++        .map_err(|error| format!("failed to read {}: {error}", target.display()))?;
++
++    match entries.next() {
++        Some(Ok(_)) => Err(format!(
++            "target directory is not empty: {}",
++            target.display()
++        )),
++        Some(Err(error)) => Err(format!("failed to inspect {}: {error}", target.display())),
++        None => Ok(()),
++    }
++}
++
++fn write_template(path: &Path, template: &str, name: &str) -> Result<(), String> {
++    let rendered = template.replace("{{name}}", name);
++    write_new_file(path, rendered.as_bytes())
++        .map_err(|error| format!("failed to write {}: {error}", path.display()))
++}
++
++fn write_new_file(path: &Path, content: &[u8]) -> io::Result<()> {
++    fs::write(path, content)
++}
+
+
+diff --git "a/templates\\python\\SKILL.md" "b/templates\\python\\SKILL.md"
+new file mode 100644
+index 0000000..57020cd
+--- /dev/null
++++ "b/templates\\python\\SKILL.md"
+@@ -0,0 +1,33 @@
++# {{name}} Skill
++
++## Purpose
++
++Describe the business job this capsule performs and the situations where an
++agent is allowed to call it.
++
++## SOP
++
++1. Validate that the request contains enough context to make a decision.
++2. Apply policy limits before returning an approval.
++3. Return a structured rejection when approval is missing or the request is out
++   of scope.
++4. Keep the final decision auditable.
++
++## Required Context
++
++- `order_id`
++- `amount`
++- `reason`
++- `customer_tier`
++- `manager_approval_id` when policy requires escalation
++
++## Prohibited Behavior
++
++- Do not move money or trigger external side effects from this template.
++- Do not approve requests that violate the local policy.
++- Do not treat stdout as the business result.
++
++## Recovery Guidance
++
++If the action returns a policy error, ask for the missing approval or context
++instead of retrying blindly.
+
+
+diff --git "a/templates\\python\\action.py" "b/templates\\python\\action.py"
+new file mode 100644
+index 0000000..5967ed1
+--- /dev/null
++++ "b/templates\\python\\action.py"
+@@ -0,0 +1,40 @@
++from typing import Literal
++
++from pydantic import BaseModel, Field
++
++
++class Input(BaseModel):
++    order_id: str = Field(min_length=1)
++    amount: int = Field(ge=1)
++    reason: Literal["damaged", "duplicate", "wrong_item"]
++    customer_tier: Literal["standard", "gold", "enterprise"] = "standard"
++    manager_approval_id: str | None = None
++
++
++class Output(BaseModel):
++    decision: Literal["approved", "needs_approval", "rejected"]
++    amount: int
++    reasoning_summary: str
++    audit_note: str
++
++
++def preflight(input: Input, ctx) -> None:
++    if input.amount > 500 and not input.manager_approval_id:
++        raise ValueError("manager approval is required for refunds above 500")
++
++
++def run(input: Input, ctx) -> Output:
++    if input.amount > 500:
++        return Output(
++            decision="needs_approval",
++            amount=input.amount,
++            reasoning_summary="Refund requires manager approval before execution.",
++            audit_note=f"Order {input.order_id} requires approval before refund.",
++        )
++
++    return Output(
++        decision="approved",
++        amount=input.amount,
++        reasoning_summary=f"Refund reason {input.reason} is allowed by the starter policy.",
++        audit_note=f"Order {input.order_id} approved for refund decision only.",
++    )
+
+
+diff --git "a/templates\\python\\examples\\default.input.json" "b/templates\\python\\examples\\default.input.json"
+new file mode 100644
+index 0000000..972cc40
+--- /dev/null
++++ "b/templates\\python\\examples\\default.input.json"
+@@ -0,0 +1,6 @@
++{
++  "order_id": "order_1001",
++  "amount": 120,
++  "reason": "damaged",
++  "customer_tier": "standard"
++}
+
+
+diff --git "a/templates\\python\\skillrun.config.json" "b/templates\\python\\skillrun.config.json"
+new file mode 100644
+index 0000000..155241b
+--- /dev/null
++++ "b/templates\\python\\skillrun.config.json"
+@@ -0,0 +1,19 @@
++{
++  "runtime": {
++    "adapter": "python",
++    "entrypoint": "action.py",
++    "timeout": "30s"
++  },
++  "permissions": {
++    "files": {
++      "read": [],
++      "write": [".skillrun/runs/**"]
++    },
++    "network": {
++      "outbound": []
++    },
++    "env": {
++      "read": []
++    }
++  }
++}
+
+
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 5850dc7..843caf1 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -39,11 +39,11 @@ fn version_uses_approved_project_name() {
+ }
+ 
+ #[test]
+-fn planned_commands_fail_until_implemented() {
+-    let output = run_skillrun(&["init"]);
++fn unimplemented_planned_commands_fail_until_implemented() {
++    let output = run_skillrun(&["manifest"]);
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
+ 
+-    assert!(stderr.contains("command not implemented yet: init"));
++    assert!(stderr.contains("command not implemented yet: manifest"));
+ }
+
+
+diff --git "a/tests\\init.rs" "b/tests\\init.rs"
+new file mode 100644
+index 0000000..2df56e8
+--- /dev/null
++++ "b/tests\\init.rs"
+@@ -0,0 +1,100 @@
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn assert_file_contains(path: &Path, expected: &str) {
++    let content = fs::read_to_string(path).expect("file should be readable");
++    assert!(
++        content.contains(expected),
++        "{} should contain {expected:?}",
++        path.display()
++    );
++}
++
++#[test]
++fn init_python_creates_standard_capsule() {
++    let output_root = temp_dir("init-python");
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++
++    assert!(output.status.success());
++    let capsule = output_root.join("refund");
++
++    assert!(capsule.join("SKILL.md").is_file());
++    assert!(capsule.join("action.py").is_file());
++    assert!(capsule
++        .join("examples")
++        .join("default.input.json")
++        .is_file());
++    assert!(capsule.join("skillrun.config.json").is_file());
++
++    assert_file_contains(&capsule.join("SKILL.md"), "# refund");
++    assert_file_contains(&capsule.join("SKILL.md"), "SOP");
++    assert_file_contains(&capsule.join("action.py"), "class Input(BaseModel)");
++    assert_file_contains(&capsule.join("action.py"), "class Output(BaseModel)");
++    assert_file_contains(&capsule.join("action.py"), "def preflight");
++    assert_file_contains(&capsule.join("action.py"), "def run");
++    assert_file_contains(
++        &capsule.join("examples").join("default.input.json"),
++        "\"order_id\"",
++    );
++    assert_file_contains(&capsule.join("skillrun.config.json"), "\"timeout\"");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn init_refuses_non_empty_target() {
++    let output_root = temp_dir("init-non-empty");
++    let capsule = output_root.join("refund");
++    fs::create_dir_all(&capsule).expect("test target should be created");
++    fs::write(capsule.join("existing.txt"), "keep me").expect("marker should be written");
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++
++    assert!(!output.status.success());
++    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("target directory is not empty"));
++    assert_eq!(
++        fs::read_to_string(capsule.join("existing.txt")).expect("marker should remain"),
++        "keep me"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn init_requires_python_flag() {
++    let output = run_skillrun(&["init", "refund"]);
++
++    assert!(!output.status.success());
++    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("init currently requires --python"));
++}
++
++#[test]
++fn init_rejects_path_like_capsule_names() {
++    let output = run_skillrun(&["init", "../refund", "--python"]);
++
++    assert!(!output.status.success());
++    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("invalid capsule name"));
++}
+
+
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index df5dc54..0b564af 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001 已按 Rust-first correction 重新执行，当前状态为 `Needs_Review`。T002-T011 仍为 `Draft`，需要在 T001 被用户接受后再逐一 packetize 和执行。
++T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -38,8 +38,8 @@ Validation:
+ - `cargo run -- init refund --python --output tmp/e2e-init`
+ 
+ Tasks:
+-- [ ] T001 [US-001] Scaffold Rust crate and CLI entrypoint
+-- [ ] T002 [US-001] Implement Python Action capsule init templates
++- [x] T001 [US-001] Scaffold Rust crate and CLI entrypoint
++- [x] T002 [US-001] Implement Python Action capsule init templates
+ 
+ ## Story US-002: 生成并查看 Manifest 合同
+ 
+@@ -154,7 +154,7 @@ Tasks:
+ 
+ ### T001: Scaffold Rust Crate And CLI Entrypoint
+ 
+-Status: Needs_Review
++Status: Accepted
+ Priority: P0
+ Depends on: None
+ Blocks: T002, T003, T005, T009, T010, T011
+@@ -212,7 +212,7 @@ Evidence required:
+ 
+ ### T002: Implement Python Action Capsule Init Templates
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001
+ Blocks: T003, T004, T005, T011
+@@ -224,6 +224,8 @@ Goal:
+ Implement `skillrun init refund --python` in Rust so it creates a standard Python Action Skill Capsule with a runnable default example.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/init.rs`
+@@ -231,9 +233,11 @@ Allowed files:
+ - `templates/python/action.py`
+ - `templates/python/examples/default.input.json`
+ - `templates/python/skillrun.config.json`
++- `tests/cli.rs`
+ - `tests/init.rs`
+ 
+ Test targets:
++- `tests/cli.rs`
+ - `tests/init.rs`
+ 
+ Deliverables:
+
+
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index df5dc54..0b564af 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001 已按 Rust-first correction 重新执行，当前状态为 `Needs_Review`。T002-T011 仍为 `Draft`，需要在 T001 被用户接受后再逐一 packetize 和执行。
++T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -38,8 +38,8 @@ Validation:
+ - `cargo run -- init refund --python --output tmp/e2e-init`
+ 
+ Tasks:
+-- [ ] T001 [US-001] Scaffold Rust crate and CLI entrypoint
+-- [ ] T002 [US-001] Implement Python Action capsule init templates
++- [x] T001 [US-001] Scaffold Rust crate and CLI entrypoint
++- [x] T002 [US-001] Implement Python Action capsule init templates
+ 
+ ## Story US-002: 生成并查看 Manifest 合同
+ 
+@@ -154,7 +154,7 @@ Tasks:
+ 
+ ### T001: Scaffold Rust Crate And CLI Entrypoint
+ 
+-Status: Needs_Review
++Status: Accepted
+ Priority: P0
+ Depends on: None
+ Blocks: T002, T003, T005, T009, T010, T011
+@@ -212,7 +212,7 @@ Evidence required:
+ 
+ ### T002: Implement Python Action Capsule Init Templates
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001
+ Blocks: T003, T004, T005, T011
+@@ -224,6 +224,8 @@ Goal:
+ Implement `skillrun init refund --python` in Rust so it creates a standard Python Action Skill Capsule with a runnable default example.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/init.rs`
+@@ -231,9 +233,11 @@ Allowed files:
+ - `templates/python/action.py`
+ - `templates/python/examples/default.input.json`
+ - `templates/python/skillrun.config.json`
++- `tests/cli.rs`
+ - `tests/init.rs`
+ 
+ Test targets:
++- `tests/cli.rs`
+ - `tests/init.rs`
+ 
+ Deliverables:
+
+
+diff --git "a/.ai-platform\\specs\\mvp\\packets\\T002.yaml" "b/.ai-platform\\specs\\mvp\\packets\\T002.yaml"
+new file mode 100644
+index 0000000..a719900
+--- /dev/null
++++ "b/.ai-platform\\specs\\mvp\\packets\\T002.yaml"
+@@ -0,0 +1,157 @@
++schema_version: 1
++packet_id: EP-MVP-T002
++task_id: T002
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t001: Accepted after rereview on 2026-05-11
++
++work_unit:
++  title: Implement Python Action Capsule Init Templates
++  goal: Implement skillrun init refund --python in Rust so it creates a standard Python Action Skill Capsule with a runnable default example.
++  epic: E001 Capsule And Manifest
++  story: US-001
++  requirements:
++    - FR-001
++  priority: P0
++  depends_on:
++    - T001
++  blocks:
++    - T003
++    - T004
++    - T005
++    - T011
++  parallel: false
++  conflicts_with:
++    - T001
++    - T003
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - README.md
++    - README.zh-CN.md
++    - docs/mvp.md
++    - docs/ssot.md
++    - .ai-platform/docs/tasks.md
++    - .ai-platform/docs/test-strategy.md
++    - src/main.rs
++    - tests/cli.rs
++  existing_patterns:
++    - SkillRun is a Cargo binary crate named skillrun.
++    - T001 uses Rust stdlib command parsing and integration tests through CARGO_BIN_EXE_skillrun.
++    - Documentation distinguishes implemented behavior from planned MVP behavior.
++  interfaces_or_contracts:
++    - skillrun init refund --python --output tmp/e2e-init creates tmp/e2e-init/refund.
++    - Generated capsule includes SKILL.md, action.py, examples/default.input.json, and skillrun.config.json.
++    - Generated action.py contains Pydantic Input and Output models plus preflight and run functions.
++    - Re-running into an existing non-empty target fails clearly.
++  forbidden_changes:
++    - Do not implement manifest, inspect, runtime, MCP, pack, or adapter execution behavior in T002.
++    - Do not create a Python package for SkillRun.
++    - Do not rename the project or add a v2 suffix.
++    - Do not mark T002 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/init.rs
++    - templates/python/SKILL.md
++    - templates/python/action.py
++    - templates/python/examples/default.input.json
++    - templates/python/skillrun.config.json
++    - tests/cli.rs
++    - tests/init.rs
++  test_targets:
++    - tests/cli.rs
++    - tests/init.rs
++  ownership_notes:
++    - Preserve user README additions while updating implemented/planned status accurately.
++    - Existing T001 files are accepted; only adjust them where T002 behavior requires it.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test init
++    expected_failure: Tests fail because init command and templates do not exist yet.
++  green:
++    command: cargo test --test init
++    expected_signal: init command creates the standard Python Action capsule and rejects non-empty targets.
++  refactor:
++    command: cargo test && cargo run -- init refund --python --output tmp/e2e-init
++    expected_signal: Full tests pass and the CLI creates tmp/e2e-init/refund.
++
++validation_loop:
++  commands:
++    - cargo test --test init
++    - cargo test
++    - cargo run -- init refund --python --output tmp/e2e-init
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to init command parsing, template writing, or overwrite guard.
++    second_failure: Determine whether T002 scope, filesystem assumptions, or test setup is blocking.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T002/summary.md
++  diff: .ai-platform/evidence/T002/diff.patch
++  test_results: .ai-platform/evidence/T002/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T002 Accepted.
++  review_focus:
++    - Generated files match the MVP capsule shape.
++    - init refuses unsafe or non-empty targets.
++    - README accurately distinguishes implemented init from planned downstream commands.
++    - T002 does not implement Manifest or runtime behavior.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep branch or current worktree for follow-up
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear allowed files
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
