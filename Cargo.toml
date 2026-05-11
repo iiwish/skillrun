@@ -1,0 +1,10 @@
+[package]
+name = "skillrun"
+version = "0.1.0"
+edition = "2021"
+description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
+license = "Apache-2.0"
+
+[[bin]]
+name = "skillrun"
+path = "src/main.rs"

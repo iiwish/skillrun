@@ -1,0 +1,347 @@
+﻿# Generated with git diff --no-index against NUL for key T001 files.
+
+
+warning: in the working copy of 'Cargo.toml', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Cargo.toml b/Cargo.toml
+new file mode 100644
+index 0000000..852b757
+--- /dev/null
++++ b/Cargo.toml
+@@ -0,0 +1,10 @@
++[package]
++name = "skillrun"
++version = "0.1.0"
++edition = "2021"
++description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
++license = "MIT"
++
++[[bin]]
++name = "skillrun"
++path = "src/main.rs"
+
+
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..a727c8d
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,33 @@
++# SkillRun
++
++SkillRun 是用 Rust 实现的本地 CLI/Core。它把一份 SOP 和一个显式 Action
++组织成可测试、可检查、可运行、可给 Agent 调用、可打包分发的 Skill Capsule。
++
++当前状态：T001 Rust CLI skeleton。
++
++## 项目约定
++
++- 项目名是 `SkillRun`，CLI / crate 名是 `skillrun`。
++- 文档默认使用中文；协议名、命令名、文件名和关键术语可保留英文。
++- SkillRun 本体、CLI、Core、Manifest、IPC、MCP 和 pack 路径使用 Rust 实现。
++- MVP 的首个被运行 Action 格式是 Python `action.py`，这是用户 skill 的 adapter 目标，不是 SkillRun 本体实现语言。
++- stdout/stderr 只作为日志，结构化结果必须来自 output/error envelope。
++- instruction-only Skill 不会被隐式执行。
++- 当前任务只建立 Rust CLI 骨架，不实现 init、manifest、run、serve 或 pack 行为。
++
++## 开发
++
++T001 只提供 Rust binary 和 CLI help/version 骨架：
++
++```bash
++cargo test
++cargo run -- --help
++cargo run -- --version
++```
++
++## 文档
++
++- 产品与 MVP 合同：`docs/mvp.md`
++- 架构基线：`docs/ssot.md`
++- 经典业务示例：`docs/business-examples.md`
++- 测试策略：`.ai-platform/docs/test-strategy.md`
+
+
+warning: in the working copy of 'src\main.rs', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/src\\main.rs" "b/src\\main.rs"
+new file mode 100644
+index 0000000..454d783
+--- /dev/null
++++ "b/src\\main.rs"
+@@ -0,0 +1,56 @@
++use std::env;
++use std::process::ExitCode;
++
++const VERSION: &str = env!("CARGO_PKG_VERSION");
++const PLANNED_COMMANDS: &[&str] = &[
++    "init", "manifest", "inspect", "test", "run", "serve", "pack",
++];
++
++fn main() -> ExitCode {
++    let mut args = env::args().skip(1);
++
++    match args.next().as_deref() {
++        None | Some("-h") | Some("--help") => {
++            print_help();
++            ExitCode::SUCCESS
++        }
++        Some("-V") | Some("--version") => {
++            println!("skillrun {VERSION}");
++            ExitCode::SUCCESS
++        }
++        Some(command) if PLANNED_COMMANDS.contains(&command) => {
++            eprintln!("error: command not implemented yet: {command}");
++            ExitCode::from(2)
++        }
++        Some(command) => {
++            eprintln!("error: unknown command: {command}");
++            eprintln!("run `skillrun --help` to see available commands");
++            ExitCode::from(2)
++        }
++    }
++}
++
++fn print_help() {
++    println!(
++        "\
++SkillRun
++
++Rust CLI for turning one SOP and one action into a tested MCP skill package.
++
++Usage:
++  skillrun [--help]
++  skillrun [--version]
++  skillrun <command> [options]
++
++Planned MVP commands:
++  init       create a Python action capsule skeleton
++  manifest   generate the Manifest from SOP, action metadata, config and examples
++  inspect    show capsule contract, permissions and instruction-only status
++  test       run the default example through the runtime contract
++  run        run a capsule with an explicit input file
++  serve      expose Manifest-driven MCP tools
++  pack       create a .skr package
++
++T001 only provides this Rust CLI skeleton. Runtime behavior lands in later tasks."
++    );
++}
+
+
+warning: in the working copy of 'tests\cli.rs', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/tests\\cli.rs" "b/tests\\cli.rs"
+new file mode 100644
+index 0000000..5850dc7
+--- /dev/null
++++ "b/tests\\cli.rs"
+@@ -0,0 +1,49 @@
++use std::process::Command;
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++#[test]
++fn help_lists_planned_mvp_commands() {
++    let output = run_skillrun(&["--help"]);
++
++    assert!(output.status.success());
++    let stdout = String::from_utf8(output.stdout).expect("help output should be utf-8");
++
++    assert!(stdout.contains("SkillRun"));
++    assert!(stdout.contains("skillrun"));
++
++    for command in [
++        "init", "manifest", "inspect", "test", "run", "serve", "pack",
++    ] {
++        assert!(
++            stdout.contains(command),
++            "help output should list planned command: {command}"
++        );
++    }
++}
++
++#[test]
++fn version_uses_approved_project_name() {
++    let output = run_skillrun(&["--version"]);
++
++    assert!(output.status.success());
++    assert_eq!(
++        String::from_utf8(output.stdout).expect("version output should be utf-8"),
++        "skillrun 0.1.0\n"
++    );
++}
++
++#[test]
++fn planned_commands_fail_until_implemented() {
++    let output = run_skillrun(&["init"]);
++
++    assert!(!output.status.success());
++    let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
++
++    assert!(stderr.contains("command not implemented yet: init"));
++}
+
+
+warning: in the working copy of '.ai-platform\specs\mvp\packets\T001.yaml', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/.ai-platform\\specs\\mvp\\packets\\T001.yaml" "b/.ai-platform\\specs\\mvp\\packets\\T001.yaml"
+new file mode 100644
+index 0000000..51ab1ff
+--- /dev/null
++++ "b/.ai-platform\\specs\\mvp\\packets\\T001.yaml"
+@@ -0,0 +1,153 @@
++schema_version: 1
++packet_id: EP-MVP-T001
++task_id: T001
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    analysis: No unresolved Critical or High findings for T001
++
++work_unit:
++  title: Scaffold Rust Crate And CLI Entrypoint
++  goal: Create the Rust crate skeleton, CLI entrypoint, project metadata and baseline integration test harness.
++  epic: E001 Capsule And Manifest
++  story: US-001
++  requirements:
++    - FR-001
++    - NFR-006
++    - TDR-005
++  priority: P0
++  depends_on: []
++  blocks:
++    - T002
++    - T003
++    - T005
++    - T009
++    - T010
++    - T011
++  parallel: false
++  conflicts_with:
++    - T002
++    - T003
++    - T005
++    - T009
++    - T010
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - AGENTS.md
++    - docs/mvp.md
++    - docs/ssot.md
++    - .ai-platform/docs/tasks.md
++    - .ai-platform/docs/test-strategy.md
++  existing_patterns:
++    - The repository contains governance and product documents; T001 establishes the initial Rust Cargo binary crate.
++    - Project documentation defaults to Chinese while crate names, commands, status names, and protocol terms remain English.
++    - Use Cargo with binary name skillrun and Rust integration tests under tests.
++  interfaces_or_contracts:
++    - CLI must expose help text through cargo run -- --help.
++    - CLI must expose version text through cargo run -- --version.
++    - Cargo metadata must define package name skillrun and version 0.1.0.
++    - README must state SkillRun is implemented in Rust and must not claim runtime commands beyond T001.
++  forbidden_changes:
++    - Do not implement init, manifest, inspect, runtime, MCP, pack, or adapter behavior in T001.
++    - Do not rename the project or add a v2 suffix.
++    - Do not create a Python package for SkillRun.
++    - Do not mark any task Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - Cargo.toml
++    - Cargo.lock
++    - README.md
++    - src/main.rs
++    - tests/cli.rs
++  test_targets:
++    - tests/cli.rs
++  ownership_notes:
++    - If any allowed file already contains unrelated user changes, stop and report before editing.
++    - Preserve existing staged docs and do not revert unrelated user work.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test cli
++    expected_failure: Tests fail because Cargo.toml and the skillrun binary target do not exist yet.
++  green:
++    command: cargo test --test cli
++    expected_signal: CLI help/version tests pass.
++  refactor:
++    command: cargo test --test cli && cargo run -- --help && cargo run -- --version
++    expected_signal: Tests remain green and CLI help/version exit successfully.
++
++validation_loop:
++  commands:
++    - cargo test --test cli
++    - cargo run -- --help
++    - cargo run -- --version
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to Rust crate skeleton, CLI help, or test harness.
++    second_failure: Determine whether Cargo metadata, binary target, or environment setup is blocking.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T001/summary.md
++  diff: .ai-platform/evidence/T001/diff.patch
++  test_results: .ai-platform/evidence/T001/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T001 Accepted.
++  review_focus:
++    - T001 must not implement runtime features beyond CLI skeleton.
++    - README must not overclaim unsupported commands.
++    - SkillRun implementation must be Rust, not Python.
++    - Tests must fail before implementation and pass after minimal implementation.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep branch or current worktree for follow-up
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear allowed files
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
