@@ -1,8 +1,10 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::mpsc::{self, Receiver};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
@@ -61,6 +63,100 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_str(&stdout).expect("stdout should be JSON")
 }
 
+struct ScriptedMcpClient {
+    child: Child,
+    stdin: ChildStdin,
+    stdout_lines: Receiver<String>,
+}
+
+impl ScriptedMcpClient {
+    fn spawn(capsule: &Path) -> Self {
+        let cwd = capsule.to_string_lossy().to_string();
+        let mut child = Command::new(env!("CARGO_BIN_EXE_skillrun"))
+            .args(["serve", "--mcp", "--cwd", &cwd])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("MCP server process should spawn");
+
+        let stdin = child.stdin.take().expect("MCP stdin should be piped");
+        let stdout = child.stdout.take().expect("MCP stdout should be piped");
+        let (stdout_tx, stdout_rx) = mpsc::channel();
+
+        std::thread::spawn(move || {
+            let mut reader = BufReader::new(stdout);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                let read = reader.read_line(&mut line).unwrap_or(0);
+                if read == 0 {
+                    break;
+                }
+                let _ = stdout_tx.send(line.trim_end_matches(['\r', '\n']).to_string());
+            }
+        });
+
+        Self {
+            child,
+            stdin,
+            stdout_lines: stdout_rx,
+        }
+    }
+
+    fn send(&mut self, message: Value) {
+        let line = serde_json::to_string(&message).expect("MCP request should serialize");
+        self.stdin
+            .write_all(line.as_bytes())
+            .expect("MCP request should write to stdin");
+        self.stdin
+            .write_all(b"\n")
+            .expect("MCP request newline should write");
+        self.stdin.flush().expect("MCP stdin should flush");
+    }
+
+    fn read_response(&mut self, label: &str) -> Value {
+        let line = self
+            .stdout_lines
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap_or_else(|error| panic!("timed out waiting for {label}: {error}"));
+        serde_json::from_str(&line)
+            .unwrap_or_else(|error| panic!("{label} should be JSON-RPC, got {line:?}: {error}"))
+    }
+
+    fn initialize(&mut self) -> Value {
+        self.send(json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "skillrun-test-client",
+                    "version": "0.0.0"
+                }
+            }
+        }));
+        self.read_response("initialize response")
+    }
+
+    fn initialized(&mut self) {
+        self.send(json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+            "params": {}
+        }));
+    }
+}
+
+impl Drop for ScriptedMcpClient {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 #[test]
 fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
     let (output_root, capsule) = generated_capsule("mcp-dry-run");
@@ -94,6 +190,151 @@ fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
         .as_str()
         .expect("resource text should be a string");
     assert!(resource_text.to_ascii_lowercase().contains("refund"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn mcp_stdio_initializes_with_2025_11_25_protocol() {
+    let (output_root, capsule) = generated_capsule("mcp-stdio-init");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+
+    let response = client.initialize();
+
+    assert_eq!(response["jsonrpc"], "2.0");
+    assert_eq!(response["id"], 1);
+    assert_eq!(response["result"]["protocolVersion"], "2025-11-25");
+    assert!(response["result"]["serverInfo"]["name"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("skillrun"));
+    assert!(response["result"]["capabilities"]["tools"].is_object());
+    assert!(response["result"]["capabilities"]["resources"].is_object());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+#[ignore = "T015 enables this contract when tools/list and tools/call are wired to runtime"]
+fn mcp_stdio_lists_and_calls_manifest_tool() {
+    let (output_root, capsule) = generated_capsule("mcp-stdio-tools");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    }));
+    let tools = client.read_response("tools/list response");
+    assert_eq!(tools["id"], 2);
+    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+    assert_eq!(
+        tools["result"]["tools"][0]["inputSchema"]["properties"]["order_id"]["type"],
+        "string"
+    );
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_1001",
+                "amount": 120,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let call = client.read_response("tools/call response");
+    assert_eq!(call["id"], 3);
+    assert_eq!(call["result"]["isError"], false);
+    assert_eq!(call["result"]["content"][0]["type"], "text");
+    assert!(call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("approved"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_1002",
+                "amount": 1200,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let error_call = client.read_response("tools/call error response");
+    assert_eq!(error_call["id"], 4);
+    assert_eq!(error_call["result"]["isError"], true);
+    assert!(error_call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("PolicyViolation"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+#[ignore = "T016 enables this contract when resources/list and resources/read are implemented"]
+fn mcp_stdio_lists_and_reads_manifest_resources() {
+    let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "resources/list",
+        "params": {}
+    }));
+    let resources = client.read_response("resources/list response");
+    assert_eq!(resources["id"], 5);
+    let uri = resources["result"]["resources"][0]["uri"]
+        .as_str()
+        .expect("resource URI should be a string")
+        .to_string();
+    assert!(uri.starts_with("skillrun://refund/"));
+    assert!(uri.ends_with("SKILL.md"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "resources/read",
+        "params": {
+            "uri": uri
+        }
+    }));
+    let read = client.read_response("resources/read response");
+    assert_eq!(read["id"], 6);
+    assert_eq!(read["result"]["contents"][0]["mimeType"], "text/markdown");
+    assert!(read["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        .contains("refund"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "resources/read",
+        "params": {
+            "uri": "skillrun://refund/../action.py"
+        }
+    }));
+    let rejected = client.read_response("resources/read traversal response");
+    assert_eq!(rejected["id"], 7);
+    assert!(rejected.get("error").is_some());
 
     fs::remove_dir_all(output_root).ok();
 }
