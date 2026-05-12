@@ -305,7 +305,7 @@ Packet path:
 
 ### T016: Expose MCP Resources From Manifest
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T014
 Blocks: T017
@@ -367,7 +367,7 @@ Packet path:
 
 ### T017: Complete MCP E2E Fixture And Release Matrix
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T015, T016
 Blocks: T018

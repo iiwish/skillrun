@@ -321,7 +321,6 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
 }
 
 #[test]
-#[ignore = "T016 enables this contract when resources/list and resources/read are implemented"]
 fn mcp_stdio_lists_and_reads_manifest_resources() {
     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
     let mut client = ScriptedMcpClient::spawn(&capsule);
@@ -336,19 +335,40 @@ fn mcp_stdio_lists_and_reads_manifest_resources() {
     }));
     let resources = client.read_response("resources/list response");
     assert_eq!(resources["id"], 5);
-    let uri = resources["result"]["resources"][0]["uri"]
-        .as_str()
-        .expect("resource URI should be a string")
+    let listed = resources["result"]["resources"]
+        .as_array()
+        .expect("resources should be an array");
+    let listed_uris = listed
+        .iter()
+        .map(|resource| {
+            resource["uri"]
+                .as_str()
+                .expect("resource URI should be a string")
+                .to_string()
+        })
+        .collect::<Vec<_>>();
+    assert!(listed_uris
+        .iter()
+        .all(|uri| uri.starts_with("skillrun://refund/")));
+    assert!(listed_uris.iter().all(|uri| !uri.contains("action.py")));
+    assert!(listed_uris.iter().all(|uri| !uri.contains(".skillrun")));
+    let skill_uri = listed_uris
+        .iter()
+        .find(|uri| uri.ends_with("SKILL.md"))
+        .expect("SKILL.md resource should be listed")
         .to_string();
-    assert!(uri.starts_with("skillrun://refund/"));
-    assert!(uri.ends_with("SKILL.md"));
+    let example_uri = listed_uris
+        .iter()
+        .find(|uri| uri.ends_with("examples/default.input.json"))
+        .expect("default example resource should be listed")
+        .to_string();
 
     client.send(json!({
         "jsonrpc": "2.0",
         "id": 6,
         "method": "resources/read",
         "params": {
-            "uri": uri
+            "uri": skill_uri
         }
     }));
     let read = client.read_response("resources/read response");
@@ -359,6 +379,25 @@ fn mcp_stdio_lists_and_reads_manifest_resources() {
         .unwrap_or_default()
         .to_ascii_lowercase()
         .contains("refund"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "resources/read",
+        "params": {
+            "uri": example_uri
+        }
+    }));
+    let example_read = client.read_response("example resource read response");
+    assert_eq!(example_read["id"], 8);
+    assert_eq!(
+        example_read["result"]["contents"][0]["mimeType"],
+        "application/json"
+    );
+    assert!(example_read["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("order_1001"));
 
     client.send(json!({
         "jsonrpc": "2.0",

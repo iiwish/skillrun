@@ -1,0 +1,318 @@
+﻿diff --git a/.ai-platform/specs/v0.2/tasks.md b/.ai-platform/specs/v0.2/tasks.md
+index 3f5246f..9e97c22 100644
+--- a/.ai-platform/specs/v0.2/tasks.md
++++ b/.ai-platform/specs/v0.2/tasks.md
+@@ -305,7 +305,7 @@ Packet path:
+ 
+ ### T016: Expose MCP Resources From Manifest
+ 
+-Status: Ready
++Status: Accepted
+ Priority: P0
+ Depends on: T014
+ Blocks: T017
+@@ -367,7 +367,7 @@ Packet path:
+ 
+ ### T017: Complete MCP E2E Fixture And Release Matrix
+ 
+-Status: Draft
++Status: Ready
+ Priority: P0
+ Depends on: T015, T016
+ Blocks: T018
+diff --git a/src/mcp.rs b/src/mcp.rs
+index c7bc140..f89fe93 100644
+--- a/src/mcp.rs
++++ b/src/mcp.rs
+@@ -2,7 +2,7 @@ use serde_json::{json, Value as JsonValue};
+ use serde_yaml::Value as YamlValue;
+ use std::fs;
+ use std::io::{self, BufRead, Write};
+-use std::path::Path;
++use std::path::{Component, Path, PathBuf};
+ 
+ use crate::consumer::ValidManifest;
+ use crate::runtime;
+@@ -136,6 +136,14 @@ fn handle_message(
+             let id = id.unwrap_or(JsonValue::Null);
+             Some(handle_tools_call(id, object, capsule_dir, manifest))
+         }
++        Some("resources/list") => Some(success_response(
++            id.unwrap_or(JsonValue::Null),
++            resources_list_result(capsule_dir, manifest),
++        )),
++        Some("resources/read") => {
++            let id = id.unwrap_or(JsonValue::Null);
++            Some(handle_resources_read(id, object, capsule_dir, manifest))
++        }
+         Some(method) => {
+             let id = id.unwrap_or(JsonValue::Null);
+             if id.is_null() {
+@@ -156,6 +164,166 @@ fn handle_message(
+     }
+ }
+ 
++#[derive(Clone)]
++struct McpResource {
++    uri: String,
++    name: String,
++    relative_path: String,
++    mime_type: String,
++}
++
++fn resource_registry(capsule_dir: &Path, manifest: &ValidManifest) -> Vec<McpResource> {
++    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
++    let mut resources = Vec::new();
++
++    let skill_path =
++        string_at(&manifest.value, &["sources", "skill", "path"]).unwrap_or("SKILL.md");
++    if let Some(resource) = resource_for_path(skill_name, "SKILL.md", skill_path, "text/markdown") {
++        resources.push(resource);
++    }
++
++    if let Some(YamlValue::Sequence(examples)) = value_at(&manifest.value, &["examples"]) {
++        for example in examples {
++            let Some(input_path) = string_at_value(example, &["input"]) else {
++                continue;
++            };
++            let name = input_path
++                .rsplit(['/', '\\'])
++                .next()
++                .unwrap_or(input_path)
++                .to_string();
++            if let Some(resource) =
++                resource_for_path(skill_name, &name, input_path, "application/json")
++            {
++                resources.push(resource);
++            }
++        }
++    }
++
++    resources
++        .into_iter()
++        .filter(|resource| {
++            safe_relative_path(&resource.relative_path)
++                .map(|path| capsule_dir.join(path).is_file())
++                .unwrap_or(false)
++        })
++        .collect()
++}
++
++fn resource_for_path(
++    skill_name: &str,
++    name: &str,
++    relative_path: &str,
++    mime_type: &str,
++) -> Option<McpResource> {
++    let safe_path = safe_relative_path(relative_path).ok()?;
++    let uri_path = safe_path
++        .components()
++        .filter_map(|component| match component {
++            Component::Normal(value) => value.to_str(),
++            _ => None,
++        })
++        .collect::<Vec<_>>()
++        .join("/");
++    Some(McpResource {
++        uri: format!("skillrun://{skill_name}/{uri_path}"),
++        name: name.to_string(),
++        relative_path: uri_path,
++        mime_type: mime_type.to_string(),
++    })
++}
++
++fn resources_list_result(capsule_dir: &Path, manifest: &ValidManifest) -> JsonValue {
++    let resources = resource_registry(capsule_dir, manifest)
++        .into_iter()
++        .map(|resource| {
++            json!({
++                "uri": resource.uri,
++                "name": resource.name,
++                "mimeType": resource.mime_type
++            })
++        })
++        .collect::<Vec<_>>();
++
++    json!({ "resources": resources })
++}
++
++fn handle_resources_read(
++    id: JsonValue,
++    request: &serde_json::Map<String, JsonValue>,
++    capsule_dir: &Path,
++    manifest: &ValidManifest,
++) -> JsonValue {
++    let Some(params) = request.get("params").and_then(JsonValue::as_object) else {
++        return error_response(id, -32602, "Invalid params: resources/read requires params");
++    };
++    let Some(uri) = params.get("uri").and_then(JsonValue::as_str) else {
++        return error_response(id, -32602, "Invalid params: resources/read requires uri");
++    };
++
++    let Some(resource) = resource_registry(capsule_dir, manifest)
++        .into_iter()
++        .find(|resource| resource.uri == uri)
++    else {
++        return error_response(id, -32002, format!("Resource not found: {uri}"));
++    };
++
++    let path = match safe_relative_path(&resource.relative_path) {
++        Ok(path) => capsule_dir.join(path),
++        Err(error) => return error_response(id, -32002, error),
++    };
++    let text = match fs::read_to_string(&path) {
++        Ok(text) => text,
++        Err(error) => {
++            return error_response(
++                id,
++                -32002,
++                format!("Failed to read resource {uri}: {error}"),
++            );
++        }
++    };
++
++    success_response(
++        id,
++        json!({
++            "contents": [
++                {
++                    "uri": resource.uri,
++                    "mimeType": resource.mime_type,
++                    "text": text
++                }
++            ]
++        }),
++    )
++}
++
++fn safe_relative_path(value: &str) -> Result<PathBuf, String> {
++    let path = Path::new(value);
++    if path.is_absolute() {
++        return Err(format!("resource path must be relative: {value}"));
++    }
++
++    let mut safe = PathBuf::new();
++    for component in path.components() {
++        match component {
++            Component::Normal(value) => safe.push(value),
++            Component::CurDir => {}
++            Component::ParentDir => {
++                return Err(format!("resource path escapes capsule: {value}"));
++            }
++            Component::RootDir | Component::Prefix(_) => {
++                return Err(format!("resource path must stay inside capsule: {value}"));
++            }
++        }
++    }
++
++    if safe.as_os_str().is_empty() {
++        return Err("resource path must not be empty".to_string());
++    }
++
++    Ok(safe)
++}
++
+ fn tools_list_result(manifest: &ValidManifest) -> JsonValue {
+     let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
+     let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
+@@ -312,6 +480,15 @@ fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
+     value_at(value, path)?.as_str()
+ }
+ 
++fn string_at_value<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
++    let mut current = value;
++    for segment in path {
++        let key = YamlValue::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    current.as_str()
++}
++
+ fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<JsonValue> {
+     let value = value_at(value, path)?;
+     serde_json::to_value(value).ok()
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+index 40e4e9b..ee6d248 100644
+--- a/tests/mcp_server.rs
++++ b/tests/mcp_server.rs
+@@ -321,7 +321,6 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
+ }
+ 
+ #[test]
+-#[ignore = "T016 enables this contract when resources/list and resources/read are implemented"]
+ fn mcp_stdio_lists_and_reads_manifest_resources() {
+     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
+     let mut client = ScriptedMcpClient::spawn(&capsule);
+@@ -336,19 +335,40 @@ fn mcp_stdio_lists_and_reads_manifest_resources() {
+     }));
+     let resources = client.read_response("resources/list response");
+     assert_eq!(resources["id"], 5);
+-    let uri = resources["result"]["resources"][0]["uri"]
+-        .as_str()
+-        .expect("resource URI should be a string")
++    let listed = resources["result"]["resources"]
++        .as_array()
++        .expect("resources should be an array");
++    let listed_uris = listed
++        .iter()
++        .map(|resource| {
++            resource["uri"]
++                .as_str()
++                .expect("resource URI should be a string")
++                .to_string()
++        })
++        .collect::<Vec<_>>();
++    assert!(listed_uris
++        .iter()
++        .all(|uri| uri.starts_with("skillrun://refund/")));
++    assert!(listed_uris.iter().all(|uri| !uri.contains("action.py")));
++    assert!(listed_uris.iter().all(|uri| !uri.contains(".skillrun")));
++    let skill_uri = listed_uris
++        .iter()
++        .find(|uri| uri.ends_with("SKILL.md"))
++        .expect("SKILL.md resource should be listed")
++        .to_string();
++    let example_uri = listed_uris
++        .iter()
++        .find(|uri| uri.ends_with("examples/default.input.json"))
++        .expect("default example resource should be listed")
+         .to_string();
+-    assert!(uri.starts_with("skillrun://refund/"));
+-    assert!(uri.ends_with("SKILL.md"));
+ 
+     client.send(json!({
+         "jsonrpc": "2.0",
+         "id": 6,
+         "method": "resources/read",
+         "params": {
+-            "uri": uri
++            "uri": skill_uri
+         }
+     }));
+     let read = client.read_response("resources/read response");
+@@ -360,6 +380,25 @@ fn mcp_stdio_lists_and_reads_manifest_resources() {
+         .to_ascii_lowercase()
+         .contains("refund"));
+ 
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 8,
++        "method": "resources/read",
++        "params": {
++            "uri": example_uri
++        }
++    }));
++    let example_read = client.read_response("example resource read response");
++    assert_eq!(example_read["id"], 8);
++    assert_eq!(
++        example_read["result"]["contents"][0]["mimeType"],
++        "application/json"
++    );
++    assert!(example_read["result"]["contents"][0]["text"]
++        .as_str()
++        .unwrap_or_default()
++        .contains("order_1001"));
++
+     client.send(json!({
+         "jsonrpc": "2.0",
+         "id": 7,
