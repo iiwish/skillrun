@@ -13,6 +13,12 @@ pub struct ManifestOptions {
     pub cwd: PathBuf,
 }
 
+pub fn generated_manifest_path(capsule_dir: &Path) -> PathBuf {
+    capsule_dir
+        .join(".skillrun")
+        .join("manifest.generated.yaml")
+}
+
 #[derive(Debug, Serialize)]
 struct ManifestDocument {
     manifest_version: String,
@@ -155,7 +161,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
             manifest_dir.display()
         )
     })?;
-    let manifest_path = manifest_dir.join("manifest.generated.yaml");
+    let manifest_path = generated_manifest_path(&capsule_dir);
     let yaml = serde_yaml::to_string(&manifest)
         .map_err(|error| format!("failed to serialize manifest: {error}"))?;
     fs::write(&manifest_path, yaml)

@@ -2,10 +2,11 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::init::{self, InitOptions};
+use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const UNIMPLEMENTED_COMMANDS: &[&str] = &["inspect", "test", "run", "serve", "pack"];
+const UNIMPLEMENTED_COMMANDS: &[&str] = &["test", "run", "serve", "pack"];
 
 pub fn run<I>(args: I) -> ExitCode
 where
@@ -53,6 +54,23 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun manifest [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("inspect") => match parse_inspect(args.collect()) {
+            Ok(options) => match inspect::render(&options) {
+                Ok(summary) => {
+                    println!("{summary}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun inspect [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -128,6 +146,26 @@ fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
     Ok(ManifestOptions { cwd })
 }
 
+fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected inspect argument: {value}")),
+        }
+    }
+
+    Ok(InspectOptions { cwd })
+}
+
 fn print_help() {
     println!(
         "\
@@ -152,7 +190,8 @@ MVP commands:
 Implemented:
   init --python
   manifest
+  inspect
 
-Later tasks implement inspect, runtime, MCP, and packaging behavior."
+Later tasks implement runtime, MCP, and packaging behavior."
     );
 }

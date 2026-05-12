@@ -4,6 +4,7 @@ mod cli;
 mod config;
 mod hashing;
 mod init;
+mod inspect;
 mod manifest;
 mod schemas;
 mod adapters {

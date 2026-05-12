@@ -4,7 +4,7 @@ Version: v0.1
 Status: Confirmed
 Feature: mvp
 Source spec: `docs/mvp.md`
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 ## 状态定义
 
@@ -17,7 +17,7 @@ Last updated: 2026-05-11
 
 ## Current Gate
 
-T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -53,7 +53,7 @@ Validation:
 
 Tasks:
 - [x] T003 [US-002] Generate Manifest from Python Action metadata
-- [ ] T004 [US-002] Render inspect output and instruction-only status
+- [x] T004 [US-002] Render inspect output and instruction-only status
 
 ## Epic E002: IPC And Run
 
@@ -337,7 +337,7 @@ Evidence required:
 
 ### T004: Render Inspect Output And Instruction-only Status
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T001, T003
 Blocks: T008, T011
@@ -349,10 +349,13 @@ Goal:
 Implement `skillrun inspect` for runnable capsules and instruction-only Skill directories.
 
 Allowed files:
+- `README.md`
+- `README.zh-CN.md`
 - `src/main.rs`
 - `src/cli.rs`
 - `src/inspect.rs`
 - `src/manifest.rs`
+- `tests/cli.rs`
 - `tests/inspect.rs`
 - `tests/fixtures/instruction_only/`
 

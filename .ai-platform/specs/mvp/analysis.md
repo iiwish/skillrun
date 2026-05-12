@@ -2,8 +2,8 @@
 
 Version: v0.1
 Status: Clear
-Scope: SkillRun MVP planning artifacts after T003 acceptance
-Last updated: 2026-05-11
+Scope: SkillRun MVP planning artifacts after T004 acceptance
+Last updated: 2026-05-12
 
 ## Inputs
 
@@ -13,15 +13,15 @@ Last updated: 2026-05-11
 - Test strategy: `.ai-platform/docs/test-strategy.md`
 - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
 - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`
+- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`
 
 ## Coverage
 
 - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
 - Requirements without task coverage: None.
 - Tasks without requirement/plan mapping: None.
-- Ready tasks without packet: None. T003 has `.ai-platform/specs/mvp/packets/T003.yaml` and is now Accepted.
-- Packets missing required fields: None for T003.
+- Ready tasks without packet: None. T004 is accepted and has evidence in `.ai-platform/evidence/T004/`.
+- Packets missing required fields: None for T004.
 
 ## Constitution Check
 
@@ -38,7 +38,7 @@ Last updated: 2026-05-11
 ## Non-Functional Requirements
 
 - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
-- Gaps: No blocking gaps for T003. Later tasks must create their own packets before becoming Ready.
+- Gaps: No blocking gaps for T004. Later tasks must create their own packets before becoming Ready.
 
 ## Findings
 
@@ -49,10 +49,10 @@ Last updated: 2026-05-11
 
 ## Execute Gate
 
-- Result: Clear after T003 acceptance.
-- Reason: T001, T002, and T003 are accepted; T004 is the next dependency-ready task but still needs its own packet before execution.
+- Result: T004 accepted; clear to packetize T005.
+- Reason: T001, T002, T003 and T004 have passed review. T005 dependencies are satisfied, but T005 still needs a self-contained packet and analysis update before execution.
 
 ## Scope Guard
 
-- No further task is clear to execute until its packet is generated.
-- T004-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
+- T005 may be packetized next.
+- T006-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.

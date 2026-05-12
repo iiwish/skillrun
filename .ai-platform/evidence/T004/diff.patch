@@ -1,0 +1,1223 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 7a5d65e..1e05a4b 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -2,12 +2,12 @@
+ 
+ Version: v0.1
+ Status: Draft
+-Last updated: 2026-05-11
++Last updated: 2026-05-12
+ Review: Not ready for user approval
+ 
+ ## 范围
+ 
+-No release scope has been accepted yet. This report is initialized as the release evidence ledger for the SkillRun MVP.
++The MVP release is not ready yet. This report records accepted task slices and validation evidence for the SkillRun MVP.
+ 
+ ## Governance Summary
+ 
+@@ -17,13 +17,14 @@ No release scope has been accepted yet. This report is initialized as the releas
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear for T001
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T004 acceptance and ready for T005 packetization
+ 
+ ## Accepted Tasks
+ 
+ - T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
+ - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
+ - T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
++- T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -33,24 +34,21 @@ No release scope has been accepted yet. This report is initialized as the releas
+ - `cargo run -- --version`: passed with `skillrun 0.1.0`.
+ - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
+ - T003 validation recorded in `.ai-platform/evidence/T003/`.
++- T004 validation recorded in `.ai-platform/evidence/T004/`.
+ 
+ ## Known Limitations
+ 
+-- T001 has been accepted.
+-- T002-T011 are not packetized yet.
+-- Test cases have been redesigned in documentation, but no automated tests have been created yet.
++- T001-T004 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- T001 is Needs_Review with evidence at `.ai-platform/evidence/T001/`.
++- Runtime, structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- T002 has been accepted.
+-- T003 has been accepted.
+-- Keep T004-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T005-T011 Draft until their packets are generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T004.
++- Packetize and execute T005.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 714991f..1a4bc78 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -4,7 +4,7 @@ Version: v0.1
+ Status: Confirmed
+ Feature: mvp
+ Source spec: `docs/mvp.md`
+-Last updated: 2026-05-11
++Last updated: 2026-05-12
+ 
+ ## 状态定义
+ 
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -53,7 +53,7 @@ Validation:
+ 
+ Tasks:
+ - [x] T003 [US-002] Generate Manifest from Python Action metadata
+-- [ ] T004 [US-002] Render inspect output and instruction-only status
++- [x] T004 [US-002] Render inspect output and instruction-only status
+ 
+ ## Epic E002: IPC And Run
+ 
+@@ -337,7 +337,7 @@ Evidence required:
+ 
+ ### T004: Render Inspect Output And Instruction-only Status
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T001, T003
+ Blocks: T008, T011
+@@ -349,10 +349,13 @@ Goal:
+ Implement `skillrun inspect` for runnable capsules and instruction-only Skill directories.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/inspect.rs`
+ - `src/manifest.rs`
++- `tests/cli.rs`
+ - `tests/inspect.rs`
+ - `tests/fixtures/instruction_only/`
+ 
+diff --git a/.ai-platform/evidence/T004/diff.patch b/.ai-platform/evidence/T004/diff.patch
+new file mode 100644
+index 0000000..83e5e10
+--- /dev/null
++++ b/.ai-platform/evidence/T004/diff.patch
+@@ -0,0 +1,105 @@
++diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
++index 7a5d65e..1e05a4b 100644
++--- a/.ai-platform/docs/release-report.md
+++++ b/.ai-platform/docs/release-report.md
++@@ -2,12 +2,12 @@
++ 
++ Version: v0.1
++ Status: Draft
++-Last updated: 2026-05-11
+++Last updated: 2026-05-12
++ Review: Not ready for user approval
++ 
++ ## 范围
++ 
++-No release scope has been accepted yet. This report is initialized as the release evidence ledger for the SkillRun MVP.
+++The MVP release is not ready yet. This report records accepted task slices and validation evidence for the SkillRun MVP.
++ 
++ ## Governance Summary
++ 
++@@ -17,13 +17,14 @@ No release scope has been accepted yet. This report is initialized as the releas
++ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
++ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
++ - Business examples: `docs/business-examples.md` status Confirmed
++-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear for T001
+++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T004 acceptance and ready for T005 packetization
++ 
++ ## Accepted Tasks
++ 
++ - T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
++ - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
++ - T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
+++- T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
++ 
++ ## Validation Summary
++ 
++@@ -33,24 +34,21 @@ No release scope has been accepted yet. This report is initialized as the releas
++ - `cargo run -- --version`: passed with `skillrun 0.1.0`.
++ - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
++ - T003 validation recorded in `.ai-platform/evidence/T003/`.
+++- T004 validation recorded in `.ai-platform/evidence/T004/`.
++ 
++ ## Known Limitations
++ 
++-- T001 has been accepted.
++-- T002-T011 are not packetized yet.
++-- Test cases have been redesigned in documentation, but no automated tests have been created yet.
+++- T001-T004 have been accepted.
++ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
++-- T001 is Needs_Review with evidence at `.ai-platform/evidence/T001/`.
+++- Runtime, structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
++ 
++ ## Unfinished Tasks
++ 
++-- T002 has been accepted.
++-- T003 has been accepted.
++-- Keep T004-T011 Draft until their packets are generated and dependencies are satisfied.
+++- Keep T005-T011 Draft until their packets are generated and dependencies are satisfied.
++ 
++ ## Next Recommended Actions
++ 
++-- Packetize and execute T004.
+++- Packetize and execute T005.
++ 
++ ## User Review Gate
++ 
++diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
++index 714991f..1a4bc78 100644
++--- a/.ai-platform/docs/tasks.md
+++++ b/.ai-platform/docs/tasks.md
++@@ -4,7 +4,7 @@ Version: v0.1
++ Status: Confirmed
++ Feature: mvp
++ Source spec: `docs/mvp.md`
++-Last updated: 2026-05-11
+++Last updated: 2026-05-12
++ 
++ ## 状态定义
++ 
++@@ -17,7 +17,7 @@ Last updated: 2026-05-11
++ 
++ ## Current Gate
++ 
++-T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+++T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++ 
++ ## Epic E001: Capsule And Manifest
++ 
++@@ -53,7 +53,7 @@ Validation:
++ 
++ Tasks:
++ - [x] T003 [US-002] Generate Manifest from Python Action metadata
++-- [ ] T004 [US-002] Render inspect output and instruction-only status
+++- [x] T004 [US-002] Render inspect output and instruction-only status
++ 
++ ## Epic E002: IPC And Run
++ 
++@@ -337,7 +337,7 @@ Evidence required:
++ 
++ ### T004: Render Inspect Output And Instruction-only Status
++ 
++-Status: Draft
+++Status: Accepted
++ Priority: P1
++ Depends on: T001, T003
++ Blocks: T008,
+\ No newline at end of file
+diff --git a/.ai-platform/evidence/T004/summary.md b/.ai-platform/evidence/T004/summary.md
+new file mode 100644
+index 0000000..0c71fc9
+--- /dev/null
++++ b/.ai-platform/evidence/T004/summary.md
+@@ -0,0 +1,55 @@
++# T004 Evidence Summary
++
++Task: T004 Render Inspect Output And Instruction-only Status
++Status: Accepted
++Executor: codex direct execute fallback
++Date: 2026-05-12
++
++## Direct Execute Fallback
++
++用户要求继续推进 governed task，但没有显式授权 subagents。当前宿主指令要求只有用户明确要求 delegation 时才能创建 subagent，因此 T004 在当前 worktree 中由 Codex direct execute fallback 完成。
++
++## Changed Files
++
++- `README.md`
++- `README.zh-CN.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T004.yaml`
++- `.ai-platform/evidence/T004/summary.md`
++- `.ai-platform/evidence/T004/test-results.md`
++- `.ai-platform/evidence/T004/diff.patch`
++- `src/cli.rs`
++- `src/inspect.rs`
++- `src/main.rs`
++- `src/manifest.rs`
++- `tests/cli.rs`
++- `tests/inspect.rs`
++
++## Implementation Summary
++
++- 在 Rust CLI 中加入 `skillrun inspect [--cwd <dir>]` dispatch。
++- 新增 human-readable inspect renderer，通过 YAML 解析读取 `.skillrun/manifest.generated.yaml`。
++- runnable capsule 输出会展示 status、skill name、SOP/action hash、schema presence、adapter、entrypoint、permissions、examples、preflight status 和 MCP tool metadata。
++- 只有 `SKILL.md` 但缺少 runnable contract 的 instruction-only Skill 目录会显示为 `instruction-only`，不会被升级为 runnable capsule，也不会创建 Manifest。
++- 新增共享 Manifest path helper，没有改变 Manifest generation 语义。
++- T004 未实现 runtime、MCP serving、packaging、run behavior 或 stale Manifest enforcement。
++
++## TDD Summary
++
++- RED: `cargo test --test inspect` 失败，3 个 inspect tests 都因为 `inspect` 仍返回 `command not implemented yet` 而失败。
++- GREEN: 实现 renderer 后，`cargo test --test inspect` 通过。
++- REFACTOR/validation: `cargo test` 以及 init/manifest/inspect e2e commands 均通过。
++
++## Review
++
++- Spec compliance: Pass。T004 acceptance points 已由 tests 和 inspect output 覆盖。
++- Bug/code quality: Pass。Inspect 只读取 Manifest 和本地文件文本，不 import 或运行 `action.py`。
++- QA acceptance: Pass。runnable 和 instruction-only 路径均已覆盖。Stale Manifest enforcement 按计划留到 T008。
++- Rereview: Pass。2026-05-12 复审无 blocking findings，用户要求复审通过后提交并继续 T005。
++
++## Residual Risk
++
++- T004 只报告 source presence 和 preflight status，完整 stale Manifest fail-closed 行为按计划留到 T008。
++- Inspect output 是 human-readable 格式，T004 不引入 machine-stable inspect JSON contract。
+diff --git a/.ai-platform/evidence/T004/test-results.md b/.ai-platform/evidence/T004/test-results.md
+new file mode 100644
+index 0000000..e9679d5
+--- /dev/null
++++ b/.ai-platform/evidence/T004/test-results.md
+@@ -0,0 +1,73 @@
++# T004 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++Command: `cargo test --test inspect`
++Result: 按预期失败，exit code 1。
++
++Signal:
++- `inspect_runnable_capsule_summarizes_manifest_contract` 失败，因为 `inspect` 返回 `command not implemented yet`。
++- `inspect_instruction_only_skill_stays_non_runnable` 因同样原因失败。
++- `inspect_does_not_import_or_execute_action_source` 因同样原因失败。
++
++## GREEN
++
++Command: `cargo test --test inspect`
++Result: 通过，exit code 0。
++
++Summary:
++- 3 passed.
++- 0 failed.
++
++## Full Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test`
++Result: 通过，exit code 0。
++
++Summary:
++- CLI tests: 3 passed.
++- Init tests: 4 passed.
++- Inspect tests: 3 passed.
++- Manifest tests: 3 passed.
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++## E2E Validation
++
++Command: `cargo run -- init refund --python --output tmp/e2e-inspect`
++Result: 通过，exit code 0。
++
++Command: `cargo run -- manifest --cwd tmp/e2e-inspect/refund`
++Result: 通过，exit code 0。
++
++Command: `cargo run -- inspect --cwd tmp/e2e-inspect/refund`
++Result: 通过，exit code 0。
++
++关键输出：
++
++```text
++SkillRun Inspect
++status: runnable
++name: refund
++input schema: present
++output schema: present
++adapter: python
++entrypoint: action.py
++file write: .skillrun/runs/**
++preflight: present
++MCP tool: refund
++```
++
++## Governance Validation
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T004`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index 53c36e3..8eabd29 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,8 +2,8 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T003 acceptance
+-Last updated: 2026-05-11
++Scope: SkillRun MVP planning artifacts after T004 acceptance
++Last updated: 2026-05-12
+ 
+ ## Inputs
+ 
+@@ -13,15 +13,15 @@ Last updated: 2026-05-11
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T003 has `.ai-platform/specs/mvp/packets/T003.yaml` and is now Accepted.
+-- Packets missing required fields: None for T003.
++- Ready tasks without packet: None. T004 is accepted and has evidence in `.ai-platform/evidence/T004/`.
++- Packets missing required fields: None for T004.
+ 
+ ## Constitution Check
+ 
+@@ -38,7 +38,7 @@ Last updated: 2026-05-11
+ ## Non-Functional Requirements
+ 
+ - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
+-- Gaps: No blocking gaps for T003. Later tasks must create their own packets before becoming Ready.
++- Gaps: No blocking gaps for T004. Later tasks must create their own packets before becoming Ready.
+ 
+ ## Findings
+ 
+@@ -49,10 +49,10 @@ Last updated: 2026-05-11
+ 
+ ## Execute Gate
+ 
+-- Result: Clear after T003 acceptance.
+-- Reason: T001, T002, and T003 are accepted; T004 is the next dependency-ready task but still needs its own packet before execution.
++- Result: T004 accepted; clear to packetize T005.
++- Reason: T001, T002, T003 and T004 have passed review. T005 dependencies are satisfied, but T005 still needs a self-contained packet and analysis update before execution.
+ 
+ ## Scope Guard
+ 
+-- No further task is clear to execute until its packet is generated.
+-- T004-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
++- T005 may be packetized next.
++- T006-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
+diff --git a/.ai-platform/specs/mvp/packets/T004.yaml b/.ai-platform/specs/mvp/packets/T004.yaml
+new file mode 100644
+index 0000000..46fa8c8
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T004.yaml
+@@ -0,0 +1,152 @@
++schema_version: 1
++packet_id: EP-MVP-T004
++task_id: T004
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t001: Accepted after rereview on 2026-05-11
++    dependency_t003: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Render Inspect Output And Instruction-only Status
++  goal: Implement skillrun inspect for runnable capsules and instruction-only Skill directories.
++  epic: E001 Capsule And Manifest
++  story: US-002 and US-006
++  requirements:
++    - FR-003
++    - FR-009
++    - TDR-004
++  priority: P1
++  depends_on:
++    - T001
++    - T003
++  blocks:
++    - T008
++    - T011
++  parallel: false
++  conflicts_with:
++    - T003
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - docs/ssot.md
++    - src/cli.rs
++    - src/manifest.rs
++    - tests/manifest.rs
++  existing_patterns:
++    - CLI dispatch lives in src/cli.rs.
++    - Manifest generation writes YAML to .skillrun/manifest.generated.yaml.
++    - Rust integration tests use CARGO_BIN_EXE_skillrun.
++  interfaces_or_contracts:
++    - skillrun inspect --cwd path/to/capsule prints a human-readable summary.
++    - Runnable capsule inspect output includes skill name, SOP hash, schemas, adapter, permissions, examples, preflight status, and MCP summary.
++    - Instruction-only directories print instruction-only status and do not become runnable capsules.
++  forbidden_changes:
++    - Do not implement stale Manifest guard beyond inspection messaging.
++    - Do not implement runtime, MCP serving, pack, or run behavior in T004.
++    - Do not mark T004 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/inspect.rs
++    - src/manifest.rs
++    - tests/cli.rs
++    - tests/inspect.rs
++    - tests/fixtures/instruction_only/
++  test_targets:
++    - tests/inspect.rs
++  ownership_notes:
++    - README updates are allowed only to reflect inspect status accurately.
++    - Keep Manifest generation behavior stable unless inspect needs a read helper.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test inspect
++    expected_failure: Tests fail because inspect command and renderer do not exist yet.
++  green:
++    command: cargo test --test inspect
++    expected_signal: inspect prints runnable and instruction-only status.
++  refactor:
++    command: cargo test && cargo run -- inspect --cwd tmp/e2e-inspect/refund
++    expected_signal: Full tests pass and a generated capsule can be inspected.
++
++validation_loop:
++  commands:
++    - cargo test --test inspect
++    - cargo test
++    - cargo run -- init refund --python --output tmp/e2e-inspect
++    - cargo run -- manifest --cwd tmp/e2e-inspect/refund
++    - cargo run -- inspect --cwd tmp/e2e-inspect/refund
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to inspect command parsing, Manifest loading, or instruction-only detection.
++    second_failure: Determine whether T004 scope, YAML parsing, or fixture setup is blocking.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T004/summary.md
++  diff: .ai-platform/evidence/T004/diff.patch
++  test_results: .ai-platform/evidence/T004/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T004 Accepted.
++  review_focus:
++    - inspect does not execute business run.
++    - output is understandable without reading Manifest directly.
++    - instruction-only Skill remains non-executable.
++    - T004 does not implement downstream runtime or MCP behavior.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep branch or current worktree for follow-up
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear allowed files
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index 714991f..1a4bc78 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -4,7 +4,7 @@ Version: v0.1
+ Status: Confirmed
+ Feature: mvp
+ Source spec: `docs/mvp.md`
+-Last updated: 2026-05-11
++Last updated: 2026-05-12
+ 
+ ## 状态定义
+ 
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -53,7 +53,7 @@ Validation:
+ 
+ Tasks:
+ - [x] T003 [US-002] Generate Manifest from Python Action metadata
+-- [ ] T004 [US-002] Render inspect output and instruction-only status
++- [x] T004 [US-002] Render inspect output and instruction-only status
+ 
+ ## Epic E002: IPC And Run
+ 
+@@ -337,7 +337,7 @@ Evidence required:
+ 
+ ### T004: Render Inspect Output And Instruction-only Status
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T001, T003
+ Blocks: T008, T011
+@@ -349,10 +349,13 @@ Goal:
+ Implement `skillrun inspect` for runnable capsules and instruction-only Skill directories.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/inspect.rs`
+ - `src/manifest.rs`
++- `tests/cli.rs`
+ - `tests/inspect.rs`
+ - `tests/fixtures/instruction_only/`
+ 
+diff --git a/README.md b/README.md
+index d374809..29b0671 100644
+--- a/README.md
++++ b/README.md
+@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T003` Rust Manifest generation.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, and contract tests for the skeleton/init/manifest path.
+-- Planned MVP commands are listed by the CLI, but `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
++- Current implementation: through `T004` Rust inspect output and instruction-only status.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, and contract tests for the skeleton/init/manifest/inspect path.
++- Planned MVP commands are listed by the CLI, but `test`, `run`, `serve`, and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, and Manifest generator:
++The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, and inspect renderer:
+ 
+ ```bash
+ cargo test
+@@ -102,6 +102,7 @@ cargo run -- --help
+ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
++cargo run -- inspect --cwd tmp/e2e-init/refund
+ ```
+ 
+ Example output:
+@@ -110,7 +111,7 @@ Example output:
+ skillrun 0.1.0
+ ```
+ 
+-Downstream planned commands intentionally fail with `command not implemented yet` until their implementation tasks land.
++Downstream runtime, MCP, and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+ 
+ ## Security Model
+ 
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 7e14d30..988bdb7 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,9 +12,9 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T003` Rust Manifest generation。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`，以及 CLI/init/manifest 路径的 contract tests。
+-- CLI 已列出计划中的 MVP 命令，但 `inspect`、`test`、`run`、`serve` 和 `pack` 尚未实现。
++- 当前实现：已推进到 `T004` Rust inspect 输出和 instruction-only 状态。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`，以及 CLI/init/manifest/inspect 路径的 contract tests。
++- CLI 已列出计划中的 MVP 命令，但 `test`、`run`、`serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -94,7 +94,7 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器和 Manifest 生成器：
++仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器和 inspect renderer：
+ 
+ ```bash
+ cargo test
+@@ -102,6 +102,7 @@ cargo run -- --help
+ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
++cargo run -- inspect --cwd tmp/e2e-init/refund
+ ```
+ 
+ 示例输出：
+@@ -110,7 +111,7 @@ cargo run -- manifest --cwd tmp/e2e-init/refund
+ skillrun 0.1.0
+ ```
+ 
+-后续计划命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为 runtime 行为已经落地。
++后续 runtime、MCP 和 packaging 命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为这些行为已经落地。
+ 
+ ## 安全模型
+ 
+diff --git a/src/cli.rs b/src/cli.rs
+index df9544c..5a670bf 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -2,10 +2,11 @@ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
+ use crate::init::{self, InitOptions};
++use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+-const UNIMPLEMENTED_COMMANDS: &[&str] = &["inspect", "test", "run", "serve", "pack"];
++const UNIMPLEMENTED_COMMANDS: &[&str] = &["test", "run", "serve", "pack"];
+ 
+ pub fn run<I>(args: I) -> ExitCode
+ where
+@@ -56,6 +57,23 @@ where
+                 ExitCode::from(2)
+             }
+         },
++        Some("inspect") => match parse_inspect(args.collect()) {
++            Ok(options) => match inspect::render(&options) {
++                Ok(summary) => {
++                    println!("{summary}");
++                    ExitCode::SUCCESS
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun inspect [--cwd <dir>]");
++                ExitCode::from(2)
++            }
++        },
+         Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
+             eprintln!("error: command not implemented yet: {command}");
+             ExitCode::from(2)
+@@ -128,6 +146,26 @@ fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
+     Ok(ManifestOptions { cwd })
+ }
+ 
++fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            value => return Err(format!("unexpected inspect argument: {value}")),
++        }
++    }
++
++    Ok(InspectOptions { cwd })
++}
++
+ fn print_help() {
+     println!(
+         "\
+@@ -152,7 +190,8 @@ MVP commands:
+ Implemented:
+   init --python
+   manifest
++  inspect
+ 
+-Later tasks implement inspect, runtime, MCP, and packaging behavior."
++Later tasks implement runtime, MCP, and packaging behavior."
+     );
+ }
+diff --git a/src/inspect.rs b/src/inspect.rs
+new file mode 100644
+index 0000000..af1cab5
+--- /dev/null
++++ b/src/inspect.rs
+@@ -0,0 +1,199 @@
++use serde_yaml::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++
++use crate::manifest;
++
++#[derive(Debug)]
++pub struct InspectOptions {
++    pub cwd: PathBuf,
++}
++
++pub fn render(options: &InspectOptions) -> Result<String, String> {
++    let cwd = options.cwd.clone();
++    if !cwd.exists() {
++        return Err(format!("cwd does not exist: {}", cwd.display()));
++    }
++    if !cwd.is_dir() {
++        return Err(format!("cwd is not a directory: {}", cwd.display()));
++    }
++
++    let manifest_path = manifest::generated_manifest_path(&cwd);
++    if manifest_path.is_file() {
++        render_runnable(&cwd, &manifest_path)
++    } else {
++        render_instruction_only(&cwd, &manifest_path)
++    }
++}
++
++fn render_runnable(cwd: &Path, manifest_path: &Path) -> Result<String, String> {
++    let manifest_text = fs::read_to_string(manifest_path)
++        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
++    let manifest: Value = serde_yaml::from_str(&manifest_text)
++        .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
++
++    let fallback_name = cwd
++        .file_name()
++        .and_then(|value| value.to_str())
++        .unwrap_or("skill");
++    let name = string_at(&manifest, &["skill", "name"]).unwrap_or(fallback_name);
++    let sop_hash = string_at(&manifest, &["sources", "skill", "sha256"])
++        .or_else(|| string_at(&manifest, &["skill", "skill_hash"]))
++        .unwrap_or("unknown");
++    let action_hash = string_at(&manifest, &["sources", "action", "sha256"]).unwrap_or("unknown");
++    let input_schema = presence(value_at(&manifest, &["schemas", "input"]));
++    let output_schema = presence(value_at(&manifest, &["schemas", "output"]));
++    let adapter = string_at(&manifest, &["runtime", "adapter"]).unwrap_or("unknown");
++    let entrypoint = string_at(&manifest, &["runtime", "entrypoint"]).unwrap_or("action.py");
++    let timeout = string_at(&manifest, &["runtime", "timeout"]).unwrap_or("unknown");
++    let file_reads = strings_at(&manifest, &["permissions", "files", "read"]);
++    let file_writes = strings_at(&manifest, &["permissions", "files", "write"]);
++    let network = strings_at(&manifest, &["permissions", "network", "outbound"]);
++    let env_reads = strings_at(&manifest, &["permissions", "env", "read"]);
++    let examples = examples(&manifest);
++    let tool_name = string_at(&manifest, &["tool", "name"]).unwrap_or(name);
++    let tool_description = string_at(&manifest, &["tool", "description"]).unwrap_or("unknown");
++    let preflight = preflight_status(cwd, entrypoint);
++
++    Ok(format!(
++        "\
++SkillRun Inspect
++cwd: {cwd}
++status: runnable
++name: {name}
++manifest: {manifest_path}
++source hashes:
++  SOP hash: {sop_hash}
++  action hash: {action_hash}
++schemas:
++  input schema: {input_schema}
++  output schema: {output_schema}
++runtime:
++  adapter: {adapter}
++  entrypoint: {entrypoint}
++  timeout: {timeout}
++permissions:
++  file read: {file_reads}
++  file write: {file_writes}
++  network outbound: {network}
++  env read: {env_reads}
++examples:
++{examples}
++preflight: {preflight}
++MCP tool: {tool_name}
++MCP description: {tool_description}",
++        cwd = cwd.display(),
++        manifest_path = manifest_path.display(),
++        file_reads = list_or_none(&file_reads),
++        file_writes = list_or_none(&file_writes),
++        network = list_or_none(&network),
++        env_reads = list_or_none(&env_reads),
++    ))
++}
++
++fn render_instruction_only(cwd: &Path, manifest_path: &Path) -> Result<String, String> {
++    let skill_path = cwd.join("SKILL.md");
++    if !skill_path.is_file() {
++        return Err(format!(
++            "not a SkillRun capsule or instruction-only Skill: missing SKILL.md in {}",
++            cwd.display()
++        ));
++    }
++
++    let action_path = cwd.join("action.py");
++    let mut missing = Vec::new();
++    if !action_path.is_file() {
++        missing.push("missing action.py".to_string());
++    }
++    if !manifest_path.is_file() {
++        missing.push("missing .skillrun/manifest.generated.yaml".to_string());
++    }
++
++    let missing_lines = missing
++        .iter()
++        .map(|item| format!("  - {item}"))
++        .collect::<Vec<_>>()
++        .join("\n");
++
++    Ok(format!(
++        "\
++SkillRun Inspect
++cwd: {cwd}
++status: instruction-only
++reason: not a runnable capsule
++instruction file: SKILL.md
++missing:
++{missing_lines}
++note: instruction-only Skill directories remain documentation until an action and Manifest are present.",
++        cwd = cwd.display()
++    ))
++}
++
++fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
++    let mut current = value;
++    for segment in path {
++        let key = Value::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
++
++fn strings_at(value: &Value, path: &[&str]) -> Vec<String> {
++    match value_at(value, path) {
++        Some(Value::Sequence(items)) => items
++            .iter()
++            .filter_map(Value::as_str)
++            .map(str::to_string)
++            .collect(),
++        _ => Vec::new(),
++    }
++}
++
++fn presence(value: Option<&Value>) -> &'static str {
++    match value {
++        Some(Value::Null) | None => "absent",
++        Some(_) => "present",
++    }
++}
++
++fn list_or_none(items: &[String]) -> String {
++    if items.is_empty() {
++        "none".to_string()
++    } else {
++        items.join(", ")
++    }
++}
++
++fn examples(manifest: &Value) -> String {
++    let Some(Value::Sequence(items)) = value_at(manifest, &["examples"]) else {
++        return "  none".to_string();
++    };
++
++    let rendered = items
++        .iter()
++        .map(|item| {
++            let id = string_at(item, &["id"]).unwrap_or("example");
++            let input = string_at(item, &["input"]).unwrap_or("unknown");
++            format!("  - {id}: {input}")
++        })
++        .collect::<Vec<_>>();
++
++    if rendered.is_empty() {
++        "  none".to_string()
++    } else {
++        rendered.join("\n")
++    }
++}
++
++fn preflight_status(cwd: &Path, entrypoint: &str) -> String {
++    let action_path = cwd.join(entrypoint);
++    match fs::read_to_string(&action_path) {
++        Ok(text) if text.contains("def preflight") => "present".to_string(),
++        Ok(_) => "absent".to_string(),
++        Err(_) => format!("source missing ({})", action_path.display()),
++    }
++}
+diff --git a/src/main.rs b/src/main.rs
+index b735831..fe44bfd 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -4,6 +4,7 @@ mod cli;
+ mod config;
+ mod hashing;
+ mod init;
++mod inspect;
+ mod manifest;
+ mod schemas;
+ mod adapters {
+diff --git a/src/manifest.rs b/src/manifest.rs
+index 7664ede..f3e7ccd 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -13,6 +13,12 @@ pub struct ManifestOptions {
+     pub cwd: PathBuf,
+ }
+ 
++pub fn generated_manifest_path(capsule_dir: &Path) -> PathBuf {
++    capsule_dir
++        .join(".skillrun")
++        .join("manifest.generated.yaml")
++}
++
+ #[derive(Debug, Serialize)]
+ struct ManifestDocument {
+     manifest_version: String,
+@@ -155,7 +161,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+             manifest_dir.display()
+         )
+     })?;
+-    let manifest_path = manifest_dir.join("manifest.generated.yaml");
++    let manifest_path = generated_manifest_path(&capsule_dir);
+     let yaml = serde_yaml::to_string(&manifest)
+         .map_err(|error| format!("failed to serialize manifest: {error}"))?;
+     fs::write(&manifest_path, yaml)
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 5b03344..815233f 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -39,11 +39,11 @@ fn version_uses_approved_project_name() {
+ }
+ 
+ #[test]
+-fn unimplemented_planned_commands_fail_until_implemented() {
+-    let output = run_skillrun(&["inspect"]);
++fn unimplemented_runtime_commands_fail_until_implemented() {
++    let output = run_skillrun(&["test"]);
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
+ 
+-    assert!(stderr.contains("command not implemented yet: inspect"));
++    assert!(stderr.contains("command not implemented yet: test"));
+ }
+diff --git a/tests/inspect.rs b/tests/inspect.rs
+new file mode 100644
+index 0000000..88cc0aa
+--- /dev/null
++++ b/tests/inspect.rs
+@@ -0,0 +1,150 @@
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn manifest_path(capsule: &Path) -> PathBuf {
++    capsule.join(".skillrun").join("manifest.generated.yaml")
++}
++
++fn assert_contains(text: &str, expected: &str) {
++    assert!(
++        text.contains(expected),
++        "output should contain {expected:?}\n{text}"
++    );
++}
++
++fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
++#[test]
++fn inspect_runnable_capsule_summarizes_manifest_contract() {
++    let (output_root, capsule) = generated_capsule("inspect-runnable");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++
++    assert!(
++        inspect.status.success(),
++        "inspect should succeed\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
++
++    for expected in [
++        "SkillRun Inspect",
++        "status: runnable",
++        "name: refund",
++        "SOP hash:",
++        "action hash:",
++        "input schema: present",
++        "output schema: present",
++        "adapter: python",
++        "entrypoint: action.py",
++        ".skillrun/runs/**",
++        "examples/default.input.json",
++        "preflight: present",
++        "MCP tool: refund",
++    ] {
++        assert_contains(&stdout, expected);
++    }
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn inspect_instruction_only_skill_stays_non_runnable() {
++    let output_root = temp_dir("inspect-instruction-only");
++    let skill_dir = output_root.join("instruction_only");
++    fs::create_dir_all(skill_dir.join("scripts")).expect("scripts dir should be created");
++    fs::create_dir_all(skill_dir.join("assets")).expect("assets dir should be created");
++    fs::create_dir_all(skill_dir.join("references")).expect("references dir should be created");
++    fs::write(skill_dir.join("SKILL.md"), "# Instruction-only Skill\n")
++        .expect("SKILL.md should be written");
++    fs::write(
++        skill_dir.join("scripts").join("helper.py"),
++        "print('helper')\n",
++    )
++    .expect("helper should be written");
++
++    let cwd_arg = skill_dir.to_string_lossy().to_string();
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++
++    assert!(
++        inspect.status.success(),
++        "instruction-only inspect should succeed\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
++
++    for expected in [
++        "SkillRun Inspect",
++        "status: instruction-only",
++        "not a runnable capsule",
++        "missing action.py",
++        "missing .skillrun/manifest.generated.yaml",
++    ] {
++        assert_contains(&stdout, expected);
++    }
++    assert!(!manifest_path(&skill_dir).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn inspect_does_not_import_or_execute_action_source() {
++    let (output_root, capsule) = generated_capsule("inspect-no-import");
++    fs::write(
++        capsule.join("action.py"),
++        "raise RuntimeError('inspect imported action source')\n",
++    )
++    .expect("action should be replaced after manifest generation");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++
++    assert!(
++        inspect.status.success(),
++        "inspect should read the Manifest without importing action.py\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
++    assert_contains(&stdout, "status: runnable");
++
++    fs::remove_dir_all(output_root).ok();
++}

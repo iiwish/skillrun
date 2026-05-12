@@ -2,12 +2,12 @@
 
 Version: v0.1
 Status: Draft
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 Review: Not ready for user approval
 
 ## 范围
 
-No release scope has been accepted yet. This report is initialized as the release evidence ledger for the SkillRun MVP.
+The MVP release is not ready yet. This report records accepted task slices and validation evidence for the SkillRun MVP.
 
 ## Governance Summary
 
@@ -17,13 +17,14 @@ No release scope has been accepted yet. This report is initialized as the releas
 - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
 - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
 - Business examples: `docs/business-examples.md` status Confirmed
-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear for T001
+- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T004 acceptance and ready for T005 packetization
 
 ## Accepted Tasks
 
 - T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
 - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
 - T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
+- T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
 
 ## Validation Summary
 
@@ -33,24 +34,21 @@ No release scope has been accepted yet. This report is initialized as the releas
 - `cargo run -- --version`: passed with `skillrun 0.1.0`.
 - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
 - T003 validation recorded in `.ai-platform/evidence/T003/`.
+- T004 validation recorded in `.ai-platform/evidence/T004/`.
 
 ## Known Limitations
 
-- T001 has been accepted.
-- T002-T011 are not packetized yet.
-- Test cases have been redesigned in documentation, but no automated tests have been created yet.
+- T001-T004 have been accepted.
 - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
-- T001 is Needs_Review with evidence at `.ai-platform/evidence/T001/`.
+- Runtime, structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
 
 ## Unfinished Tasks
 
-- T002 has been accepted.
-- T003 has been accepted.
-- Keep T004-T011 Draft until their packets are generated and dependencies are satisfied.
+- Keep T005-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- Packetize and execute T004.
+- Packetize and execute T005.
 
 ## User Review Gate
 
