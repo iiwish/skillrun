@@ -1,13 +1,13 @@
-# SkillRun v0.2.0 Release Candidate Report
+# SkillRun v0.2.0 Release Report
 
 Version: v0.2.0
-Status: Ready_For_User_Review
+Status: Released_Local
 Last updated: 2026-05-12
-Review gate: Maintainer release decision pending
+Review gate: User approved continuing from v0.2.0 release candidate to local release handoff
 
 ## Scope
 
-This report records the first public release candidate for SkillRun. v0.1 was an internal MVP proof and was not published separately. v0.2.0 is the first candidate intended for public release review.
+This report records the first public release handoff for SkillRun. v0.1 was an internal MVP proof and was not published separately. v0.2.0 is the first version prepared for public release.
 
 The release story is deliberately narrow:
 
@@ -21,8 +21,9 @@ The release story is deliberately narrow:
 - v0.2 work graph: `.ai-platform/specs/v0.2/tasks.md`
 - v0.2 checklist: `.ai-platform/specs/v0.2/checklists/requirements.md`
 - v0.2 analysis: `.ai-platform/specs/v0.2/analysis.md`
-- Release report status: `Ready_For_User_Review`
-- No release tag or public package has been created.
+- Release report status: `Released_Local`
+- Local release tag: `v0.2.0`
+- Remote push and package publication are not performed by this report.
 
 ## Accepted v0.2 Tasks
 
@@ -33,7 +34,7 @@ The release story is deliberately narrow:
 - T016: MCP resources/list and resources/read accepted. Evidence: `.ai-platform/evidence/T016/`.
 - T017: MCP release-level E2E fixture and release matrix accepted. Evidence: `.ai-platform/evidence/T017/`.
 
-T018 prepares the release candidate for review and remains separate from the maintainer's publish/hold/revise decision.
+T018 prepared the release candidate for review. The user then approved continuing to the local release handoff.
 
 ## Release Candidate Capabilities
 
@@ -51,7 +52,7 @@ T018 prepares the release candidate for review and remains separate from the mai
 
 ## Validation Summary
 
-Validation completed on 2026-05-12:
+Release validation completed on 2026-05-12:
 
 - `cargo test`: passed.
 - `cargo run -- --version`: passed.
@@ -77,12 +78,13 @@ skillrun 0.2.0
 
 ## Release Decision Checklist
 
-- [ ] Maintainer reviews T018 diff and evidence.
-- [ ] Maintainer confirms whether to publish, hold, or revise.
-- [ ] If publishing, create the release tag only after explicit approval.
-- [ ] If holding, record blocking issues before opening follow-up implementation work.
+- [x] Maintainer reviews T018 diff and evidence.
+- [x] Maintainer confirms publish path for local release handoff.
+- [x] Create local release tag after explicit approval.
+- [ ] Push tag to remote, if desired.
+- [ ] Publish package/artifact, if desired.
 
 ## User Review Gate
 
-- Approval: Pending
-- Reviewer notes: v0.2.0 is prepared for review, not published.
+- Approval: Granted for local release handoff on 2026-05-12.
+- Reviewer notes: v0.2.0 is locally tagged for release handoff. Remote publication remains a separate step.
