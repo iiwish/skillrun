@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004、T005、T006、T007、T008、T009 和 T010 均已通过复审并进入 `Accepted`。T011 仍为 `Draft`，需要在依赖满足后再 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -699,7 +699,7 @@ Evidence required:
 
 ### T010: Implement `.skr` Package Generation
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T003, T008
 Blocks: T011
@@ -711,11 +711,14 @@ Goal:
 Implement `skillrun pack` so a capsule can be distributed as a `.skr` archive.
 
 Allowed files:
+- `Cargo.toml`
+- `Cargo.lock`
 - `src/main.rs`
 - `src/cli.rs`
 - `src/pack.rs`
 - `src/consumer.rs`
 - `tests/pack.rs`
+- `tests/consumer_guards.rs`
 - `tests/fixtures/pack_cases/`
 
 Test targets:

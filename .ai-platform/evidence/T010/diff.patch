@@ -1,0 +1,1293 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 93ef93b..072f7ad 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T009 acceptance and ready for T010 packetization
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T010 acceptance and ready for T011 packetization
+ 
+ ## Accepted Tasks
+ 
+@@ -30,6 +30,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
+ - T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
+ - T009: Implement Manifest-driven MCP Tool Exposure. Accepted on 2026-05-12 after rereview passed.
++- T010: Implement `.skr` Package Generation. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -45,21 +46,23 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T007 validation recorded in `.ai-platform/evidence/T007/`.
+ - T008 validation recorded in `.ai-platform/evidence/T008/`.
+ - T009 validation recorded in `.ai-platform/evidence/T009/`.
++- T010 validation recorded in `.ai-platform/evidence/T010/`.
+ 
+ ## Known Limitations
+ 
+ - T001-T009 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+ - `serve --mcp --dry-run` is implemented for Manifest-derived contract inspection.
+-- Long-running MCP server mode and `.skr` packaging are not implemented yet.
++- `pack` is implemented for `.skr` tar.gz generation.
++- Long-running MCP server mode is not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- Keep T010-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T011 Draft until its packet is generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T010.
++- Packetize and execute T011.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 1e44c45..075f194 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007、T008、T009 和 T010 均已通过复审并进入 `Accepted`。T011 仍为 `Draft`，需要在依赖满足后再 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -699,7 +699,7 @@ Evidence required:
+ 
+ ### T010: Implement `.skr` Package Generation
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T003, T008
+ Blocks: T011
+@@ -711,11 +711,14 @@ Goal:
+ Implement `skillrun pack` so a capsule can be distributed as a `.skr` archive.
+ 
+ Allowed files:
++- `Cargo.toml`
++- `Cargo.lock`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/pack.rs`
+ - `src/consumer.rs`
+ - `tests/pack.rs`
++- `tests/consumer_guards.rs`
+ - `tests/fixtures/pack_cases/`
+ 
+ Test targets:
+diff --git a/.ai-platform/evidence/T010/summary.md b/.ai-platform/evidence/T010/summary.md
+new file mode 100644
+index 0000000..d4aa3a2
+--- /dev/null
++++ b/.ai-platform/evidence/T010/summary.md
+@@ -0,0 +1,56 @@
++# T010 Evidence Summary
++
++Task: T010 - Implement `.skr` Package Generation
++Status: Accepted
++Date: 2026-05-12
++Execution mode: Direct Execute fallback
++
++## Direct Execute Reason
++
++本轮用户要求在 T009 复审提交后继续推进 T010，但没有显式要求使用 sub-agent；当前环境规则也要求只有用户明确请求 sub-agents 时才可以派生 agent。因此 T010 采用 direct execute fallback，并按 packet 记录真实命令、diff 和复审证据。
++
++## Changed Files
++
++- `.ai-platform/docs/release-report.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T010.yaml`
++- `Cargo.toml`
++- `Cargo.lock`
++- `src/cli.rs`
++- `src/main.rs`
++- `src/pack.rs`
++- `tests/consumer_guards.rs`
++- `tests/pack.rs`
++
++## Implementation Summary
++
++- Added `src/pack.rs` as the isolated `.skr` packaging module.
++- Wired `skillrun pack --cwd <capsule>` through the existing Consumer Mode guard before archive generation.
++- Generates `dist/<skill-name>-0.1.0.skr` as a tar.gz archive.
++- Archive includes `SKILL.md`, `action.py`, optional `skillrun.config.json`, `examples/**`, and `.skillrun/manifest.generated.yaml`.
++- Archive excludes `.skillrun/runs/**` and `dist/**`.
++- CLI output now states that `.skr` does not vendor dependencies.
++- Existing Consumer guard tests now expect valid `pack` to succeed while stale Manifest still fails closed.
++
++## Diff Summary
++
++- Dependencies: added `tar` and `flate2` for Rust-native tar.gz creation and test inspection.
++- CLI: pack dispatch now calls `pack::create` and prints a package summary.
++- Pack: builds archive content from Manifest source paths plus examples and Manifest; replaces existing archive atomically via a temporary file.
++- Tests: added `.skr` content, name, unpack/inspect, stale Manifest, and dependency-vendoring summary assertions.
++- Governance: created T010 packet, moved T010 to `Needs_Review`, updated analysis and release ledger.
++
++## Review Notes
++
++- Spec compliance: PASS. T010 implements TDR-007 package primitive and leaves install/unpack/registry behavior out of scope.
++- Bug/code quality: PASS. Pack behavior is isolated, guard order is preserved, archive paths are normalized, generated run/dist outputs are excluded, and rereview added validation that Manifest skill names cannot escape `dist/`.
++- QA acceptance: PASS. Targeted, full, formatting, whitespace, and end-to-end pack validation passed.
++- User acceptance: PASS. User requested T010 rereview, commit, and continuation on 2026-05-12.
++
++## Residual Risks
++
++- `.skr` is a distribution archive only; it does not vendor Python dependencies or provide an OS sandbox.
++- Archive generation currently includes the standard source/config/example/Manifest set only; future adapter types may need broader Manifest source declarations.
++- T011 still needs release-level A001-A013 traceability and final business example validation.
+diff --git a/.ai-platform/evidence/T010/test-results.md b/.ai-platform/evidence/T010/test-results.md
+new file mode 100644
+index 0000000..b355949
+--- /dev/null
++++ b/.ai-platform/evidence/T010/test-results.md
+@@ -0,0 +1,81 @@
++# T010 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++- `cargo test --test pack`
++  - Result: failed as expected before implementation.
++  - Signal: 2 failed, 1 passed. Valid pack cases failed with `command not implemented yet: pack`; stale Manifest guard already failed closed before fallback.
++
++## GREEN
++
++- `cargo test --test pack`
++  - Result: passed.
++  - Evidence: 3 passed, 0 failed before rereview hardening; 4 passed, 0 failed after adding invalid Manifest package-name coverage.
++
++- `cargo test --test consumer_guards`
++  - Result: passed.
++  - Evidence: 4 passed, 0 failed.
++
++## REFACTOR / FULL VALIDATION
++
++- `cargo fmt -- --check`
++  - Result: passed.
++
++- `git diff --check`
++  - Result: passed.
++
++- `cargo test`
++  - Result: passed.
++  - Evidence: 42 integration tests passed before rereview hardening.
++
++- `cargo run -- init refund --python --output tmp/e2e-init`
++  - Result: passed.
++  - Evidence: created `tmp/e2e-init/refund`.
++
++- `cargo run -- manifest --cwd tmp/e2e-init/refund`
++  - Result: passed.
++  - Evidence: generated `tmp/e2e-init/refund/.skillrun/manifest.generated.yaml`.
++
++- `cargo run -- pack --cwd tmp/e2e-init/refund`
++  - Result: passed.
++  - Evidence: generated `tmp/e2e-init/refund/dist/refund-0.1.0.skr` and printed that `.skr` does not vendor dependencies.
++
++## Governance Validation
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T010`
++  - Result: passed.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++  - Result: passed.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
++
++## Rereview Validation
++
++- `cargo test --test pack`
++  - Result: passed during T010 rereview.
++  - Evidence: 4 passed, 0 failed, including invalid Manifest package-name rejection.
++
++- `cargo test --test consumer_guards`
++  - Result: passed during T010 rereview.
++  - Evidence: 4 passed, 0 failed.
++
++- `cargo fmt -- --check`
++  - Result: passed during T010 rereview.
++
++- `git diff --check`
++  - Result: passed during T010 rereview.
++
++- `cargo test`
++  - Result: passed during T010 rereview.
++  - Evidence: 43 integration tests passed after adding invalid Manifest package-name coverage.
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T010`
++  - Result: passed during T010 rereview.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++  - Result: passed during T010 rereview.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index 142c0df..fa5e17f 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,7 +2,7 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T009 acceptance
++Scope: SkillRun MVP planning artifacts after T010 acceptance
+ Last updated: 2026-05-12
+ 
+ ## Inputs
+@@ -13,15 +13,15 @@ Last updated: 2026-05-12
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`, `.ai-platform/specs/mvp/packets/T008.yaml`, `.ai-platform/specs/mvp/packets/T009.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`, `.ai-platform/specs/mvp/packets/T008.yaml`, `.ai-platform/specs/mvp/packets/T009.yaml`, `.ai-platform/specs/mvp/packets/T010.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T009 is accepted with evidence in `.ai-platform/evidence/T009/`.
+-- Packets missing required fields: None for T009.
++- Ready tasks without packet: None. T010 is accepted with evidence in `.ai-platform/evidence/T010/`.
++- Packets missing required fields: None for T010.
+ 
+ ## Constitution Check
+ 
+@@ -38,7 +38,7 @@ Last updated: 2026-05-12
+ ## Non-Functional Requirements
+ 
+ - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
+-- Gaps: No blocking gaps for T010 packetization. Later tasks must create their own packets before becoming Ready.
++- Gaps: No blocking gaps for T011 packetization. Later tasks must create their own packets before becoming Ready.
+ 
+ ## Findings
+ 
+@@ -49,10 +49,9 @@ Last updated: 2026-05-12
+ 
+ ## Execute Gate
+ 
+-- Result: Clear to packetize and execute T010.
+-- Reason: T001 through T009 have passed review and are `Accepted`. T010 dependencies are satisfied, and no Critical or High analysis findings are open.
++- Result: Clear to packetize and execute T011.
++- Reason: T001 through T010 have passed review and are `Accepted`. T011 dependencies are satisfied, and no Critical or High analysis findings are open.
+ 
+ ## Scope Guard
+ 
+-- T010 may be packetized next.
+-- T011 remains Draft until all dependencies are accepted, a packet exists, and analysis remains clear for that task.
++- T011 may be packetized next.
+diff --git a/.ai-platform/specs/mvp/packets/T010.yaml b/.ai-platform/specs/mvp/packets/T010.yaml
+new file mode 100644
+index 0000000..a7cd037
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T010.yaml
+@@ -0,0 +1,162 @@
++schema_version: 1
++packet_id: EP-MVP-T010
++task_id: T010
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t003: Accepted after rereview on 2026-05-12
++    dependency_t008: Accepted after rereview on 2026-05-12
++    dependency_t009: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Implement .skr Package Generation
++  goal: Implement skillrun pack so a runnable capsule can be distributed as a .skr tar.gz archive.
++  epic: E004 MCP And Pack
++  story: US-005
++  requirements:
++    - FR-008
++    - NFR-004
++    - TDR-007
++  priority: P1
++  depends_on:
++    - T003
++    - T008
++  blocks:
++    - T011
++  parallel: false
++  conflicts_with:
++    - T008
++    - T009
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - .ai-platform/docs/test-strategy.md
++    - .ai-platform/docs/technology-decision-record.md
++    - src/cli.rs
++    - src/consumer.rs
++    - src/manifest.rs
++    - src/runtime.rs
++    - tests/consumer_guards.rs
++  existing_patterns:
++    - T008 centralized Consumer Mode guard in src/consumer.rs.
++    - CLI pack currently validates Consumer Mode, then returns command not implemented yet.
++    - Integration tests generate temp capsules with init + manifest and mutate source files to prove guard behavior.
++    - TDR-007 defines .skr as a tar.gz archive containing source files, examples, and .skillrun/manifest.generated.yaml, excluding .skillrun/runs/.
++  interfaces_or_contracts:
++    - pack returns a human-readable summary that includes the generated .skr path and states that dependencies are not vendored.
++    - pack writes a versioned archive such as dist/refund-0.1.0.skr under the capsule directory, using the Manifest skill name.
++    - archive paths are relative to the capsule root and use forward slashes.
++    - archive includes SKILL.md, action.py, optional skillrun.config.json, examples/**, and .skillrun/manifest.generated.yaml.
++    - archive excludes .skillrun/runs/** and does not include dist/** outputs.
++    - pack uses Consumer Mode guard before writing an archive and must fail closed when Manifest is missing or stale.
++  forbidden_changes:
++    - Do not change run/test runtime behavior.
++    - Do not bypass or weaken Consumer Mode guard.
++    - Do not implement install, unpack, registry, dependency vendoring, or runtime image behavior.
++    - Do not mark T010 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - Cargo.toml
++    - Cargo.lock
++    - src/main.rs
++    - src/cli.rs
++    - src/pack.rs
++    - src/consumer.rs
++    - tests/pack.rs
++    - tests/consumer_guards.rs
++    - tests/fixtures/pack_cases/
++  test_targets:
++    - tests/pack.rs
++  ownership_notes:
++    - Cargo dependency changes are allowed only for tar.gz creation and test inspection.
++    - src/consumer.rs may be edited only if a reusable absolute capsule path helper is needed; otherwise leave it untouched.
++    - tests/consumer_guards.rs may be updated only where T010 changes valid pack from unimplemented to implemented.
++    - Keep MCP behavior untouched except full-suite regressions.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test pack
++    expected_failure: Tests fail because pack still returns command not implemented yet and no .skr archive exists.
++  green:
++    command: cargo test --test pack
++    expected_signal: pack creates .skr, archive content matches TDR-007, runs/dist are excluded, and stale Manifest fails closed.
++  refactor:
++    command: cargo test
++    expected_signal: Full suite passes with packaging added.
++
++validation_loop:
++  commands:
++    - cargo test --test pack
++    - cargo test
++    - cargo run -- pack --cwd tmp/e2e-init/refund
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to archive content, guard order, output path, or CLI summary.
++    second_failure: Determine whether archive dependency behavior or allowed files need adjustment.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T010/summary.md
++  diff: .ai-platform/evidence/T010/diff.patch
++  test_results: .ai-platform/evidence/T010/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T010 Accepted.
++  review_focus:
++    - pack preflight uses Consumer Mode guard.
++    - archive includes required capsule sources and Manifest.
++    - archive excludes .skillrun/runs and dist output.
++    - summary states .skr does not vendor dependencies.
++    - T010 does not absorb T011 end-to-end release acceptance.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep current worktree for review
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear archive format or output naming
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index 1e44c45..075f194 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007、T008、T009 和 T010 均已通过复审并进入 `Accepted`。T011 仍为 `Draft`，需要在依赖满足后再 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -699,7 +699,7 @@ Evidence required:
+ 
+ ### T010: Implement `.skr` Package Generation
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T003, T008
+ Blocks: T011
+@@ -711,11 +711,14 @@ Goal:
+ Implement `skillrun pack` so a capsule can be distributed as a `.skr` archive.
+ 
+ Allowed files:
++- `Cargo.toml`
++- `Cargo.lock`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/pack.rs`
+ - `src/consumer.rs`
+ - `tests/pack.rs`
++- `tests/consumer_guards.rs`
+ - `tests/fixtures/pack_cases/`
+ 
+ Test targets:
+diff --git a/Cargo.lock b/Cargo.lock
+index a5fc5cc..ebc730c 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2,6 +2,12 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "adler2"
++version = "2.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
++
+ [[package]]
+ name = "android_system_properties"
+ version = "0.1.5"
+@@ -17,6 +23,12 @@ version = "1.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+ 
++[[package]]
++name = "bitflags"
++version = "2.11.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
++
+ [[package]]
+ name = "block-buffer"
+ version = "0.10.4"
+@@ -74,6 +86,15 @@ dependencies = [
+  "libc",
+ ]
+ 
++[[package]]
++name = "crc32fast"
++version = "1.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
++dependencies = [
++ "cfg-if",
++]
++
+ [[package]]
+ name = "crypto-common"
+ version = "0.1.7"
+@@ -100,12 +121,42 @@ version = "1.0.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+ 
++[[package]]
++name = "errno"
++version = "0.3.14"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
++dependencies = [
++ "libc",
++ "windows-sys",
++]
++
++[[package]]
++name = "filetime"
++version = "0.2.28"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2d5b2eef6fafbf69f877e55509ce5b11a760690ac9700a2921be067aa6afaef6"
++dependencies = [
++ "cfg-if",
++ "libc",
++]
++
+ [[package]]
+ name = "find-msvc-tools"
+ version = "0.1.9"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
+ 
++[[package]]
++name = "flate2"
++version = "1.1.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
++dependencies = [
++ "crc32fast",
++ "miniz_oxide",
++]
++
+ [[package]]
+ name = "futures-core"
+ version = "0.3.32"
+@@ -204,6 +255,12 @@ version = "0.2.186"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+ 
++[[package]]
++name = "linux-raw-sys"
++version = "0.12.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
++
+ [[package]]
+ name = "log"
+ version = "0.4.29"
+@@ -216,6 +273,16 @@ version = "2.8.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
+ 
++[[package]]
++name = "miniz_oxide"
++version = "0.8.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
++dependencies = [
++ "adler2",
++ "simd-adler32",
++]
++
+ [[package]]
+ name = "num-traits"
+ version = "0.2.19"
+@@ -255,6 +322,19 @@ dependencies = [
+  "proc-macro2",
+ ]
+ 
++[[package]]
++name = "rustix"
++version = "1.1.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
++dependencies = [
++ "bitflags",
++ "errno",
++ "libc",
++ "linux-raw-sys",
++ "windows-sys",
++]
++
+ [[package]]
+ name = "rustversion"
+ version = "1.0.22"
+@@ -340,15 +420,23 @@ version = "1.3.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+ 
++[[package]]
++name = "simd-adler32"
++version = "0.3.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
++
+ [[package]]
+ name = "skillrun"
+ version = "0.1.0"
+ dependencies = [
+  "chrono",
++ "flate2",
+  "serde",
+  "serde_json",
+  "serde_yaml",
+  "sha2",
++ "tar",
+ ]
+ 
+ [[package]]
+@@ -368,6 +456,17 @@ dependencies = [
+  "unicode-ident",
+ ]
+ 
++[[package]]
++name = "tar"
++version = "0.4.45"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "22692a6476a21fa75fdfc11d452fda482af402c008cdbaf3476414e122040973"
++dependencies = [
++ "filetime",
++ "libc",
++ "xattr",
++]
++
+ [[package]]
+ name = "typenum"
+ version = "1.20.0"
+@@ -496,6 +595,25 @@ dependencies = [
+  "windows-link",
+ ]
+ 
++[[package]]
++name = "windows-sys"
++version = "0.61.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
++dependencies = [
++ "windows-link",
++]
++
++[[package]]
++name = "xattr"
++version = "1.6.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156"
++dependencies = [
++ "libc",
++ "rustix",
++]
++
+ [[package]]
+ name = "zmij"
+ version = "1.0.21"
+diff --git a/Cargo.toml b/Cargo.toml
+index 5302bf7..672a622 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -7,10 +7,12 @@ license = "Apache-2.0"
+ 
+ [dependencies]
+ chrono = { version = "0.4", default-features = false, features = ["clock"] }
++flate2 = "1"
+ serde = { version = "1", features = ["derive"] }
+ serde_json = "1"
+ serde_yaml = "0.9"
+ sha2 = "0.10"
++tar = "0.4"
+ 
+ [[bin]]
+ name = "skillrun"
+diff --git a/src/cli.rs b/src/cli.rs
+index c69e7d0..2900769 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -6,6 +6,7 @@ use crate::init::{self, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
+ use crate::mcp;
++use crate::pack::{self, PackOptions};
+ use crate::runtime::{self, RunOptions, TestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+@@ -147,10 +148,10 @@ where
+             }
+         },
+         Some("pack") => match parse_pack(args.collect()) {
+-            Ok(options) => match consumer::validate(&options.cwd, "skillrun pack") {
+-                Ok(_) => {
+-                    eprintln!("error: command not implemented yet: pack");
+-                    ExitCode::from(2)
++            Ok(options) => match pack::create(&options) {
++                Ok(summary) => {
++                    println!("{summary}");
++                    ExitCode::SUCCESS
+                 }
+                 Err(error) => {
+                     eprintln!("error: {error}");
+@@ -176,10 +177,6 @@ struct ServeOptions {
+     dry_run: bool,
+ }
+ 
+-struct PackOptions {
+-    cwd: PathBuf,
+-}
+-
+ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
+     let mut name = None;
+     let mut python = false;
+@@ -391,7 +388,8 @@ Implemented:
+   test
+   run
+   serve --mcp --dry-run
++  pack
+ 
+-Later tasks implement long-running MCP server mode and packaging behavior."
++Later tasks implement long-running MCP server mode."
+     );
+ }
+diff --git a/src/main.rs b/src/main.rs
+index b51d999..cf74a68 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -9,6 +9,7 @@ mod init;
+ mod inspect;
+ mod manifest;
+ mod mcp;
++mod pack;
+ mod permissions;
+ mod run_record;
+ mod runtime;
+diff --git a/src/pack.rs b/src/pack.rs
+new file mode 100644
+index 0000000..f16b97a
+--- /dev/null
++++ b/src/pack.rs
+@@ -0,0 +1,251 @@
++use flate2::write::GzEncoder;
++use flate2::Compression;
++use serde_yaml::Value;
++use std::fs;
++use std::path::{Component, Path, PathBuf};
++use tar::Builder;
++
++use crate::consumer::{self, ValidManifest};
++
++#[derive(Debug)]
++pub struct PackOptions {
++    pub cwd: PathBuf,
++}
++
++pub fn create(options: &PackOptions) -> Result<String, String> {
++    let capsule_dir = absolute_path(&options.cwd)?;
++    require_dir(&capsule_dir)?;
++    let manifest = consumer::validate(&capsule_dir, "skillrun pack")?;
++    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or_else(|| {
++        capsule_dir
++            .file_name()
++            .and_then(|value| value.to_str())
++            .unwrap_or("skill")
++    });
++    let archive_stem = validate_archive_stem(skill_name)?;
++    let archive_name = format!("{archive_stem}-{}.skr", env!("CARGO_PKG_VERSION"));
++    let dist_dir = capsule_dir.join("dist");
++    fs::create_dir_all(&dist_dir).map_err(|error| {
++        format!(
++            "failed to create package directory {}: {error}",
++            dist_dir.display()
++        )
++    })?;
++
++    let archive_path = dist_dir.join(&archive_name);
++    let temp_path = dist_dir.join(format!(".{archive_name}.tmp"));
++    write_archive(&capsule_dir, &manifest, &temp_path)?;
++    if archive_path.exists() {
++        fs::remove_file(&archive_path).map_err(|error| {
++            format!(
++                "failed to replace existing package {}: {error}",
++                archive_path.display()
++            )
++        })?;
++    }
++    fs::rename(&temp_path, &archive_path).map_err(|error| {
++        format!(
++            "failed to move package {} to {}: {error}",
++            temp_path.display(),
++            archive_path.display()
++        )
++    })?;
++
++    Ok(format!(
++        "\
++created {archive}
++format: tar.gz .skr
++contents: source files, examples, and .skillrun/manifest.generated.yaml
++note: .skr does not vendor dependencies; recreate the runtime environment separately.",
++        archive = archive_path.display()
++    ))
++}
++
++fn write_archive(
++    capsule_dir: &Path,
++    manifest: &ValidManifest,
++    temp_path: &Path,
++) -> Result<(), String> {
++    let file = fs::File::create(temp_path)
++        .map_err(|error| format!("failed to create {}: {error}", temp_path.display()))?;
++    let encoder = GzEncoder::new(file, Compression::default());
++    let mut builder = Builder::new(encoder);
++
++    let skill_path =
++        string_at(&manifest.value, &["sources", "skill", "path"]).unwrap_or("SKILL.md");
++    let action_path =
++        string_at(&manifest.value, &["sources", "action", "path"]).unwrap_or("action.py");
++    append_file(&mut builder, capsule_dir, Path::new(skill_path))?;
++    append_file(&mut builder, capsule_dir, Path::new(action_path))?;
++
++    if let Some(config_path) = string_at(&manifest.value, &["sources", "config", "path"]) {
++        append_file(&mut builder, capsule_dir, Path::new(config_path))?;
++    }
++
++    append_directory_files(&mut builder, capsule_dir, Path::new("examples"))?;
++    append_file(
++        &mut builder,
++        capsule_dir,
++        Path::new(".skillrun")
++            .join("manifest.generated.yaml")
++            .as_path(),
++    )?;
++
++    builder
++        .finish()
++        .map_err(|error| format!("failed to finish package archive: {error}"))?;
++    let encoder = builder
++        .into_inner()
++        .map_err(|error| format!("failed to finish gzip stream: {error}"))?;
++    encoder
++        .finish()
++        .map_err(|error| format!("failed to write gzip stream: {error}"))?;
++
++    Ok(())
++}
++
++fn append_directory_files(
++    builder: &mut Builder<GzEncoder<fs::File>>,
++    capsule_dir: &Path,
++    relative_dir: &Path,
++) -> Result<(), String> {
++    let directory = capsule_dir.join(relative_dir);
++    if !directory.exists() {
++        return Ok(());
++    }
++    if !directory.is_dir() {
++        return Err(format!(
++            "package source is not a directory: {}",
++            directory.display()
++        ));
++    }
++
++    let mut files = Vec::new();
++    collect_files(&directory, &mut files)?;
++    files.sort();
++    for file in files {
++        let relative = file.strip_prefix(capsule_dir).map_err(|error| {
++            format!(
++                "failed to normalize package path {}: {error}",
++                file.display()
++            )
++        })?;
++        append_file(builder, capsule_dir, relative)?;
++    }
++
++    Ok(())
++}
++
++fn collect_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
++    let entries = fs::read_dir(directory)
++        .map_err(|error| format!("failed to read {}: {error}", directory.display()))?;
++    for entry in entries {
++        let entry =
++            entry.map_err(|error| format!("failed to read {}: {error}", directory.display()))?;
++        let path = entry.path();
++        let file_type = entry
++            .file_type()
++            .map_err(|error| format!("failed to inspect {}: {error}", path.display()))?;
++        if file_type.is_dir() {
++            collect_files(&path, files)?;
++        } else if file_type.is_file() {
++            files.push(path);
++        }
++    }
++    Ok(())
++}
++
++fn append_file(
++    builder: &mut Builder<GzEncoder<fs::File>>,
++    capsule_dir: &Path,
++    relative_path: &Path,
++) -> Result<(), String> {
++    let source = capsule_dir.join(relative_path);
++    if !source.is_file() {
++        return Err(format!(
++            "package source file is missing: {}",
++            source.display()
++        ));
++    }
++    let archive_path = normalize_archive_path(relative_path)?;
++    builder
++        .append_path_with_name(&source, archive_path)
++        .map_err(|error| format!("failed to add {} to package: {error}", source.display()))
++}
++
++fn normalize_archive_path(relative_path: &Path) -> Result<String, String> {
++    if relative_path.is_absolute() {
++        return Err(format!(
++            "package path must be relative: {}",
++            relative_path.display()
++        ));
++    }
++    let mut components = Vec::new();
++    for component in relative_path.components() {
++        match component {
++            Component::Normal(value) => components.push(value.to_string_lossy().into_owned()),
++            Component::CurDir => {}
++            _ => {
++                return Err(format!(
++                    "package path escapes capsule: {}",
++                    relative_path.display()
++                ));
++            }
++        }
++    }
++    let normalized = components.join("/");
++    if normalized.is_empty() || normalized.starts_with("../") || normalized.contains("/../") {
++        return Err(format!(
++            "package path escapes capsule: {}",
++            relative_path.display()
++        ));
++    }
++    Ok(normalized)
++}
++
++fn require_dir(path: &Path) -> Result<(), String> {
++    if !path.exists() {
++        return Err(format!("cwd does not exist: {}", path.display()));
++    }
++    if !path.is_dir() {
++        return Err(format!("cwd is not a directory: {}", path.display()));
++    }
++    Ok(())
++}
++
++fn validate_archive_stem(name: &str) -> Result<&str, String> {
++    let is_valid = !name.is_empty()
++        && name
++            .chars()
++            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_');
++    if is_valid {
++        Ok(name)
++    } else {
++        Err(format!(
++            "invalid package name from Manifest: {name}. Use only ASCII letters, numbers, '-' or '_'"
++        ))
++    }
++}
++
++fn absolute_path(path: &Path) -> Result<PathBuf, String> {
++    if path.is_absolute() {
++        Ok(path.to_path_buf())
++    } else {
++        std::env::current_dir()
++            .map(|cwd| cwd.join(path))
++            .map_err(|error| format!("failed to resolve current directory: {error}"))
++    }
++}
++
++fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
++    let mut current = value;
++    for segment in path {
++        let key = Value::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index 1b8a661..3dd73f0 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -121,7 +121,7 @@ fn serve_refuses_stale_action_before_unimplemented_fallback() {
+ }
+ 
+ #[test]
+-fn pack_refuses_stale_config_before_unimplemented_fallback() {
++fn pack_refuses_stale_config_before_archive_creation() {
+     let (output_root, capsule) = generated_capsule("guard-stale-config");
+     append_to(&capsule.join("skillrun.config.json"), "\n");
+ 
+@@ -133,7 +133,7 @@ fn pack_refuses_stale_config_before_unimplemented_fallback() {
+ }
+ 
+ #[test]
+-fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
++fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
+     let (output_root, capsule) = generated_capsule("guard-valid-unimplemented");
+     let cwd_arg = capsule.to_string_lossy().to_string();
+ 
+@@ -143,9 +143,10 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
+     assert_eq!(contract["tools"][0]["name"], "refund");
+ 
+     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+-    assert!(!pack.status.success());
+-    let pack_stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+-    assert!(pack_stderr.contains("command not implemented yet: pack"));
++    assert!(pack.status.success());
++    let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
++    assert!(pack_stdout.contains("refund-0.1.0.skr"));
++    assert!(pack_stdout.contains("does not vendor dependencies"));
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
+diff --git a/tests/pack.rs b/tests/pack.rs
+new file mode 100644
+index 0000000..0c9dc1c
+--- /dev/null
++++ b/tests/pack.rs
+@@ -0,0 +1,216 @@
++use flate2::read::GzDecoder;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++use tar::Archive;
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", name, "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join(name);
++    (output_root, capsule)
++}
++
++fn write_manifest(capsule: &Path) {
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++}
++
++fn generated_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
++    let (output_root, capsule) = init_capsule(label, name);
++    write_manifest(&capsule);
++    (output_root, capsule)
++}
++
++fn archive_entries(path: &Path) -> Vec<String> {
++    let file = fs::File::open(path).expect("archive should be readable");
++    let decoder = GzDecoder::new(file);
++    let mut archive = Archive::new(decoder);
++    let mut entries = archive
++        .entries()
++        .expect("archive entries should be readable")
++        .map(|entry| {
++            let entry = entry.expect("archive entry should be readable");
++            entry
++                .path()
++                .expect("archive path should be readable")
++                .to_string_lossy()
++                .replace('\\', "/")
++        })
++        .collect::<Vec<_>>();
++    entries.sort();
++    entries
++}
++
++fn unpack_archive(path: &Path, target: &Path) {
++    let file = fs::File::open(path).expect("archive should be readable");
++    let decoder = GzDecoder::new(file);
++    let mut archive = Archive::new(decoder);
++    archive.unpack(target).expect("archive should unpack");
++}
++
++#[test]
++fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
++    let (output_root, capsule) = generated_capsule("pack-content", "refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    assert!(
++        run.status.success(),
++        "test should create run history\nstderr: {}",
++        String::from_utf8_lossy(&run.stderr)
++    );
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(
++        pack.status.success(),
++        "pack should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&pack.stdout),
++        String::from_utf8_lossy(&pack.stderr)
++    );
++    let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
++    assert!(stdout.contains("created"));
++    assert!(stdout.contains("refund-0.1.0.skr"));
++    assert!(stdout.contains("does not vendor dependencies"));
++
++    let archive_path = capsule.join("dist").join("refund-0.1.0.skr");
++    assert!(archive_path.is_file(), "archive should exist");
++
++    let entries = archive_entries(&archive_path);
++    for required in [
++        ".skillrun/manifest.generated.yaml",
++        "SKILL.md",
++        "action.py",
++        "examples/default.input.json",
++        "skillrun.config.json",
++    ] {
++        assert!(
++            entries.iter().any(|entry| entry == required),
++            "archive should include {required:?}; got {entries:?}"
++        );
++    }
++    assert!(
++        entries
++            .iter()
++            .all(|entry| !entry.starts_with(".skillrun/runs/")),
++        "archive must exclude run history: {entries:?}"
++    );
++    assert!(
++        entries.iter().all(|entry| !entry.starts_with("dist/")),
++        "archive must exclude generated dist output: {entries:?}"
++    );
++
++    let unpacked_capsule = output_root.join("unpacked-refund");
++    fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
++    unpack_archive(&archive_path, &unpacked_capsule);
++    let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
++    let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
++    assert!(
++        inspect.status.success(),
++        "unpacked capsule should inspect\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stdout),
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn pack_uses_capsule_name_for_archive_filename() {
++    let (output_root, capsule) = generated_capsule("pack-name", "triage");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(
++        pack.status.success(),
++        "pack should succeed\nstderr: {}",
++        String::from_utf8_lossy(&pack.stderr)
++    );
++
++    assert!(capsule.join("dist").join("triage-0.1.0.skr").is_file());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn pack_refuses_stale_manifest_before_archive_creation() {
++    let (output_root, capsule) = generated_capsule("pack-stale", "refund");
++    let action_path = capsule.join("action.py");
++    let mut action = fs::read_to_string(&action_path).expect("action should be readable");
++    action.push_str("\n# stale before pack\n");
++    fs::write(&action_path, action).expect("action should be writable");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(
++        !pack.status.success(),
++        "pack should fail when Manifest is stale"
++    );
++    let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("stale Manifest"));
++    assert!(stderr.contains("action.py"));
++    assert!(!stderr.contains("command not implemented yet"));
++    assert!(
++        !capsule.join("dist").join("refund-0.1.0.skr").exists(),
++        "stale pack must not create an archive"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn pack_rejects_manifest_name_that_would_escape_dist() {
++    let (output_root, capsule) = generated_capsule("pack-bad-name", "refund");
++    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
++    let manifest = fs::read_to_string(&manifest_path).expect("manifest should be readable");
++    let manifest = manifest.replace("name: refund", "name: ../escape");
++    fs::write(&manifest_path, manifest).expect("manifest should be writable");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(
++        !pack.status.success(),
++        "pack should fail on invalid archive name"
++    );
++    let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("invalid package name from Manifest"));
++    assert!(
++        !capsule.join("escape-0.1.0.skr").exists(),
++        "invalid Manifest name must not escape dist"
++    );
++    assert!(
++        !capsule.join("dist").join("escape-0.1.0.skr").exists(),
++        "invalid Manifest name must not create a package"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}

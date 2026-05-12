@@ -1,0 +1,162 @@
+schema_version: 1
+packet_id: EP-MVP-T010
+task_id: T010
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t003: Accepted after rereview on 2026-05-12
+    dependency_t008: Accepted after rereview on 2026-05-12
+    dependency_t009: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Implement .skr Package Generation
+  goal: Implement skillrun pack so a runnable capsule can be distributed as a .skr tar.gz archive.
+  epic: E004 MCP And Pack
+  story: US-005
+  requirements:
+    - FR-008
+    - NFR-004
+    - TDR-007
+  priority: P1
+  depends_on:
+    - T003
+    - T008
+  blocks:
+    - T011
+  parallel: false
+  conflicts_with:
+    - T008
+    - T009
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - .ai-platform/docs/test-strategy.md
+    - .ai-platform/docs/technology-decision-record.md
+    - src/cli.rs
+    - src/consumer.rs
+    - src/manifest.rs
+    - src/runtime.rs
+    - tests/consumer_guards.rs
+  existing_patterns:
+    - T008 centralized Consumer Mode guard in src/consumer.rs.
+    - CLI pack currently validates Consumer Mode, then returns command not implemented yet.
+    - Integration tests generate temp capsules with init + manifest and mutate source files to prove guard behavior.
+    - TDR-007 defines .skr as a tar.gz archive containing source files, examples, and .skillrun/manifest.generated.yaml, excluding .skillrun/runs/.
+  interfaces_or_contracts:
+    - pack returns a human-readable summary that includes the generated .skr path and states that dependencies are not vendored.
+    - pack writes a versioned archive such as dist/refund-0.1.0.skr under the capsule directory, using the Manifest skill name.
+    - archive paths are relative to the capsule root and use forward slashes.
+    - archive includes SKILL.md, action.py, optional skillrun.config.json, examples/**, and .skillrun/manifest.generated.yaml.
+    - archive excludes .skillrun/runs/** and does not include dist/** outputs.
+    - pack uses Consumer Mode guard before writing an archive and must fail closed when Manifest is missing or stale.
+  forbidden_changes:
+    - Do not change run/test runtime behavior.
+    - Do not bypass or weaken Consumer Mode guard.
+    - Do not implement install, unpack, registry, dependency vendoring, or runtime image behavior.
+    - Do not mark T010 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - Cargo.toml
+    - Cargo.lock
+    - src/main.rs
+    - src/cli.rs
+    - src/pack.rs
+    - src/consumer.rs
+    - tests/pack.rs
+    - tests/consumer_guards.rs
+    - tests/fixtures/pack_cases/
+  test_targets:
+    - tests/pack.rs
+  ownership_notes:
+    - Cargo dependency changes are allowed only for tar.gz creation and test inspection.
+    - src/consumer.rs may be edited only if a reusable absolute capsule path helper is needed; otherwise leave it untouched.
+    - tests/consumer_guards.rs may be updated only where T010 changes valid pack from unimplemented to implemented.
+    - Keep MCP behavior untouched except full-suite regressions.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test pack
+    expected_failure: Tests fail because pack still returns command not implemented yet and no .skr archive exists.
+  green:
+    command: cargo test --test pack
+    expected_signal: pack creates .skr, archive content matches TDR-007, runs/dist are excluded, and stale Manifest fails closed.
+  refactor:
+    command: cargo test
+    expected_signal: Full suite passes with packaging added.
+
+validation_loop:
+  commands:
+    - cargo test --test pack
+    - cargo test
+    - cargo run -- pack --cwd tmp/e2e-init/refund
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to archive content, guard order, output path, or CLI summary.
+    second_failure: Determine whether archive dependency behavior or allowed files need adjustment.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T010/summary.md
+  diff: .ai-platform/evidence/T010/diff.patch
+  test_results: .ai-platform/evidence/T010/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T010 Accepted.
+  review_focus:
+    - pack preflight uses Consumer Mode guard.
+    - archive includes required capsule sources and Manifest.
+    - archive excludes .skillrun/runs and dist output.
+    - summary states .skr does not vendor dependencies.
+    - T010 does not absorb T011 end-to-end release acceptance.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear archive format or output naming
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

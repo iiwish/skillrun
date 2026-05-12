@@ -9,6 +9,7 @@ mod init;
 mod inspect;
 mod manifest;
 mod mcp;
+mod pack;
 mod permissions;
 mod run_record;
 mod runtime;

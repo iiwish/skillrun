@@ -121,7 +121,7 @@ fn serve_refuses_stale_action_before_unimplemented_fallback() {
 }
 
 #[test]
-fn pack_refuses_stale_config_before_unimplemented_fallback() {
+fn pack_refuses_stale_config_before_archive_creation() {
     let (output_root, capsule) = generated_capsule("guard-stale-config");
     append_to(&capsule.join("skillrun.config.json"), "\n");
 
@@ -133,7 +133,7 @@ fn pack_refuses_stale_config_before_unimplemented_fallback() {
 }
 
 #[test]
-fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
+fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
     let (output_root, capsule) = generated_capsule("guard-valid-unimplemented");
     let cwd_arg = capsule.to_string_lossy().to_string();
 
@@ -143,9 +143,10 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
     assert_eq!(contract["tools"][0]["name"], "refund");
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
-    assert!(!pack.status.success());
-    let pack_stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
-    assert!(pack_stderr.contains("command not implemented yet: pack"));
+    assert!(pack.status.success());
+    let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+    assert!(pack_stdout.contains("refund-0.1.0.skr"));
+    assert!(pack_stdout.contains("does not vendor dependencies"));
 
     fs::remove_dir_all(output_root).ok();
 }

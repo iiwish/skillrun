@@ -6,6 +6,7 @@ use crate::init::{self, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
+use crate::pack::{self, PackOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -147,10 +148,10 @@ where
             }
         },
         Some("pack") => match parse_pack(args.collect()) {
-            Ok(options) => match consumer::validate(&options.cwd, "skillrun pack") {
-                Ok(_) => {
-                    eprintln!("error: command not implemented yet: pack");
-                    ExitCode::from(2)
+            Ok(options) => match pack::create(&options) {
+                Ok(summary) => {
+                    println!("{summary}");
+                    ExitCode::SUCCESS
                 }
                 Err(error) => {
                     eprintln!("error: {error}");
@@ -174,10 +175,6 @@ where
 struct ServeOptions {
     cwd: PathBuf,
     dry_run: bool,
-}
-
-struct PackOptions {
-    cwd: PathBuf,
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -391,7 +388,8 @@ Implemented:
   test
   run
   serve --mcp --dry-run
+  pack
 
-Later tasks implement long-running MCP server mode and packaging behavior."
+Later tasks implement long-running MCP server mode."
     );
 }
