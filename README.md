@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that 
 
 SkillRun is in the v0.1.0 MVP buildout.
 
-- Current implementation: through `T008` Consumer Mode stale Manifest and instruction-only guards.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard paths.
-- Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
+- Current implementation: through `T009` Manifest-driven MCP dry-run exposure.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP paths.
+- Planned MVP commands are listed by the CLI, but long-running `serve --mcp` server mode and `pack` are not implemented yet.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
 
@@ -69,7 +69,7 @@ Manifest-driven contract
         +-- skillrun inspect
         +-- skillrun test
         +-- skillrun run --input examples/default.input.json
-        +-- skillrun serve --mcp
+        +-- skillrun serve --mcp --dry-run
         +-- skillrun pack
 ```
 
@@ -86,7 +86,7 @@ skillrun manifest
 skillrun inspect
 skillrun test
 skillrun run --input examples/default.input.json
-skillrun serve --mcp
+skillrun serve --mcp --dry-run
 skillrun pack
 ```
 
@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
 
 ## What Works Today
 
-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, and test/run success path:
+The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, and MCP dry-run contract renderer:
 
 ```bash
 cargo test
@@ -105,6 +105,7 @@ cargo run -- manifest --cwd tmp/e2e-init/refund
 cargo run -- inspect --cwd tmp/e2e-init/refund
 cargo run -- test --cwd tmp/e2e-init/refund
 cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
 ```
 
 Example output:
@@ -113,7 +114,7 @@ Example output:
 skillrun 0.1.0
 ```
 
-Downstream MCP and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+Long-running MCP server mode and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
 
 ## Security Model
 

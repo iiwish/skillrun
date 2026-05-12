@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -74,6 +75,17 @@ fn assert_guard_failure(output: &std::process::Output, expected_path: &str) -> S
     stderr
 }
 
+fn assert_success_json(output: &std::process::Output) -> Value {
+    assert!(
+        output.status.success(),
+        "command should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
+    serde_json::from_str(&stdout).expect("stdout should be JSON")
+}
+
 #[test]
 fn run_refuses_stale_skill_hash_before_creating_run() {
     let (output_root, capsule) = generated_capsule("guard-stale-skill");
@@ -121,14 +133,14 @@ fn pack_refuses_stale_config_before_unimplemented_fallback() {
 }
 
 #[test]
-fn valid_capsule_reaches_serve_and_pack_unimplemented_fallbacks() {
+fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
     let (output_root, capsule) = generated_capsule("guard-valid-unimplemented");
     let cwd_arg = capsule.to_string_lossy().to_string();
 
     let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
-    assert!(!serve.status.success());
-    let serve_stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
-    assert!(serve_stderr.contains("command not implemented yet: serve --mcp"));
+    let contract = assert_success_json(&serve);
+    assert_eq!(contract["mcp"]["dry_run"], true);
+    assert_eq!(contract["tools"][0]["name"], "refund");
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
     assert!(!pack.status.success());

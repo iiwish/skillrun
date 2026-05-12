@@ -5,6 +5,7 @@ use crate::consumer;
 use crate::init::{self, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
+use crate::mcp;
 use crate::runtime::{self, RunOptions, TestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -118,8 +119,20 @@ where
         },
         Some("serve") => match parse_serve(args.collect()) {
             Ok(options) => match consumer::validate(&options.cwd, "skillrun serve --mcp") {
+                Ok(manifest) if options.dry_run => {
+                    match mcp::dry_run_contract(&options.cwd, &manifest) {
+                        Ok(contract) => {
+                            println!("{contract}");
+                            ExitCode::SUCCESS
+                        }
+                        Err(error) => {
+                            eprintln!("error: {error}");
+                            ExitCode::from(2)
+                        }
+                    }
+                }
                 Ok(_) => {
-                    eprintln!("error: command not implemented yet: serve --mcp");
+                    eprintln!("error: command not implemented yet: serve --mcp server mode; use --dry-run to verify the Manifest-derived MCP contract");
                     ExitCode::from(2)
                 }
                 Err(error) => {
@@ -160,6 +173,7 @@ where
 
 struct ServeOptions {
     cwd: PathBuf,
+    dry_run: bool,
 }
 
 struct PackOptions {
@@ -298,6 +312,7 @@ fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
 fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
     let mut cwd = PathBuf::from(".");
     let mut mcp = false;
+    let mut dry_run = false;
     let mut index = 0;
 
     while index < args.len() {
@@ -314,6 +329,7 @@ fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
                 index += 2;
             }
             "--dry-run" => {
+                dry_run = true;
                 index += 1;
             }
             value => return Err(format!("unexpected serve argument: {value}")),
@@ -324,7 +340,7 @@ fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
         return Err("serve currently requires --mcp".to_string());
     }
 
-    Ok(ServeOptions { cwd })
+    Ok(ServeOptions { cwd, dry_run })
 }
 
 fn parse_pack(args: Vec<String>) -> Result<PackOptions, String> {
@@ -374,7 +390,8 @@ Implemented:
   inspect
   test
   run
+  serve --mcp --dry-run
 
-Later tasks implement MCP and packaging behavior."
+Later tasks implement long-running MCP server mode and packaging behavior."
     );
 }

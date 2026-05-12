@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
 - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
 - Business examples: `docs/business-examples.md` status Confirmed
-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T008 acceptance and ready for T009 packetization
+- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T009 acceptance and ready for T010 packetization
 
 ## Accepted Tasks
 
@@ -29,6 +29,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
 - T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
 - T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
+- T009: Implement Manifest-driven MCP Tool Exposure. Accepted on 2026-05-12 after rereview passed.
 
 ## Validation Summary
 
@@ -43,20 +44,22 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T006 validation recorded in `.ai-platform/evidence/T006/`.
 - T007 validation recorded in `.ai-platform/evidence/T007/`.
 - T008 validation recorded in `.ai-platform/evidence/T008/`.
+- T009 validation recorded in `.ai-platform/evidence/T009/`.
 
 ## Known Limitations
 
-- T001-T008 have been accepted.
+- T001-T009 have been accepted.
 - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
-- MCP exposure and `.skr` packaging are not implemented yet.
+- `serve --mcp --dry-run` is implemented for Manifest-derived contract inspection.
+- Long-running MCP server mode and `.skr` packaging are not implemented yet.
 
 ## Unfinished Tasks
 
-- Keep T009-T011 Draft until their packets are generated and dependencies are satisfied.
+- Keep T010-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- Packetize and execute T009.
+- Packetize and execute T010.
 
 ## User Review Gate
 

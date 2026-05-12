@@ -8,6 +8,7 @@ mod hashing;
 mod init;
 mod inspect;
 mod manifest;
+mod mcp;
 mod permissions;
 mod run_record;
 mod runtime;

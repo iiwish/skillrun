@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -640,7 +640,7 @@ Evidence required:
 
 ### T009: Implement Manifest-driven MCP Tool Exposure
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T003, T008
 Blocks: T011
@@ -653,11 +653,14 @@ Implement `skillrun serve --mcp` as a thin Manifest-driven MCP exposure path.
 
 Allowed files:
 - `Cargo.toml`
+- `README.md`
+- `README.zh-CN.md`
 - `src/main.rs`
 - `src/cli.rs`
 - `src/mcp.rs`
 - `src/manifest.rs`
 - `tests/mcp_server.rs`
+- `tests/consumer_guards.rs`
 
 Test targets:
 - `tests/mcp_server.rs`

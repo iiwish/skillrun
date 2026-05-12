@@ -1,0 +1,978 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index e70869e..93ef93b 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T008 acceptance and ready for T009 packetization
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T009 acceptance and ready for T010 packetization
+ 
+ ## Accepted Tasks
+ 
+@@ -29,6 +29,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
+ - T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
+ - T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
++- T009: Implement Manifest-driven MCP Tool Exposure. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -43,20 +44,22 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T006 validation recorded in `.ai-platform/evidence/T006/`.
+ - T007 validation recorded in `.ai-platform/evidence/T007/`.
+ - T008 validation recorded in `.ai-platform/evidence/T008/`.
++- T009 validation recorded in `.ai-platform/evidence/T009/`.
+ 
+ ## Known Limitations
+ 
+-- T001-T008 have been accepted.
++- T001-T009 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- MCP exposure and `.skr` packaging are not implemented yet.
++- `serve --mcp --dry-run` is implemented for Manifest-derived contract inspection.
++- Long-running MCP server mode and `.skr` packaging are not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- Keep T009-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T010-T011 Draft until their packets are generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T009.
++- Packetize and execute T010.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index c3297d3..1e44c45 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -640,7 +640,7 @@ Evidence required:
+ 
+ ### T009: Implement Manifest-driven MCP Tool Exposure
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T003, T008
+ Blocks: T011
+@@ -653,11 +653,14 @@ Implement `skillrun serve --mcp` as a thin Manifest-driven MCP exposure path.
+ 
+ Allowed files:
+ - `Cargo.toml`
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/mcp.rs`
+ - `src/manifest.rs`
+ - `tests/mcp_server.rs`
++- `tests/consumer_guards.rs`
+ 
+ Test targets:
+ - `tests/mcp_server.rs`
+diff --git a/.ai-platform/evidence/T009/summary.md b/.ai-platform/evidence/T009/summary.md
+new file mode 100644
+index 0000000..788209f
+--- /dev/null
++++ b/.ai-platform/evidence/T009/summary.md
+@@ -0,0 +1,55 @@
++# T009 Evidence Summary
++
++Task: T009 - Implement Manifest-driven MCP Tool Exposure
++Status: Accepted
++Date: 2026-05-12
++Execution mode: Direct Execute fallback
++
++## Direct Execute Reason
++
++本轮用户要求继续推进当前 governed task，但没有显式要求使用 sub-agent；当前环境规则也要求只有用户明确请求 sub-agents 时才可以派生 agent。因此 T009 采用 direct execute fallback，并按 packet 记录真实命令、diff 和复审证据。
++
++## Changed Files
++
++- `.ai-platform/docs/release-report.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T009.yaml`
++- `README.md`
++- `README.zh-CN.md`
++- `src/cli.rs`
++- `src/main.rs`
++- `src/mcp.rs`
++- `tests/consumer_guards.rs`
++- `tests/mcp_server.rs`
++
++## Implementation Summary
++
++- Added `src/mcp.rs` as an isolated Manifest-to-MCP dry-run contract builder.
++- Wired `skillrun serve --mcp --dry-run` through the existing Consumer Mode guard before building any contract.
++- Dry-run JSON now exposes Manifest-derived tool name, description, input schema, output schema, result envelope contract, Manifest hash, and `SKILL.md` resource content.
++- Preserved fail-closed stale Manifest behavior for `serve --mcp --dry-run`.
++- Kept long-running MCP server mode explicitly unimplemented with a clear message.
++- Updated Consumer guard tests so valid dry-run succeeds while `pack` remains unimplemented.
++- Updated README files to distinguish implemented MCP dry-run exposure from planned long-running MCP server and `.skr` packaging.
++
++## Diff Summary
++
++- CLI: parse and honor `--dry-run`; route valid dry-run requests to the MCP contract builder.
++- MCP: derive all public MCP contract fields from Manifest and `SKILL.md`; no Consumer Mode metadata import from `action.py`.
++- Tests: added MCP dry-run schema/resource, no-import, and stale Manifest cases.
++- Governance: created T009 packet, moved T009 to `Needs_Review`, updated analysis and release ledger.
++
++## Review Notes
++
++- Spec compliance: PASS. T009 implements Manifest-driven MCP dry-run exposure and leaves T010 packaging untouched.
++- Bug/code quality: PASS. MCP code is isolated, Consumer Mode guard order is preserved, and stale Manifest errors remain command-specific.
++- QA acceptance: PASS. Targeted, full, formatting, whitespace, and end-to-end dry-run validation passed.
++- User acceptance: PASS. User requested T009 rereview, commit, and continuation to T010 on 2026-05-12.
++
++## Residual Risks
++
++- T009 intentionally implements dry-run contract verification only; the long-running stdio MCP server loop remains future work.
++- MCP resource URI uses the Manifest skill name directly; future packaging/install work may need URI escaping if broader name characters are allowed.
++- `.skr` packaging is still unimplemented and remains T010 scope.
+diff --git a/.ai-platform/evidence/T009/test-results.md b/.ai-platform/evidence/T009/test-results.md
+new file mode 100644
+index 0000000..16baab2
+--- /dev/null
++++ b/.ai-platform/evidence/T009/test-results.md
+@@ -0,0 +1,76 @@
++# T009 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++- `cargo test --test mcp_server`
++  - Result: failed as expected before implementation.
++  - Signal: `serve --mcp --dry-run` returned `command not implemented yet: serve --mcp`; stale Manifest guard already failed closed before fallback.
++
++## Implementation Adjustment
++
++- `cargo test --test mcp_server`
++  - Result: failed once after first implementation pass.
++  - Signal: 2 passed, 1 failed because the test asserted uppercase `Refund` in `SKILL.md` content while the generated template uses lowercase `refund`.
++  - Action: narrowed the assertion to business content presence without depending on template capitalization.
++
++## GREEN
++
++- `cargo test --test mcp_server`
++  - Result: passed.
++  - Evidence: 3 passed, 0 failed.
++
++- `cargo test --test consumer_guards`
++  - Result: passed.
++  - Evidence: 4 passed, 0 failed.
++
++## REFACTOR / FULL VALIDATION
++
++- `cargo fmt -- --check`
++  - Result: passed.
++
++- `git diff --check`
++  - Result: passed.
++
++- `cargo test`
++  - Result: passed.
++  - Evidence: 39 integration tests passed across CLI, init, manifest, inspect, runtime, errors, artifacts, permissions, consumer guards, instruction-only, and MCP tests.
++
++- `cargo run -- init refund --python --output tmp/e2e-init`
++  - Result: passed.
++  - Evidence: created `tmp/e2e-init/refund`.
++
++- `cargo run -- manifest --cwd tmp/e2e-init/refund`
++  - Result: passed.
++  - Evidence: generated `tmp/e2e-init/refund/.skillrun/manifest.generated.yaml`.
++
++- `cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run`
++  - Result: passed.
++  - Evidence: printed JSON containing `mcp.dry_run=true`, `protocol=model-context-protocol`, `tools[0].name=refund`, Manifest-derived schemas, and `SKILL.md` resource content.
++
++## Governance Validation
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T009`
++  - Result: passed.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++  - Result: passed.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
++
++## Rereview Validation
++
++- `cargo fmt -- --check`
++  - Result: passed during T009 rereview.
++
++- `git diff --check`
++  - Result: passed during T009 rereview.
++
++- `cargo test --test mcp_server --test consumer_guards`
++  - Result: passed during T009 rereview.
++  - Evidence: 7 passed, 0 failed.
++
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T009`
++  - Result: passed during T009 rereview.
++  - Evidence: `ok: delivery artifacts passed lightweight validation`.
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index 7fefb52..142c0df 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,7 +2,7 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T008 acceptance
++Scope: SkillRun MVP planning artifacts after T009 acceptance
+ Last updated: 2026-05-12
+ 
+ ## Inputs
+@@ -13,15 +13,15 @@ Last updated: 2026-05-12
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`, `.ai-platform/specs/mvp/packets/T008.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`, `.ai-platform/specs/mvp/packets/T008.yaml`, `.ai-platform/specs/mvp/packets/T009.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T008 is accepted with evidence in `.ai-platform/evidence/T008/`.
+-- Packets missing required fields: None for T008.
++- Ready tasks without packet: None. T009 is accepted with evidence in `.ai-platform/evidence/T009/`.
++- Packets missing required fields: None for T009.
+ 
+ ## Constitution Check
+ 
+@@ -38,7 +38,7 @@ Last updated: 2026-05-12
+ ## Non-Functional Requirements
+ 
+ - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
+-- Gaps: No blocking gaps for T009 packetization. Later tasks must create their own packets before becoming Ready.
++- Gaps: No blocking gaps for T010 packetization. Later tasks must create their own packets before becoming Ready.
+ 
+ ## Findings
+ 
+@@ -49,10 +49,10 @@ Last updated: 2026-05-12
+ 
+ ## Execute Gate
+ 
+-- Result: Clear to packetize T009.
+-- Reason: T001 through T008 have passed review and are `Accepted`. T009 dependencies are satisfied, but T009 still needs a self-contained packet and analysis update before execution.
++- Result: Clear to packetize and execute T010.
++- Reason: T001 through T009 have passed review and are `Accepted`. T010 dependencies are satisfied, and no Critical or High analysis findings are open.
+ 
+ ## Scope Guard
+ 
+-- T009 may be packetized next.
+-- T010-T011 remain Draft until each task has a packet, dependencies are satisfied, current review gate is cleared, and analysis remains clear for that task.
++- T010 may be packetized next.
++- T011 remains Draft until all dependencies are accepted, a packet exists, and analysis remains clear for that task.
+diff --git a/.ai-platform/specs/mvp/packets/T009.yaml b/.ai-platform/specs/mvp/packets/T009.yaml
+new file mode 100644
+index 0000000..1180c68
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T009.yaml
+@@ -0,0 +1,158 @@
++schema_version: 1
++packet_id: EP-MVP-T009
++task_id: T009
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t003: Accepted after rereview on 2026-05-12
++    dependency_t008: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Implement Manifest-driven MCP Tool Exposure
++  goal: Implement skillrun serve --mcp as a thin Manifest-driven MCP exposure path with dry-run contract verification.
++  epic: E004 MCP And Pack
++  story: US-004
++  requirements:
++    - FR-007
++    - NFR-001
++    - TDR-006
++  priority: P1
++  depends_on:
++    - T003
++    - T008
++  blocks:
++    - T011
++  parallel: false
++  conflicts_with:
++    - T008
++    - T010
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - .ai-platform/docs/test-strategy.md
++    - .ai-platform/docs/technology-decision-record.md
++    - src/cli.rs
++    - src/consumer.rs
++    - src/manifest.rs
++    - src/inspect.rs
++    - tests/consumer_guards.rs
++  existing_patterns:
++    - T008 centralized Consumer Mode guard in src/consumer.rs.
++    - CLI parse_serve already recognizes --mcp, --cwd, and --dry-run.
++    - inspect renders MCP tool name and description from Manifest.
++    - Integration tests generate temp capsules and mutate action.py to prove Consumer Mode boundaries.
++  interfaces_or_contracts:
++    - serve --mcp --dry-run returns a machine-readable JSON contract derived from Manifest and SKILL.md.
++    - The contract contains a tool name, tool description, input schema, output schema, output/error envelope result contract, and SKILL.md resource metadata/content.
++    - serve --mcp uses Consumer Mode guard before building the contract and must not import action.py for metadata.
++    - Non-dry-run MCP server mode may remain unimplemented in T009 if the dry-run contract is complete; the long-running server can be introduced later without changing Manifest mapping.
++  forbidden_changes:
++    - Do not implement .skr archive generation; T010 owns packaging.
++    - Do not bypass or weaken Consumer Mode guard.
++    - Do not re-import action.py in Consumer Mode for metadata.
++    - Do not mark T009 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - Cargo.toml
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/mcp.rs
++    - src/manifest.rs
++    - tests/mcp_server.rs
++    - tests/consumer_guards.rs
++  test_targets:
++    - tests/mcp_server.rs
++  ownership_notes:
++    - tests/consumer_guards.rs may be updated only where T009 changes valid serve --mcp --dry-run from unimplemented to implemented.
++    - README updates are allowed only to reflect T009 MCP dry-run status accurately.
++    - Keep pack behavior untouched except existing guard fallback.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test mcp_server
++    expected_failure: Tests fail because serve --mcp --dry-run still returns unimplemented and no MCP contract builder exists.
++  green:
++    command: cargo test --test mcp_server
++    expected_signal: dry-run JSON contract maps Manifest tool/schema/resource and stale Manifest fails closed.
++  refactor:
++    command: cargo test
++    expected_signal: Full suite passes after updating existing guard expectation for valid serve dry-run.
++
++validation_loop:
++  commands:
++    - cargo test --test mcp_server
++    - cargo test
++    - cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to Manifest-to-MCP mapping, Consumer Mode guard order, CLI parse_serve, or dry-run JSON shape.
++    second_failure: Determine whether T009 scope needs to defer non-dry-run server mode or adjust packet boundaries.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T009/summary.md
++  diff: .ai-platform/evidence/T009/diff.patch
++  test_results: .ai-platform/evidence/T009/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T009 Accepted.
++  review_focus:
++    - input schema comes from Manifest.
++    - SKILL.md is exposed as a resource.
++    - action.py is not imported for metadata.
++    - stale Manifest fails closed before contract generation.
++    - T009 does not absorb T010 pack behavior.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep current worktree for review
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear MCP dry-run contract shape
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index c3297d3..1e44c45 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007、T008 和 T009 均已通过复审并进入 `Accepted`。T010-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -640,7 +640,7 @@ Evidence required:
+ 
+ ### T009: Implement Manifest-driven MCP Tool Exposure
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T003, T008
+ Blocks: T011
+@@ -653,11 +653,14 @@ Implement `skillrun serve --mcp` as a thin Manifest-driven MCP exposure path.
+ 
+ Allowed files:
+ - `Cargo.toml`
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/mcp.rs`
+ - `src/manifest.rs`
+ - `tests/mcp_server.rs`
++- `tests/consumer_guards.rs`
+ 
+ Test targets:
+ - `tests/mcp_server.rs`
+diff --git a/README.md b/README.md
+index d8b7a2b..4f2cbbb 100644
+--- a/README.md
++++ b/README.md
+@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T008` Consumer Mode stale Manifest and instruction-only guards.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard paths.
+-- Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
++- Current implementation: through `T009` Manifest-driven MCP dry-run exposure.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP paths.
++- Planned MVP commands are listed by the CLI, but long-running `serve --mcp` server mode and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -69,7 +69,7 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp
++        +-- skillrun serve --mcp --dry-run
+         +-- skillrun pack
+ ```
+ 
+@@ -86,7 +86,7 @@ skillrun manifest
+ skillrun inspect
+ skillrun test
+ skillrun run --input examples/default.input.json
+-skillrun serve --mcp
++skillrun serve --mcp --dry-run
+ skillrun pack
+ ```
+ 
+@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, and test/run success path:
++The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, and MCP dry-run contract renderer:
+ 
+ ```bash
+ cargo test
+@@ -105,6 +105,7 @@ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
+ cargo run -- test --cwd tmp/e2e-init/refund
+ cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
++cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
+ ```
+ 
+ Example output:
+@@ -113,7 +114,7 @@ Example output:
+ skillrun 0.1.0
+ ```
+ 
+-Downstream MCP and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
++Long-running MCP server mode and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+ 
+ ## Security Model
+ 
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 600d42d..69ad430 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,9 +12,9 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T008` Consumer Mode stale Manifest 和 instruction-only guards。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard 路径的 contract tests。
+-- CLI 已列出计划中的 MVP 命令，但 `serve` 和 `pack` 尚未实现。
++- 当前实现：已推进到 `T009` Manifest-driven MCP dry-run exposure。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP contract inspection，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP 路径的 contract tests。
++- CLI 已列出计划中的 MVP 命令，但 long-running `serve --mcp` server mode 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -69,7 +69,7 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp
++        +-- skillrun serve --mcp --dry-run
+         +-- skillrun pack
+ ```
+ 
+@@ -86,7 +86,7 @@ skillrun manifest
+ skillrun inspect
+ skillrun test
+ skillrun run --input examples/default.input.json
+-skillrun serve --mcp
++skillrun serve --mcp --dry-run
+ skillrun pack
+ ```
+ 
+@@ -94,7 +94,7 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器、inspect renderer 和 test/run 成功路径：
++仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器、inspect renderer、test/run 成功路径和 MCP dry-run contract renderer：
+ 
+ ```bash
+ cargo test
+@@ -105,6 +105,7 @@ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
+ cargo run -- test --cwd tmp/e2e-init/refund
+ cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
++cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
+ ```
+ 
+ 示例输出：
+@@ -113,7 +114,7 @@ cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+ skillrun 0.1.0
+ ```
+ 
+-后续 MCP 和 packaging 命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为这些行为已经落地。
++long-running MCP server mode 和 packaging 命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为这些行为已经落地。
+ 
+ ## 安全模型
+ 
+diff --git a/src/cli.rs b/src/cli.rs
+index 45498b7..c69e7d0 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -5,6 +5,7 @@ use crate::consumer;
+ use crate::init::{self, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
++use crate::mcp;
+ use crate::runtime::{self, RunOptions, TestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+@@ -118,8 +119,20 @@ where
+         },
+         Some("serve") => match parse_serve(args.collect()) {
+             Ok(options) => match consumer::validate(&options.cwd, "skillrun serve --mcp") {
++                Ok(manifest) if options.dry_run => {
++                    match mcp::dry_run_contract(&options.cwd, &manifest) {
++                        Ok(contract) => {
++                            println!("{contract}");
++                            ExitCode::SUCCESS
++                        }
++                        Err(error) => {
++                            eprintln!("error: {error}");
++                            ExitCode::from(2)
++                        }
++                    }
++                }
+                 Ok(_) => {
+-                    eprintln!("error: command not implemented yet: serve --mcp");
++                    eprintln!("error: command not implemented yet: serve --mcp server mode; use --dry-run to verify the Manifest-derived MCP contract");
+                     ExitCode::from(2)
+                 }
+                 Err(error) => {
+@@ -160,6 +173,7 @@ where
+ 
+ struct ServeOptions {
+     cwd: PathBuf,
++    dry_run: bool,
+ }
+ 
+ struct PackOptions {
+@@ -298,6 +312,7 @@ fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
+ fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
+     let mut cwd = PathBuf::from(".");
+     let mut mcp = false;
++    let mut dry_run = false;
+     let mut index = 0;
+ 
+     while index < args.len() {
+@@ -314,6 +329,7 @@ fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
+                 index += 2;
+             }
+             "--dry-run" => {
++                dry_run = true;
+                 index += 1;
+             }
+             value => return Err(format!("unexpected serve argument: {value}")),
+@@ -324,7 +340,7 @@ fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
+         return Err("serve currently requires --mcp".to_string());
+     }
+ 
+-    Ok(ServeOptions { cwd })
++    Ok(ServeOptions { cwd, dry_run })
+ }
+ 
+ fn parse_pack(args: Vec<String>) -> Result<PackOptions, String> {
+@@ -374,7 +390,8 @@ Implemented:
+   inspect
+   test
+   run
++  serve --mcp --dry-run
+ 
+-Later tasks implement MCP and packaging behavior."
++Later tasks implement long-running MCP server mode and packaging behavior."
+     );
+ }
+diff --git a/src/main.rs b/src/main.rs
+index 873dd63..b51d999 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -8,6 +8,7 @@ mod hashing;
+ mod init;
+ mod inspect;
+ mod manifest;
++mod mcp;
+ mod permissions;
+ mod run_record;
+ mod runtime;
+diff --git a/src/mcp.rs b/src/mcp.rs
+new file mode 100644
+index 0000000..754a1c3
+--- /dev/null
++++ b/src/mcp.rs
+@@ -0,0 +1,72 @@
++use serde_json::{json, Value as JsonValue};
++use serde_yaml::Value as YamlValue;
++use std::fs;
++use std::path::Path;
++
++use crate::consumer::ValidManifest;
++
++pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<String, String> {
++    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
++    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
++    let tool_description =
++        string_at(&manifest.value, &["tool", "description"]).unwrap_or("SkillRun MCP tool.");
++    let input_schema =
++        json_value_at(&manifest.value, &["schemas", "input"]).unwrap_or_else(|| json!({}));
++    let output_schema =
++        json_value_at(&manifest.value, &["schemas", "output"]).unwrap_or_else(|| json!({}));
++    let skill_path =
++        string_at(&manifest.value, &["sources", "skill", "path"]).unwrap_or("SKILL.md");
++    let skill_text = fs::read_to_string(capsule_dir.join(skill_path))
++        .map_err(|error| format!("failed to read MCP resource {skill_path}: {error}"))?;
++
++    let contract = json!({
++        "mcp": {
++            "dry_run": true,
++            "transport": "stdio",
++            "protocol": "model-context-protocol"
++        },
++        "source": {
++            "manifest": manifest.path.display().to_string(),
++            "manifest_sha256": manifest.sha256
++        },
++        "tools": [
++            {
++                "name": tool_name,
++                "description": tool_description,
++                "input_schema": input_schema,
++                "output_schema": output_schema,
++                "result_contract": "SkillRun output/error envelope"
++            }
++        ],
++        "resources": [
++            {
++                "uri": format!("skillrun://{skill_name}/SKILL.md"),
++                "name": "SKILL.md",
++                "path": skill_path,
++                "mime_type": "text/markdown",
++                "text": skill_text
++            }
++        ]
++    });
++
++    serde_json::to_string_pretty(&contract)
++        .map_err(|error| format!("failed to serialize MCP dry-run contract: {error}"))
++}
++
++fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
++    let mut current = value;
++    for segment in path {
++        let key = YamlValue::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
++
++fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<JsonValue> {
++    let value = value_at(value, path)?;
++    serde_json::to_value(value).ok()
++}
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index 076cfbb..1b8a661 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -1,3 +1,4 @@
++use serde_json::Value;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+ use std::process::Command;
+@@ -74,6 +75,17 @@ fn assert_guard_failure(output: &std::process::Output, expected_path: &str) -> S
+     stderr
+ }
+ 
++fn assert_success_json(output: &std::process::Output) -> Value {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    serde_json::from_str(&stdout).expect("stdout should be JSON")
++}
++
+ #[test]
+ fn run_refuses_stale_skill_hash_before_creating_run() {
+     let (output_root, capsule) = generated_capsule("guard-stale-skill");
+@@ -121,14 +133,14 @@ fn pack_refuses_stale_config_before_unimplemented_fallback() {
+ }
+ 
+ #[test]
+-fn valid_capsule_reaches_serve_and_pack_unimplemented_fallbacks() {
++fn valid_capsule_reaches_serve_dry_run_and_pack_unimplemented_fallback() {
+     let (output_root, capsule) = generated_capsule("guard-valid-unimplemented");
+     let cwd_arg = capsule.to_string_lossy().to_string();
+ 
+     let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+-    assert!(!serve.status.success());
+-    let serve_stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
+-    assert!(serve_stderr.contains("command not implemented yet: serve --mcp"));
++    let contract = assert_success_json(&serve);
++    assert_eq!(contract["mcp"]["dry_run"], true);
++    assert_eq!(contract["tools"][0]["name"], "refund");
+ 
+     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+     assert!(!pack.status.success());
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+new file mode 100644
+index 0000000..36f84cc
+--- /dev/null
++++ b/tests/mcp_server.rs
+@@ -0,0 +1,152 @@
++use serde_json::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    (output_root, capsule)
++}
++
++fn write_manifest(capsule: &Path) {
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++}
++
++fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let (output_root, capsule) = init_capsule(label);
++    write_manifest(&capsule);
++    (output_root, capsule)
++}
++
++fn assert_success_json(output: &std::process::Output) -> Value {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    serde_json::from_str(&stdout).expect("stdout should be JSON")
++}
++
++#[test]
++fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
++    let (output_root, capsule) = generated_capsule("mcp-dry-run");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    let contract = assert_success_json(&serve);
++
++    assert_eq!(contract["mcp"]["dry_run"], true);
++    assert_eq!(contract["mcp"]["transport"], "stdio");
++    assert_eq!(contract["tools"][0]["name"], "refund");
++    assert!(contract["tools"][0]["description"]
++        .as_str()
++        .unwrap()
++        .contains("refund"));
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["order_id"]["type"],
++        "string"
++    );
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
++        "integer"
++    );
++    assert_eq!(
++        contract["tools"][0]["result_contract"],
++        "SkillRun output/error envelope"
++    );
++    assert_eq!(contract["resources"][0]["path"], "SKILL.md");
++    assert_eq!(contract["resources"][0]["mime_type"], "text/markdown");
++    let resource_text = contract["resources"][0]["text"]
++        .as_str()
++        .expect("resource text should be a string");
++    assert!(resource_text.to_ascii_lowercase().contains("refund"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn mcp_dry_run_does_not_import_action_for_metadata() {
++    let (output_root, capsule) = init_capsule("mcp-no-import");
++    let marker = output_root.join("import-marker.txt");
++    let marker_literal = serde_json::to_string(&marker.to_string_lossy().to_string())
++        .expect("marker should serialize");
++    let action_path = capsule.join("action.py");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let action = action.replace(
++        "from typing import Literal\n",
++        &format!(
++            "from typing import Literal\nfrom pathlib import Path\nPath({marker_literal}).write_text(\"imported\", encoding=\"utf-8\")\n"
++        ),
++    );
++    fs::write(&action_path, action).expect("action should be updated");
++
++    write_manifest(&capsule);
++    assert!(
++        marker.is_file(),
++        "manifest metadata extraction imports action.py in Author Mode"
++    );
++    fs::remove_file(&marker).expect("marker should be removed before serve");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert_success_json(&serve);
++    assert!(
++        !marker.exists(),
++        "serve --mcp --dry-run must not import action.py for metadata"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn mcp_dry_run_fails_closed_when_manifest_is_stale() {
++    let (output_root, capsule) = generated_capsule("mcp-stale");
++    let action_path = capsule.join("action.py");
++    let mut action = fs::read_to_string(&action_path).expect("action should be readable");
++    action.push_str("\n# stale after manifest\n");
++    fs::write(&action_path, action).expect("action should be updated");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert!(!serve.status.success());
++    let stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("stale Manifest"));
++    assert!(stderr.contains("action.py"));
++    assert!(!stderr.contains("command not implemented yet"));
++
++    fs::remove_dir_all(output_root).ok();
++}
