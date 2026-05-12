@@ -2,6 +2,7 @@ use std::process::ExitCode;
 
 mod cli;
 mod config;
+mod errors;
 mod hashing;
 mod init;
 mod inspect;

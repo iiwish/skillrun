@@ -1,0 +1,154 @@
+schema_version: 1
+packet_id: EP-MVP-T006
+task_id: T006
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t005: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Implement Structured Error Envelope Handling
+  goal: Implement structured error handling for validation, policy, protocol, and runtime failures.
+  epic: E002 IPC And Run
+  story: US-003
+  requirements:
+    - FR-006
+    - TDR-003
+  priority: P0
+  depends_on:
+    - T005
+  blocks:
+    - T011
+  parallel: false
+  conflicts_with:
+    - T005
+    - T007
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - .ai-platform/docs/test-strategy.md
+    - .ai-platform/docs/technology-decision-record.md
+    - src/runtime.rs
+    - src/adapters/python.rs
+    - src/run_record.rs
+    - tests/runtime.rs
+  existing_patterns:
+    - T005 runtime returns machine-readable JSON envelopes on stdout.
+    - Python adapter writes output.json through file-based IPC and captures stdout/stderr as logs.
+    - CLI dispatch maps runtime outcomes to process exit codes.
+    - Rust integration tests generate capsules in temp directories and mutate action.py for behavior tests.
+  interfaces_or_contracts:
+    - Failures return an ok false JSON envelope with error.code, error.message, error.recoverable, optional error.llm_hint, display.markdown, run_id, run_dir, and record.
+    - ValidationError covers invalid input schema.
+    - PolicyViolation covers preflight or business policy rejection and should include llm_hint.
+    - ProtocolViolation covers missing or invalid output envelope and must not be masked by stdout.
+    - RuntimeError covers uncategorized action/runtime failures.
+    - Stack traces must stay in stderr.log and not appear in display.markdown.
+  forbidden_changes:
+    - Do not implement artifact path containment or permission enforcement; T007 owns that.
+    - Do not implement stale Manifest fail-closed guard; T008 owns that.
+    - Do not implement MCP serving or packaging.
+    - Do not mark T006 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/errors.rs
+    - src/runtime.rs
+    - src/adapters/python.rs
+    - tests/errors.rs
+    - tests/fixtures/error_cases/
+  test_targets:
+    - tests/errors.rs
+  ownership_notes:
+    - README updates are allowed only to reflect structured error status accurately.
+    - Keep run record schema compatible with T005 unless error status requires existing fields.
+    - Keep T007 permission and artifact enforcement scope untouched.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test errors
+    expected_failure: Tests fail because structured error mapping is not implemented yet.
+  green:
+    command: cargo test --test errors
+    expected_signal: ValidationError, PolicyViolation, ProtocolViolation, and RuntimeError cases return structured envelopes.
+  refactor:
+    command: cargo test
+    expected_signal: Full test suite passes after error envelope normalization.
+
+validation_loop:
+  commands:
+    - cargo test --test errors
+    - cargo test
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to error envelope construction, adapter exception mapping, CLI exit behavior, or log capture.
+    second_failure: Determine whether T006 scope needs to defer a case or adjust packet boundaries.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T006/summary.md
+  diff: .ai-platform/evidence/T006/diff.patch
+  test_results: .ai-platform/evidence/T006/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T006 Accepted.
+  review_focus:
+    - error envelope shape is stable and machine-readable.
+    - stack traces stay out of display output.
+    - stdout cannot fake success when output.json is missing or invalid.
+    - T006 does not absorb T007/T008 behavior.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - Python subprocess cannot import Pydantic in the local environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear allowed files
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

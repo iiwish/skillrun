@@ -16,6 +16,7 @@ pub struct ActionRunRequest<'a> {
 }
 
 pub struct ActionRunOutput {
+    pub success: bool,
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
 }
@@ -95,19 +96,23 @@ import os
 import sys
 import traceback
 from pathlib import Path
+from pydantic import ValidationError as PydanticValidationError
 
 context_path = Path(os.environ["SKILLRUN_CONTEXT_JSON"])
 input_path = Path(os.environ["SKILLRUN_INPUT_JSON"])
 output_path = Path(os.environ["SKILLRUN_OUTPUT_JSON"])
 
-def write_error(code, message):
+def write_error(code, message, recoverable=False, llm_hint=None):
+    error = {
+        "code": code,
+        "message": message,
+        "recoverable": recoverable
+    }
+    if llm_hint:
+        error["llm_hint"] = llm_hint
     output_path.write_text(json.dumps({
         "ok": False,
-        "error": {
-            "code": code,
-            "message": message,
-            "recoverable": False
-        },
+        "error": error,
         "display": {
             "markdown": message
         }
@@ -123,18 +128,50 @@ try:
 
     Input = getattr(module, "Input")
     Output = getattr(module, "Output")
-    input_model = Input.model_validate_json(input_path.read_text(encoding="utf-8"))
     context = json.loads(context_path.read_text(encoding="utf-8"))
+
+    try:
+        input_model = Input.model_validate_json(input_path.read_text(encoding="utf-8"))
+    except PydanticValidationError as exc:
+        write_error("ValidationError", str(exc), False)
+        sys.exit(1)
 
     preflight = getattr(module, "preflight", None)
     if preflight is not None:
-        preflight(input_model, context)
+        try:
+            preflight(input_model, context)
+        except ValueError as exc:
+            write_error(
+                "PolicyViolation",
+                str(exc),
+                True,
+                "Ask for the missing approval or policy context before retrying."
+            )
+            sys.exit(1)
 
-    result = module.run(input_model, context)
-    if isinstance(result, Output):
-        output_model = result
-    else:
-        output_model = Output.model_validate(result)
+    try:
+        result = module.run(input_model, context)
+    except ValueError as exc:
+        write_error(
+            "PolicyViolation",
+            str(exc),
+            True,
+            "Ask for the missing approval or policy context before retrying."
+        )
+        sys.exit(1)
+    except Exception as exc:
+        traceback.print_exc(file=sys.stderr)
+        write_error("RuntimeError", str(exc), False)
+        sys.exit(1)
+
+    try:
+        if isinstance(result, Output):
+            output_model = result
+        else:
+            output_model = Output.model_validate(result)
+    except PydanticValidationError as exc:
+        write_error("ProtocolViolation", str(exc), False)
+        sys.exit(1)
 
     payload = output_model.model_dump(mode="json")
     output_path.write_text(json.dumps({
@@ -146,7 +183,7 @@ try:
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 except Exception as exc:
     traceback.print_exc(file=sys.stderr)
-    write_error("RuntimeError", str(exc))
+    write_error("RuntimeError", str(exc), False)
     sys.exit(1)
 "#;
 
@@ -171,16 +208,8 @@ except Exception as exc:
         )
     })?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!(
-            "python action adapter failed for {}: {}",
-            action_path.display(),
-            stderr.trim()
-        ));
-    }
-
     Ok(ActionRunOutput {
+        success: output.status.success(),
         stdout: output.stdout,
         stderr: output.stderr,
     })

@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004 和 T005 均已通过复审并进入 `Accepted`。T006-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004、T005 和 T006 均已通过复审并进入 `Accepted`。T007-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -75,7 +75,7 @@ Validation:
 
 Tasks:
 - [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
-- [ ] T006 [US-003] Implement structured error envelope handling
+- [x] T006 [US-003] Implement structured error envelope handling
 - [ ] T007 [US-003] Enforce artifact and declared permission boundaries
 
 ## Epic E003: Inspect And Failure Discipline
@@ -458,7 +458,7 @@ Evidence required:
 
 ### T006: Implement Structured Error Envelope Handling
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T005
 Blocks: T011
@@ -471,10 +471,13 @@ Implement structured error handling for validation, policy, protocol and runtime
 
 Allowed files:
 - `src/errors.rs`
+- `src/main.rs`
 - `src/runtime.rs`
 - `src/adapters/python.rs`
 - `tests/errors.rs`
 - `tests/fixtures/error_cases/`
+- `README.md`
+- `README.zh-CN.md`
 
 Test targets:
 - `tests/errors.rs`

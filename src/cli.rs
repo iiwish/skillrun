@@ -77,9 +77,13 @@ where
         },
         Some("test") => match parse_test(args.collect()) {
             Ok(options) => match runtime::run_test(&options) {
-                Ok(envelope) => {
-                    println!("{envelope}");
-                    ExitCode::SUCCESS
+                Ok(outcome) => {
+                    println!("{}", outcome.envelope);
+                    if outcome.success {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
                 }
                 Err(error) => {
                     eprintln!("error: {error}");
@@ -94,9 +98,13 @@ where
         },
         Some("run") => match parse_run(args.collect()) {
             Ok(options) => match runtime::run_with_input(&options) {
-                Ok(envelope) => {
-                    println!("{envelope}");
-                    ExitCode::SUCCESS
+                Ok(outcome) => {
+                    println!("{}", outcome.envelope);
+                    if outcome.success {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
                 }
                 Err(error) => {
                     eprintln!("error: {error}");

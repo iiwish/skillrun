@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::adapters::python::{self, ActionRunRequest};
+use crate::errors;
 use crate::hashing;
 use crate::manifest;
 use crate::run_record::{self, RunRecordInput};
@@ -41,16 +42,21 @@ struct RunPaths {
     record_json: PathBuf,
 }
 
-pub fn run_test(options: &TestOptions) -> Result<String, String> {
+pub struct RunOutcome {
+    pub envelope: String,
+    pub success: bool,
+}
+
+pub fn run_test(options: &TestOptions) -> Result<RunOutcome, String> {
     let input = PathBuf::from("examples").join("default.input.json");
     execute(&options.cwd, &input, "test")
 }
 
-pub fn run_with_input(options: &RunOptions) -> Result<String, String> {
+pub fn run_with_input(options: &RunOptions) -> Result<RunOutcome, String> {
     execute(&options.cwd, &options.input, "run")
 }
 
-fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<String, String> {
+fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
     let capsule_dir = absolute_path(cwd)?;
     require_dir(&capsule_dir)?;
     let manifest = load_manifest(&capsule_dir)?;
@@ -82,7 +88,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<String, String> {
     });
     write_json(&paths.context_json, &context)?;
 
-    let adapter_output = python::run_action(&ActionRunRequest {
+    let adapter_output = match python::run_action(&ActionRunRequest {
         capsule_dir: &capsule_dir,
         entrypoint,
         context_json: &paths.context_json,
@@ -90,63 +96,157 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<String, String> {
         output_json: &paths.output_json,
         artifact_dir: &paths.artifact_dir,
         timeout,
-    })?;
+    }) {
+        Ok(output) => output,
+        Err(error) => {
+            fs::write(&paths.stdout_log, []).map_err(|write_error| {
+                format!(
+                    "failed to write {}: {write_error}",
+                    paths.stdout_log.display()
+                )
+            })?;
+            fs::write(&paths.stderr_log, error.as_bytes()).map_err(|write_error| {
+                format!(
+                    "failed to write {}: {write_error}",
+                    paths.stderr_log.display()
+                )
+            })?;
+            return finish_run(
+                FinishRunInput {
+                    run_id: &run_id,
+                    mode,
+                    success: false,
+                    started_at,
+                    duration_started_at: started,
+                    capsule_dir: &capsule_dir,
+                    manifest: &manifest,
+                    paths: &paths,
+                },
+                errors::runtime_error(error),
+            );
+        }
+    };
     fs::write(&paths.stdout_log, adapter_output.stdout)
         .map_err(|error| format!("failed to write {}: {error}", paths.stdout_log.display()))?;
     fs::write(&paths.stderr_log, adapter_output.stderr)
         .map_err(|error| format!("failed to write {}: {error}", paths.stderr_log.display()))?;
 
-    if !paths.output_json.is_file() {
-        return Err(format!(
-            "adapter did not write output envelope: {}",
-            paths.output_json.display()
-        ));
-    }
+    let (envelope, success) = adapter_envelope(&paths, adapter_output.success);
+    finish_run(
+        FinishRunInput {
+            run_id: &run_id,
+            mode,
+            success,
+            started_at,
+            duration_started_at: started,
+            capsule_dir: &capsule_dir,
+            manifest: &manifest,
+            paths: &paths,
+        },
+        envelope,
+    )
+}
 
-    let mut envelope = read_json_file(&paths.output_json)?;
-    if envelope.get("ok").and_then(Value::as_bool) != Some(true) {
-        return Err("adapter did not return an ok: true envelope".to_string());
-    }
+struct FinishRunInput<'a> {
+    run_id: &'a str,
+    mode: &'a str,
+    success: bool,
+    started_at: chrono::DateTime<Utc>,
+    duration_started_at: Instant,
+    capsule_dir: &'a Path,
+    manifest: &'a RuntimeManifest,
+    paths: &'a RunPaths,
+}
+
+fn finish_run(input: FinishRunInput<'_>, mut envelope: Value) -> Result<RunOutcome, String> {
     let Some(object) = envelope.as_object_mut() else {
-        return Err("adapter output envelope must be a JSON object".to_string());
+        envelope = errors::protocol_violation("adapter envelope must be a JSON object");
+        return finish_run(
+            FinishRunInput {
+                success: false,
+                ..input
+            },
+            envelope,
+        );
     };
-    object.insert("run_id".to_string(), Value::String(run_id.clone()));
+    object.insert(
+        "run_id".to_string(),
+        Value::String(input.run_id.to_string()),
+    );
     object.insert(
         "run_dir".to_string(),
-        Value::String(paths.run_dir.display().to_string()),
+        Value::String(input.paths.run_dir.display().to_string()),
     );
     object.insert(
         "record".to_string(),
-        Value::String(paths.record_json.display().to_string()),
+        Value::String(input.paths.record_json.display().to_string()),
     );
-    write_json(&paths.output_json, &envelope)?;
+    write_json(&input.paths.output_json, &envelope)?;
 
     let finished_at = Utc::now();
-    let skill_sha256 = string_at(&manifest.value, &["sources", "skill", "sha256"])
-        .or_else(|| string_at(&manifest.value, &["skill", "skill_hash"]))
+    let skill_sha256 = string_at(&input.manifest.value, &["sources", "skill", "sha256"])
+        .or_else(|| string_at(&input.manifest.value, &["skill", "skill_hash"]))
         .unwrap_or("missing");
     let action_sha256 =
-        string_at(&manifest.value, &["sources", "action", "sha256"]).unwrap_or("missing");
+        string_at(&input.manifest.value, &["sources", "action", "sha256"]).unwrap_or("missing");
     run_record::write(
-        &paths.record_json,
+        &input.paths.record_json,
         RunRecordInput {
-            run_id: &run_id,
-            mode,
-            status: "succeeded",
-            started_at,
+            run_id: input.run_id,
+            mode: input.mode,
+            status: if input.success { "succeeded" } else { "failed" },
+            started_at: input.started_at,
             finished_at,
-            duration: started.elapsed(),
-            capsule_dir: &capsule_dir,
-            manifest_path: &manifest.path,
-            manifest_sha256: &manifest.sha256,
+            duration: input.duration_started_at.elapsed(),
+            capsule_dir: input.capsule_dir,
+            manifest_path: &input.manifest.path,
+            manifest_sha256: &input.manifest.sha256,
             skill_sha256,
             action_sha256,
-            permissions: json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null),
+            permissions: json_value_at(&input.manifest.value, &["permissions"])
+                .unwrap_or(Value::Null),
         },
     )?;
 
-    serde_json::to_string_pretty(&envelope)
-        .map_err(|error| format!("failed to serialize output envelope: {error}"))
+    let envelope = serde_json::to_string_pretty(&envelope)
+        .map_err(|error| format!("failed to serialize output envelope: {error}"))?;
+    Ok(RunOutcome {
+        envelope,
+        success: input.success,
+    })
+}
+
+fn adapter_envelope(paths: &RunPaths, adapter_success: bool) -> (Value, bool) {
+    if !paths.output_json.is_file() {
+        return (
+            errors::protocol_violation(format!(
+                "adapter did not write output envelope: {}",
+                paths.output_json.display()
+            )),
+            false,
+        );
+    }
+
+    let envelope = match read_json_file(&paths.output_json) {
+        Ok(envelope) => envelope,
+        Err(error) => return (errors::protocol_violation(error), false),
+    };
+
+    match envelope.get("ok").and_then(Value::as_bool) {
+        Some(true) if adapter_success => (envelope, true),
+        Some(true) => (
+            errors::protocol_violation("adapter exited with failure after writing ok: true"),
+            false,
+        ),
+        Some(false) => match errors::validate_error_envelope(&envelope) {
+            Ok(()) => (envelope, false),
+            Err(error) => (errors::protocol_violation(error), false),
+        },
+        None => (
+            errors::protocol_violation("adapter output envelope is missing ok"),
+            false,
+        ),
+    }
 }
 
 fn require_dir(path: &Path) -> Result<(), String> {

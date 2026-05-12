@@ -12,8 +12,8 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that 
 
 SkillRun is in the v0.1.0 MVP buildout.
 
-- Current implementation: through `T005` Rust test/run success path and run records.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, and contract tests for the skeleton/init/manifest/inspect/runtime path.
+- Current implementation: through `T006` Rust structured error envelopes.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, and contract tests for the skeleton/init/manifest/inspect/runtime/error path.
 - Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
