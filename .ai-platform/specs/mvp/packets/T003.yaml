@@ -1,0 +1,169 @@
+schema_version: 1
+packet_id: EP-MVP-T003
+task_id: T003
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t001: Accepted after rereview on 2026-05-11
+    dependency_t002: Accepted after rereview on 2026-05-11
+
+work_unit:
+  title: Generate Manifest From Python Action Metadata
+  goal: Implement skillrun manifest in Rust for Author Mode using Pydantic v2 metadata extraction and source hash tracking.
+  epic: E001 Capsule And Manifest
+  story: US-002
+  requirements:
+    - FR-002
+    - NFR-001
+    - NFR-003
+    - TDR-001
+    - TDR-002
+  priority: P0
+  depends_on:
+    - T001
+    - T002
+  blocks:
+    - T004
+    - T005
+    - T008
+    - T009
+    - T010
+    - T011
+  parallel: false
+  conflicts_with:
+    - T004
+    - T005
+    - T008
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - docs/ssot.md
+    - .ai-platform/docs/tasks.md
+    - .ai-platform/docs/test-strategy.md
+    - src/cli.rs
+    - src/init.rs
+    - templates/python/action.py
+    - tests/init.rs
+  existing_patterns:
+    - CLI parsing currently lives in src/cli.rs and dispatches to focused modules.
+    - T002 templates generate a Python action using Pydantic v2 Input and Output models.
+    - Rust integration tests use CARGO_BIN_EXE_skillrun.
+  interfaces_or_contracts:
+    - skillrun manifest --cwd path/to/capsule writes path/to/capsule/.skillrun/manifest.generated.yaml.
+    - The Manifest records source hashes for SKILL.md, action.py, and optional skillrun.config.json.
+    - Python metadata extraction runs in Author Mode through a subprocess and does not inject user secrets.
+    - Manifest includes schemas.input and schemas.output from Pydantic v2 model_json_schema.
+  forbidden_changes:
+    - Do not implement inspect, runtime, MCP, pack, or run behavior in T003.
+    - Do not dynamically import action.py in Consumer Mode paths.
+    - Do not create a Python package for SkillRun.
+    - Do not mark T003 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - Cargo.toml
+    - Cargo.lock
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/cli.rs
+    - src/config.rs
+    - src/hashing.rs
+    - src/manifest.rs
+    - src/schemas.rs
+    - src/adapters/python.rs
+    - tests/manifest.rs
+    - tests/fixtures/
+  test_targets:
+    - tests/manifest.rs
+  ownership_notes:
+    - Adding Rust dependencies is allowed only for manifest serialization, JSON parsing, timestamps, and SHA-256 hashing.
+    - Keep generated capsule templates stable unless a manifest test exposes a direct incompatibility.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test manifest
+    expected_failure: Tests fail because manifest command and generation modules do not exist yet.
+  green:
+    command: cargo test --test manifest
+    expected_signal: Manifest tests pass and .skillrun/manifest.generated.yaml is generated with schemas and hashes.
+  refactor:
+    command: cargo test && cargo run -- init refund --python --output tmp/e2e-manifest && cargo run -- manifest --cwd tmp/e2e-manifest/refund
+    expected_signal: Full tests pass and a generated capsule can produce a Manifest.
+
+validation_loop:
+  commands:
+    - cargo test --test manifest
+    - cargo test
+    - cargo run -- init refund --python --output tmp/e2e-manifest
+    - cargo run -- manifest --cwd tmp/e2e-manifest/refund
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to manifest command parsing, hash generation, YAML serialization, or Python metadata extraction.
+    second_failure: Determine whether Pydantic availability, Rust dependency setup, or task scope is blocking.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T003/summary.md
+  diff: .ai-platform/evidence/T003/diff.patch
+  test_results: .ai-platform/evidence/T003/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T003 Accepted.
+  review_focus:
+    - Manifest contains MVP minimum fields and source hashes.
+    - Python metadata extraction is Author Mode only and no secrets are injected.
+    - Missing SKILL.md, action.py, or schema metadata fails clearly.
+    - T003 does not implement downstream runtime/inspect/MCP/pack behavior.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep branch or current worktree for follow-up
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - missing Python or Pydantic v2 in the local execution environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear allowed files
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

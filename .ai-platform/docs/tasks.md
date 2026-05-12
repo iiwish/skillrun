@@ -17,7 +17,7 @@ Last updated: 2026-05-11
 
 ## Current Gate
 
-T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -52,7 +52,7 @@ Validation:
 - `cargo run -- inspect --cwd tmp/e2e-init/refund`
 
 Tasks:
-- [ ] T003 [US-002] Generate Manifest from Python Action metadata
+- [x] T003 [US-002] Generate Manifest from Python Action metadata
 - [ ] T004 [US-002] Render inspect output and instruction-only status
 
 ## Epic E002: IPC And Run
@@ -274,7 +274,7 @@ Evidence required:
 
 ### T003: Generate Manifest From Python Action Metadata
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T001, T002
 Blocks: T004, T005, T008, T009, T010, T011
@@ -286,6 +286,10 @@ Goal:
 Implement `skillrun manifest` in Rust for Author Mode using Pydantic v2 metadata extraction and source hash tracking.
 
 Allowed files:
+- `Cargo.toml`
+- `Cargo.lock`
+- `README.md`
+- `README.zh-CN.md`
 - `src/main.rs`
 - `src/cli.rs`
 - `src/config.rs`

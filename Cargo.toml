@@ -5,6 +5,13 @@ edition = "2021"
 description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
 license = "Apache-2.0"
 
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+sha2 = "0.10"
+
 [[bin]]
 name = "skillrun"
 path = "src/main.rs"

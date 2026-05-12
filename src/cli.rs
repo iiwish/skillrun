@@ -2,9 +2,10 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::init::{self, InitOptions};
+use crate::manifest::{self, ManifestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const UNIMPLEMENTED_COMMANDS: &[&str] = &["manifest", "inspect", "test", "run", "serve", "pack"];
+const UNIMPLEMENTED_COMMANDS: &[&str] = &["inspect", "test", "run", "serve", "pack"];
 
 pub fn run<I>(args: I) -> ExitCode
 where
@@ -35,6 +36,23 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun init <name> --python [--output <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("manifest") => match parse_manifest(args.collect()) {
+            Ok(options) => match manifest::generate(&options) {
+                Ok(path) => {
+                    println!("generated {}", path.display());
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun manifest [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -90,6 +108,26 @@ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
     Ok(InitOptions { name, output_dir })
 }
 
+fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected manifest argument: {value}")),
+        }
+    }
+
+    Ok(ManifestOptions { cwd })
+}
+
 fn print_help() {
     println!(
         "\
@@ -113,7 +151,8 @@ MVP commands:
 
 Implemented:
   init --python
+  manifest
 
-Later tasks implement Manifest, runtime, MCP, and packaging behavior."
+Later tasks implement inspect, runtime, MCP, and packaging behavior."
     );
 }

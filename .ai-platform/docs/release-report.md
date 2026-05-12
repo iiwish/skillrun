@@ -23,6 +23,7 @@ No release scope has been accepted yet. This report is initialized as the releas
 
 - T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
 - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
+- T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
 
 ## Validation Summary
 
@@ -31,6 +32,7 @@ No release scope has been accepted yet. This report is initialized as the releas
 - `cargo run -- --help`: passed.
 - `cargo run -- --version`: passed with `skillrun 0.1.0`.
 - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
+- T003 validation recorded in `.ai-platform/evidence/T003/`.
 
 ## Known Limitations
 
@@ -43,11 +45,12 @@ No release scope has been accepted yet. This report is initialized as the releas
 ## Unfinished Tasks
 
 - T002 has been accepted.
-- Keep T003-T011 Draft until their packets are generated and dependencies are satisfied.
+- T003 has been accepted.
+- Keep T004-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- Packetize and execute T003.
+- Packetize and execute T004.
 
 ## User Review Gate
 

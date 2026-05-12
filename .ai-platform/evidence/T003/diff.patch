@@ -1,0 +1,1553 @@
+﻿# Generated from working tree changes for T003 key files.
+
+
+diff --git a/Cargo.toml b/Cargo.toml
+index e14bf4d..5302bf7 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -5,6 +5,13 @@ edition = "2021"
+ description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
+ license = "Apache-2.0"
+ 
++[dependencies]
++chrono = { version = "0.4", default-features = false, features = ["clock"] }
++serde = { version = "1", features = ["derive"] }
++serde_json = "1"
++serde_yaml = "0.9"
++sha2 = "0.10"
++
+ [[bin]]
+ name = "skillrun"
+ path = "src/main.rs"
+
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 9dd69c0..a5fc5cc 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2,6 +2,502 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "android_system_properties"
++version = "0.1.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
++dependencies = [
++ "libc",
++]
++
++[[package]]
++name = "autocfg"
++version = "1.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
++
++[[package]]
++name = "block-buffer"
++version = "0.10.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
++dependencies = [
++ "generic-array",
++]
++
++[[package]]
++name = "bumpalo"
++version = "3.20.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
++
++[[package]]
++name = "cc"
++version = "1.2.62"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a1dce859f0832a7d088c4f1119888ab94ef4b5d6795d1ce05afb7fe159d79f98"
++dependencies = [
++ "find-msvc-tools",
++ "shlex",
++]
++
++[[package]]
++name = "cfg-if"
++version = "1.0.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
++
++[[package]]
++name = "chrono"
++version = "0.4.44"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
++dependencies = [
++ "iana-time-zone",
++ "num-traits",
++ "windows-link",
++]
++
++[[package]]
++name = "core-foundation-sys"
++version = "0.8.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
++
++[[package]]
++name = "cpufeatures"
++version = "0.2.17"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
++dependencies = [
++ "libc",
++]
++
++[[package]]
++name = "crypto-common"
++version = "0.1.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
++dependencies = [
++ "generic-array",
++ "typenum",
++]
++
++[[package]]
++name = "digest"
++version = "0.10.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
++dependencies = [
++ "block-buffer",
++ "crypto-common",
++]
++
++[[package]]
++name = "equivalent"
++version = "1.0.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
++
++[[package]]
++name = "find-msvc-tools"
++version = "0.1.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
++
++[[package]]
++name = "futures-core"
++version = "0.3.32"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d"
++
++[[package]]
++name = "futures-task"
++version = "0.3.32"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "037711b3d59c33004d3856fbdc83b99d4ff37a24768fa1be9ce3538a1cde4393"
++
++[[package]]
++name = "futures-util"
++version = "0.3.32"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6"
++dependencies = [
++ "futures-core",
++ "futures-task",
++ "pin-project-lite",
++ "slab",
++]
++
++[[package]]
++name = "generic-array"
++version = "0.14.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
++dependencies = [
++ "typenum",
++ "version_check",
++]
++
++[[package]]
++name = "hashbrown"
++version = "0.17.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
++
++[[package]]
++name = "iana-time-zone"
++version = "0.1.65"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e31bc9ad994ba00e440a8aa5c9ef0ec67d5cb5e5cb0cc7f8b744a35b389cc470"
++dependencies = [
++ "android_system_properties",
++ "core-foundation-sys",
++ "iana-time-zone-haiku",
++ "js-sys",
++ "log",
++ "wasm-bindgen",
++ "windows-core",
++]
++
++[[package]]
++name = "iana-time-zone-haiku"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
++dependencies = [
++ "cc",
++]
++
++[[package]]
++name = "indexmap"
++version = "2.14.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
++dependencies = [
++ "equivalent",
++ "hashbrown",
++]
++
++[[package]]
++name = "itoa"
++version = "1.0.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
++
++[[package]]
++name = "js-sys"
++version = "0.3.98"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "67df7112613f8bfd9150013a0314e196f4800d3201ae742489d999db2f979f08"
++dependencies = [
++ "cfg-if",
++ "futures-util",
++ "once_cell",
++ "wasm-bindgen",
++]
++
++[[package]]
++name = "libc"
++version = "0.2.186"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
++
++[[package]]
++name = "log"
++version = "0.4.29"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
++
++[[package]]
++name = "memchr"
++version = "2.8.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
++
++[[package]]
++name = "num-traits"
++version = "0.2.19"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
++dependencies = [
++ "autocfg",
++]
++
++[[package]]
++name = "once_cell"
++version = "1.21.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
++
++[[package]]
++name = "pin-project-lite"
++version = "0.2.17"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
++
++[[package]]
++name = "proc-macro2"
++version = "1.0.106"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
++dependencies = [
++ "unicode-ident",
++]
++
++[[package]]
++name = "quote"
++version = "1.0.45"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
++dependencies = [
++ "proc-macro2",
++]
++
++[[package]]
++name = "rustversion"
++version = "1.0.22"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
++
++[[package]]
++name = "ryu"
++version = "1.0.23"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
++
++[[package]]
++name = "serde"
++version = "1.0.228"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
++dependencies = [
++ "serde_core",
++ "serde_derive",
++]
++
++[[package]]
++name = "serde_core"
++version = "1.0.228"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
++dependencies = [
++ "serde_derive",
++]
++
++[[package]]
++name = "serde_derive"
++version = "1.0.228"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
++[[package]]
++name = "serde_json"
++version = "1.0.149"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
++dependencies = [
++ "itoa",
++ "memchr",
++ "serde",
++ "serde_core",
++ "zmij",
++]
++
++[[package]]
++name = "serde_yaml"
++version = "0.9.34+deprecated"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
++dependencies = [
++ "indexmap",
++ "itoa",
++ "ryu",
++ "serde",
++ "unsafe-libyaml",
++]
++
++[[package]]
++name = "sha2"
++version = "0.10.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
++dependencies = [
++ "cfg-if",
++ "cpufeatures",
++ "digest",
++]
++
++[[package]]
++name = "shlex"
++version = "1.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
++
+ [[package]]
+ name = "skillrun"
+ version = "0.1.0"
++dependencies = [
++ "chrono",
++ "serde",
++ "serde_json",
++ "serde_yaml",
++ "sha2",
++]
++
++[[package]]
++name = "slab"
++version = "0.4.12"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
++
++[[package]]
++name = "syn"
++version = "2.0.117"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "unicode-ident",
++]
++
++[[package]]
++name = "typenum"
++version = "1.20.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "40ce102ab67701b8526c123c1bab5cbe42d7040ccfd0f64af1a385808d2f43de"
++
++[[package]]
++name = "unicode-ident"
++version = "1.0.24"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
++
++[[package]]
++name = "unsafe-libyaml"
++version = "0.2.11"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
++
++[[package]]
++name = "version_check"
++version = "0.9.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
++
++[[package]]
++name = "wasm-bindgen"
++version = "0.2.121"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "49ace1d07c165b0864824eee619580c4689389afa9dc9ed3a4c75040d82e6790"
++dependencies = [
++ "cfg-if",
++ "once_cell",
++ "rustversion",
++ "wasm-bindgen-macro",
++ "wasm-bindgen-shared",
++]
++
++[[package]]
++name = "wasm-bindgen-macro"
++version = "0.2.121"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8e68e6f4afd367a562002c05637acb8578ff2dea1943df76afb9e83d177c8578"
++dependencies = [
++ "quote",
++ "wasm-bindgen-macro-support",
++]
++
++[[package]]
++name = "wasm-bindgen-macro-support"
++version = "0.2.121"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d95a9ec35c64b2a7cb35d3fead40c4238d0940c86d107136999567a4703259f2"
++dependencies = [
++ "bumpalo",
++ "proc-macro2",
++ "quote",
++ "syn",
++ "wasm-bindgen-shared",
++]
++
++[[package]]
++name = "wasm-bindgen-shared"
++version = "0.2.121"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c4e0100b01e9f0d03189a92b96772a1fb998639d981193d7dbab487302513441"
++dependencies = [
++ "unicode-ident",
++]
++
++[[package]]
++name = "windows-core"
++version = "0.62.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
++dependencies = [
++ "windows-implement",
++ "windows-interface",
++ "windows-link",
++ "windows-result",
++ "windows-strings",
++]
++
++[[package]]
++name = "windows-implement"
++version = "0.60.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
++[[package]]
++name = "windows-interface"
++version = "0.59.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3f316c4a2570ba26bbec722032c4099d8c8bc095efccdc15688708623367e358"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
++[[package]]
++name = "windows-link"
++version = "0.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
++
++[[package]]
++name = "windows-result"
++version = "0.4.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
++dependencies = [
++ "windows-link",
++]
++
++[[package]]
++name = "windows-strings"
++version = "0.5.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7837d08f69c77cf6b07689544538e017c1bfcf57e34b4c0ff58e6c2cd3b37091"
++dependencies = [
++ "windows-link",
++]
++
++[[package]]
++name = "zmij"
++version = "1.0.21"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+
+diff --git a/README.md b/README.md
+index 569f247..d374809 100644
+--- a/README.md
++++ b/README.md
+@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T002` Rust `init --python` capsule skeleton.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, and contract tests for the skeleton/init path.
+-- Planned MVP commands are listed by the CLI, but `manifest`, `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
++- Current implementation: through `T003` Rust Manifest generation.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, and contract tests for the skeleton/init/manifest path.
++- Planned MVP commands are listed by the CLI, but `inspect`, `test`, `run`, `serve`, and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -94,13 +94,14 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI skeleton and `init --python` capsule generator:
++The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, and Manifest generator:
+ 
+ ```bash
+ cargo test
+ cargo run -- --help
+ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
++cargo run -- manifest --cwd tmp/e2e-init/refund
+ ```
+ 
+ Example output:
+
+
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index fbf2eef..7e14d30 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,9 +12,9 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T002` Rust `init --python` capsule skeleton。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`，以及 CLI/init 路径的 contract tests。
+-- CLI 已列出计划中的 MVP 命令，但 `manifest`、`inspect`、`test`、`run`、`serve` 和 `pack` 尚未实现。
++- 当前实现：已推进到 `T003` Rust Manifest generation。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`，以及 CLI/init/manifest 路径的 contract tests。
++- CLI 已列出计划中的 MVP 命令，但 `inspect`、`test`、`run`、`serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -94,13 +94,14 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含 Rust CLI skeleton 和 `init --python` capsule 生成器：
++仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器和 Manifest 生成器：
+ 
+ ```bash
+ cargo test
+ cargo run -- --help
+ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
++cargo run -- manifest --cwd tmp/e2e-init/refund
+ ```
+ 
+ 示例输出：
+
+
+diff --git a/src/main.rs b/src/main.rs
+index 3e2a39d..b735831 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,7 +1,14 @@
+ use std::process::ExitCode;
+ 
+ mod cli;
++mod config;
++mod hashing;
+ mod init;
++mod manifest;
++mod schemas;
++mod adapters {
++    pub mod python;
++}
+ 
+ fn main() -> ExitCode {
+     cli::run(std::env::args())
+
+
+diff --git a/src/cli.rs b/src/cli.rs
+index 4f93e68..df9544c 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -2,9 +2,10 @@ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
+ use crate::init::{self, InitOptions};
++use crate::manifest::{self, ManifestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+-const UNIMPLEMENTED_COMMANDS: &[&str] = &["manifest", "inspect", "test", "run", "serve", "pack"];
++const UNIMPLEMENTED_COMMANDS: &[&str] = &["inspect", "test", "run", "serve", "pack"];
+ 
+ pub fn run<I>(args: I) -> ExitCode
+ where
+@@ -38,6 +39,23 @@ where
+                 ExitCode::from(2)
+             }
+         },
++        Some("manifest") => match parse_manifest(args.collect()) {
++            Ok(options) => match manifest::generate(&options) {
++                Ok(path) => {
++                    println!("generated {}", path.display());
++                    ExitCode::SUCCESS
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun manifest [--cwd <dir>]");
++                ExitCode::from(2)
++            }
++        },
+         Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
+             eprintln!("error: command not implemented yet: {command}");
+             ExitCode::from(2)
+@@ -90,6 +108,26 @@ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
+     Ok(InitOptions { name, output_dir })
+ }
+ 
++fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            value => return Err(format!("unexpected manifest argument: {value}")),
++        }
++    }
++
++    Ok(ManifestOptions { cwd })
++}
++
+ fn print_help() {
+     println!(
+         "\
+@@ -113,7 +151,8 @@ MVP commands:
+ 
+ Implemented:
+   init --python
++  manifest
+ 
+-Later tasks implement Manifest, runtime, MCP, and packaging behavior."
++Later tasks implement inspect, runtime, MCP, and packaging behavior."
+     );
+ }
+
+
+diff --git "a/src\\config.rs" "b/src\\config.rs"
+new file mode 100644
+index 0000000..b1de620
+--- /dev/null
++++ "b/src\\config.rs"
+@@ -0,0 +1,85 @@
++use serde::Serialize;
++use std::fs;
++use std::path::Path;
++
++#[derive(Debug, Serialize)]
++pub struct RuntimeConfig {
++    pub adapter: String,
++    pub entrypoint: String,
++    pub timeout: String,
++}
++
++#[derive(Debug, Serialize)]
++pub struct ManifestPermissions {
++    pub files: FilePermissions,
++    pub network: NetworkPermissions,
++    pub env: EnvPermissions,
++}
++
++#[derive(Debug, Serialize)]
++pub struct FilePermissions {
++    pub read: Vec<String>,
++    pub write: Vec<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub struct NetworkPermissions {
++    pub outbound: Vec<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub struct EnvPermissions {
++    pub read: Vec<String>,
++}
++
++pub fn load_runtime_config(path: &Path) -> Result<RuntimeConfig, String> {
++    if !path.exists() {
++        return Ok(default_runtime_config());
++    }
++
++    let text = fs::read_to_string(path)
++        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
++    let json: serde_json::Value = serde_json::from_str(&text)
++        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
++
++    let runtime = json.get("runtime").unwrap_or(&serde_json::Value::Null);
++
++    Ok(RuntimeConfig {
++        adapter: runtime
++            .get("adapter")
++            .and_then(serde_json::Value::as_str)
++            .unwrap_or("python")
++            .to_string(),
++        entrypoint: runtime
++            .get("entrypoint")
++            .and_then(serde_json::Value::as_str)
++            .unwrap_or("action.py")
++            .to_string(),
++        timeout: runtime
++            .get("timeout")
++            .and_then(serde_json::Value::as_str)
++            .unwrap_or("30s")
++            .to_string(),
++    })
++}
++
++pub fn default_permissions() -> ManifestPermissions {
++    ManifestPermissions {
++        files: FilePermissions {
++            read: Vec::new(),
++            write: vec![".skillrun/runs/**".to_string()],
++        },
++        network: NetworkPermissions {
++            outbound: Vec::new(),
++        },
++        env: EnvPermissions { read: Vec::new() },
++    }
++}
++
++fn default_runtime_config() -> RuntimeConfig {
++    RuntimeConfig {
++        adapter: "python".to_string(),
++        entrypoint: "action.py".to_string(),
++        timeout: "30s".to_string(),
++    }
++}
+
+
+diff --git "a/src\\hashing.rs" "b/src\\hashing.rs"
+new file mode 100644
+index 0000000..f470c77
+--- /dev/null
++++ "b/src\\hashing.rs"
+@@ -0,0 +1,11 @@
++use sha2::{Digest, Sha256};
++use std::fs;
++use std::path::Path;
++
++pub fn sha256_file(path: &Path) -> Result<String, String> {
++    let bytes =
++        fs::read(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
++    let mut hasher = Sha256::new();
++    hasher.update(bytes);
++    Ok(format!("{:x}", hasher.finalize()))
++}
+
+
+diff --git "a/src\\manifest.rs" "b/src\\manifest.rs"
+new file mode 100644
+index 0000000..7664ede
+--- /dev/null
++++ "b/src\\manifest.rs"
+@@ -0,0 +1,173 @@
++use chrono::Utc;
++use serde::Serialize;
++use std::fs;
++use std::path::{Path, PathBuf};
++
++use crate::adapters::python;
++use crate::config::{self, ManifestPermissions, RuntimeConfig};
++use crate::hashing;
++use crate::schemas::Schemas;
++
++#[derive(Debug)]
++pub struct ManifestOptions {
++    pub cwd: PathBuf,
++}
++
++#[derive(Debug, Serialize)]
++struct ManifestDocument {
++    manifest_version: String,
++    generated_by: String,
++    generated_at: String,
++    sources: Sources,
++    skill: SkillInfo,
++    tool: ToolInfo,
++    schemas: Schemas,
++    runtime: RuntimeConfig,
++    permissions: ManifestPermissions,
++    ipc: IpcInfo,
++    examples: Vec<ExampleInfo>,
++    artifacts: ArtifactInfo,
++    errors: ErrorInfo,
++}
++
++#[derive(Debug, Serialize)]
++struct Sources {
++    skill: SourceInfo,
++    action: SourceInfo,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    config: Option<SourceInfo>,
++}
++
++#[derive(Debug, Serialize)]
++struct SourceInfo {
++    path: String,
++    sha256: String,
++}
++
++#[derive(Debug, Serialize)]
++struct SkillInfo {
++    name: String,
++    sop_summary: String,
++    skill_hash: String,
++}
++
++#[derive(Debug, Serialize)]
++struct ToolInfo {
++    name: String,
++    description: String,
++}
++
++#[derive(Debug, Serialize)]
++struct IpcInfo {
++    protocol_version: String,
++}
++
++#[derive(Debug, Serialize)]
++struct ExampleInfo {
++    id: String,
++    input: String,
++}
++
++#[derive(Debug, Serialize)]
++struct ArtifactInfo {
++    allowed_kinds: Vec<String>,
++}
++
++#[derive(Debug, Serialize)]
++struct ErrorInfo {
++    envelope: bool,
++}
++
++pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
++    let capsule_dir = options.cwd.clone();
++    let skill_path = capsule_dir.join("SKILL.md");
++    let action_path = capsule_dir.join("action.py");
++    let config_path = capsule_dir.join("skillrun.config.json");
++
++    require_file(&skill_path, "missing SKILL.md")?;
++    require_file(&action_path, "missing action.py")?;
++
++    let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
++    let runtime = config::load_runtime_config(&config_path)?;
++    let skill_hash = hashing::sha256_file(&skill_path)?;
++    let action_hash = hashing::sha256_file(&action_path)?;
++    let config_source = if config_path.exists() {
++        Some(SourceInfo {
++            path: "skillrun.config.json".to_string(),
++            sha256: hashing::sha256_file(&config_path)?,
++        })
++    } else {
++        None
++    };
++    let name = capsule_dir
++        .file_name()
++        .and_then(|value| value.to_str())
++        .unwrap_or("skill")
++        .to_string();
++
++    let manifest = ManifestDocument {
++        manifest_version: "0.1.0".to_string(),
++        generated_by: format!("skillrun@{}", env!("CARGO_PKG_VERSION")),
++        generated_at: Utc::now().to_rfc3339(),
++        sources: Sources {
++            skill: SourceInfo {
++                path: "SKILL.md".to_string(),
++                sha256: skill_hash.clone(),
++            },
++            action: SourceInfo {
++                path: "action.py".to_string(),
++                sha256: action_hash,
++            },
++            config: config_source,
++        },
++        skill: SkillInfo {
++            name: name.clone(),
++            sop_summary: "Generated from SKILL.md. Inspect support lands in T004.".to_string(),
++            skill_hash,
++        },
++        tool: ToolInfo {
++            name: name.clone(),
++            description: format!("Execute the {name} SkillRun capsule."),
++        },
++        schemas,
++        runtime,
++        permissions: config::default_permissions(),
++        ipc: IpcInfo {
++            protocol_version: "0.1.0".to_string(),
++        },
++        examples: vec![ExampleInfo {
++            id: "default".to_string(),
++            input: "examples/default.input.json".to_string(),
++        }],
++        artifacts: ArtifactInfo {
++            allowed_kinds: ["json", "markdown", "html", "pdf", "text", "file"]
++                .into_iter()
++                .map(str::to_string)
++                .collect(),
++        },
++        errors: ErrorInfo { envelope: true },
++    };
++
++    let manifest_dir = capsule_dir.join(".skillrun");
++    fs::create_dir_all(&manifest_dir).map_err(|error| {
++        format!(
++            "failed to create manifest directory {}: {error}",
++            manifest_dir.display()
++        )
++    })?;
++    let manifest_path = manifest_dir.join("manifest.generated.yaml");
++    let yaml = serde_yaml::to_string(&manifest)
++        .map_err(|error| format!("failed to serialize manifest: {error}"))?;
++    fs::write(&manifest_path, yaml)
++        .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
++
++    Ok(manifest_path)
++}
++
++fn require_file(path: &Path, message: &str) -> Result<(), String> {
++    if path.is_file() {
++        Ok(())
++    } else {
++        Err(format!("{message}: {}", path.display()))
++    }
++}
+
+
+diff --git "a/src\\schemas.rs" "b/src\\schemas.rs"
+new file mode 100644
+index 0000000..467c425
+--- /dev/null
++++ "b/src\\schemas.rs"
+@@ -0,0 +1,7 @@
++use serde::{Deserialize, Serialize};
++
++#[derive(Debug, Deserialize, Serialize)]
++pub struct Schemas {
++    pub input: serde_json::Value,
++    pub output: serde_json::Value,
++}
+
+
+diff --git "a/src\\adapters\\python.rs" "b/src\\adapters\\python.rs"
+new file mode 100644
+index 0000000..f5ac88c
+--- /dev/null
++++ "b/src\\adapters\\python.rs"
+@@ -0,0 +1,107 @@
++use std::path::Path;
++use std::process::{Command, Output, Stdio};
++use std::thread;
++use std::time::{Duration, Instant};
++
++use crate::schemas::Schemas;
++
++pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
++    let action_path = action_path
++        .canonicalize()
++        .map_err(|error| format!("failed to resolve {}: {error}", action_path.display()))?;
++    let script = r#"
++import importlib.util
++import json
++import sys
++from pathlib import Path
++
++action = Path(sys.argv[1])
++spec = importlib.util.spec_from_file_location("skillrun_action", action)
++if spec is None or spec.loader is None:
++    raise RuntimeError(f"cannot load action module: {action}")
++module = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(module)
++
++def schema_for(name):
++    model = getattr(module, name, None)
++    if model is None:
++        raise RuntimeError(f"missing {name} model")
++    method = getattr(model, "model_json_schema", None)
++    if method is None:
++        raise RuntimeError(f"{name} must be a Pydantic v2 model")
++    return method()
++
++print(json.dumps({
++    "input": schema_for("Input"),
++    "output": schema_for("Output"),
++}, ensure_ascii=False))
++"#;
++
++    let mut command = Command::new("python");
++    command
++        .arg("-c")
++        .arg(script)
++        .arg(&action_path)
++        .current_dir(capsule_dir)
++        .env_clear()
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped());
++
++    let timeout = metadata_timeout();
++    let output = run_with_timeout(command, timeout).map_err(|error| {
++        format!(
++            "failed to run Python metadata extractor for {}: {error}",
++            action_path.display()
++        )
++    })?;
++
++    if !output.status.success() {
++        let stderr = String::from_utf8_lossy(&output.stderr);
++        return Err(format!(
++            "python metadata extraction failed for {}: {}",
++            action_path.display(),
++            stderr.trim()
++        ));
++    }
++
++    serde_json::from_slice(&output.stdout)
++        .map_err(|error| format!("python metadata output was not valid JSON: {error}"))
++}
++
++fn metadata_timeout() -> Duration {
++    std::env::var("SKILLRUN_METADATA_TIMEOUT_MS")
++        .ok()
++        .and_then(|value| value.parse::<u64>().ok())
++        .map(Duration::from_millis)
++        .unwrap_or_else(|| Duration::from_secs(10))
++}
++
++fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
++    let mut child = command
++        .spawn()
++        .map_err(|error| format!("failed to spawn Python metadata extractor: {error}"))?;
++    let started_at = Instant::now();
++
++    loop {
++        if child
++            .try_wait()
++            .map_err(|error| format!("failed to poll Python metadata extractor: {error}"))?
++            .is_some()
++        {
++            return child
++                .wait_with_output()
++                .map_err(|error| format!("failed to collect Python metadata output: {error}"));
++        }
++
++        if started_at.elapsed() >= timeout {
++            let _ = child.kill();
++            let _ = child.wait_with_output();
++            return Err(format!(
++                "metadata extraction timed out after {} ms",
++                timeout.as_millis()
++            ));
++        }
++
++        thread::sleep(Duration::from_millis(10));
++    }
++}
+
+
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 843caf1..5b03344 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -40,10 +40,10 @@ fn version_uses_approved_project_name() {
+ 
+ #[test]
+ fn unimplemented_planned_commands_fail_until_implemented() {
+-    let output = run_skillrun(&["manifest"]);
++    let output = run_skillrun(&["inspect"]);
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
+ 
+-    assert!(stderr.contains("command not implemented yet: manifest"));
++    assert!(stderr.contains("command not implemented yet: inspect"));
+ }
+
+
+diff --git "a/tests\\manifest.rs" "b/tests\\manifest.rs"
+new file mode 100644
+index 0000000..51b7eaa
+--- /dev/null
++++ "b/tests\\manifest.rs"
+@@ -0,0 +1,138 @@
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn run_skillrun_with_env(args: &[&str], envs: &[(&str, &str)]) -> std::process::Output {
++    let mut command = Command::new(env!("CARGO_BIN_EXE_skillrun"));
++    command.args(args);
++    for (key, value) in envs {
++        command.env(key, value);
++    }
++    command.output().expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn generated_manifest(capsule: &Path) -> PathBuf {
++    capsule.join(".skillrun").join("manifest.generated.yaml")
++}
++
++fn assert_contains(text: &str, expected: &str) {
++    assert!(
++        text.contains(expected),
++        "manifest should contain {expected:?}\n{text}"
++    );
++}
++
++fn sha_lines_are_64_hex(manifest: &str) -> bool {
++    let lines: Vec<&str> = manifest.lines().collect();
++    lines.windows(2).any(|window| {
++        window[0].trim_start().starts_with("path: SKILL.md")
++            && window[1]
++                .trim_start()
++                .strip_prefix("sha256: ")
++                .is_some_and(is_64_hex)
++    }) && lines.windows(2).any(|window| {
++        window[0].trim_start().starts_with("path: action.py")
++            && window[1]
++                .trim_start()
++                .strip_prefix("sha256: ")
++                .is_some_and(is_64_hex)
++    }) && lines.windows(2).any(|window| {
++        window[0]
++            .trim_start()
++            .starts_with("path: skillrun.config.json")
++            && window[1]
++                .trim_start()
++                .strip_prefix("sha256: ")
++                .is_some_and(is_64_hex)
++    })
++}
++
++fn is_64_hex(value: &str) -> bool {
++    value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
++}
++
++#[test]
++fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
++    let output_root = temp_dir("manifest");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(manifest.status.success());
++    let manifest_path = generated_manifest(&capsule);
++    assert!(manifest_path.is_file());
++    let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
++
++    assert_contains(&manifest_text, "manifest_version: 0.1.0");
++    assert_contains(&manifest_text, "generated_by: skillrun@0.1.0");
++    assert_contains(&manifest_text, "name: refund");
++    assert_contains(&manifest_text, "adapter: python");
++    assert_contains(&manifest_text, "entrypoint: action.py");
++    assert_contains(&manifest_text, "order_id");
++    assert_contains(&manifest_text, "manager_approval_id");
++    assert_contains(&manifest_text, "decision");
++    assert!(sha_lines_are_64_hex(&manifest_text));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_when_action_is_missing() {
++    let output_root = temp_dir("manifest-missing-action");
++    let capsule = output_root.join("instruction_only");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# instruction only").expect("skill should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("missing action.py"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_metadata_extraction_times_out() {
++    let output_root = temp_dir("manifest-timeout");
++    let capsule = output_root.join("slow_action");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# slow action").expect("skill should be written");
++    fs::write(capsule.join("action.py"), "import time\ntime.sleep(5)\n")
++        .expect("action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun_with_env(
++        &["manifest", "--cwd", &cwd_arg],
++        &[("SKILLRUN_METADATA_TIMEOUT_MS", "200")],
++    );
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("metadata extraction timed out"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
+
+
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 0b564af..714991f 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -52,7 +52,7 @@ Validation:
+ - `cargo run -- inspect --cwd tmp/e2e-init/refund`
+ 
+ Tasks:
+-- [ ] T003 [US-002] Generate Manifest from Python Action metadata
++- [x] T003 [US-002] Generate Manifest from Python Action metadata
+ - [ ] T004 [US-002] Render inspect output and instruction-only status
+ 
+ ## Epic E002: IPC And Run
+@@ -274,7 +274,7 @@ Evidence required:
+ 
+ ### T003: Generate Manifest From Python Action Metadata
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001, T002
+ Blocks: T004, T005, T008, T009, T010, T011
+@@ -286,6 +286,10 @@ Goal:
+ Implement `skillrun manifest` in Rust for Author Mode using Pydantic v2 metadata extraction and source hash tracking.
+ 
+ Allowed files:
++- `Cargo.toml`
++- `Cargo.lock`
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/config.rs`
+
+
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index 0b564af..714991f 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-11
+ 
+ ## Current Gate
+ 
+-T001 和 T002 均已通过复审并进入 `Accepted`。T003-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002 和 T003 均已通过复审并进入 `Accepted`。T004-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -52,7 +52,7 @@ Validation:
+ - `cargo run -- inspect --cwd tmp/e2e-init/refund`
+ 
+ Tasks:
+-- [ ] T003 [US-002] Generate Manifest from Python Action metadata
++- [x] T003 [US-002] Generate Manifest from Python Action metadata
+ - [ ] T004 [US-002] Render inspect output and instruction-only status
+ 
+ ## Epic E002: IPC And Run
+@@ -274,7 +274,7 @@ Evidence required:
+ 
+ ### T003: Generate Manifest From Python Action Metadata
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001, T002
+ Blocks: T004, T005, T008, T009, T010, T011
+@@ -286,6 +286,10 @@ Goal:
+ Implement `skillrun manifest` in Rust for Author Mode using Pydantic v2 metadata extraction and source hash tracking.
+ 
+ Allowed files:
++- `Cargo.toml`
++- `Cargo.lock`
++- `README.md`
++- `README.zh-CN.md`
+ - `src/main.rs`
+ - `src/cli.rs`
+ - `src/config.rs`
+
+
+diff --git "a/.ai-platform\\specs\\mvp\\packets\\T003.yaml" "b/.ai-platform\\specs\\mvp\\packets\\T003.yaml"
+new file mode 100644
+index 0000000..7d40edf
+--- /dev/null
++++ "b/.ai-platform\\specs\\mvp\\packets\\T003.yaml"
+@@ -0,0 +1,169 @@
++schema_version: 1
++packet_id: EP-MVP-T003
++task_id: T003
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t001: Accepted after rereview on 2026-05-11
++    dependency_t002: Accepted after rereview on 2026-05-11
++
++work_unit:
++  title: Generate Manifest From Python Action Metadata
++  goal: Implement skillrun manifest in Rust for Author Mode using Pydantic v2 metadata extraction and source hash tracking.
++  epic: E001 Capsule And Manifest
++  story: US-002
++  requirements:
++    - FR-002
++    - NFR-001
++    - NFR-003
++    - TDR-001
++    - TDR-002
++  priority: P0
++  depends_on:
++    - T001
++    - T002
++  blocks:
++    - T004
++    - T005
++    - T008
++    - T009
++    - T010
++    - T011
++  parallel: false
++  conflicts_with:
++    - T004
++    - T005
++    - T008
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - docs/ssot.md
++    - .ai-platform/docs/tasks.md
++    - .ai-platform/docs/test-strategy.md
++    - src/cli.rs
++    - src/init.rs
++    - templates/python/action.py
++    - tests/init.rs
++  existing_patterns:
++    - CLI parsing currently lives in src/cli.rs and dispatches to focused modules.
++    - T002 templates generate a Python action using Pydantic v2 Input and Output models.
++    - Rust integration tests use CARGO_BIN_EXE_skillrun.
++  interfaces_or_contracts:
++    - skillrun manifest --cwd path/to/capsule writes path/to/capsule/.skillrun/manifest.generated.yaml.
++    - The Manifest records source hashes for SKILL.md, action.py, and optional skillrun.config.json.
++    - Python metadata extraction runs in Author Mode through a subprocess and does not inject user secrets.
++    - Manifest includes schemas.input and schemas.output from Pydantic v2 model_json_schema.
++  forbidden_changes:
++    - Do not implement inspect, runtime, MCP, pack, or run behavior in T003.
++    - Do not dynamically import action.py in Consumer Mode paths.
++    - Do not create a Python package for SkillRun.
++    - Do not mark T003 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - Cargo.toml
++    - Cargo.lock
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/config.rs
++    - src/hashing.rs
++    - src/manifest.rs
++    - src/schemas.rs
++    - src/adapters/python.rs
++    - tests/manifest.rs
++    - tests/fixtures/
++  test_targets:
++    - tests/manifest.rs
++  ownership_notes:
++    - Adding Rust dependencies is allowed only for manifest serialization, JSON parsing, timestamps, and SHA-256 hashing.
++    - Keep generated capsule templates stable unless a manifest test exposes a direct incompatibility.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test manifest
++    expected_failure: Tests fail because manifest command and generation modules do not exist yet.
++  green:
++    command: cargo test --test manifest
++    expected_signal: Manifest tests pass and .skillrun/manifest.generated.yaml is generated with schemas and hashes.
++  refactor:
++    command: cargo test && cargo run -- init refund --python --output tmp/e2e-manifest && cargo run -- manifest --cwd tmp/e2e-manifest/refund
++    expected_signal: Full tests pass and a generated capsule can produce a Manifest.
++
++validation_loop:
++  commands:
++    - cargo test --test manifest
++    - cargo test
++    - cargo run -- init refund --python --output tmp/e2e-manifest
++    - cargo run -- manifest --cwd tmp/e2e-manifest/refund
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to manifest command parsing, hash generation, YAML serialization, or Python metadata extraction.
++    second_failure: Determine whether Pydantic availability, Rust dependency setup, or task scope is blocking.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T003/summary.md
++  diff: .ai-platform/evidence/T003/diff.patch
++  test_results: .ai-platform/evidence/T003/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T003 Accepted.
++  review_focus:
++    - Manifest contains MVP minimum fields and source hashes.
++    - Python metadata extraction is Author Mode only and no secrets are injected.
++    - Missing SKILL.md, action.py, or schema metadata fails clearly.
++    - T003 does not implement downstream runtime/inspect/MCP/pack behavior.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep branch or current worktree for follow-up
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - missing Python or Pydantic v2 in the local execution environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear allowed files
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
