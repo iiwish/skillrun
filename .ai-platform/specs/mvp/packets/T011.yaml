@@ -1,0 +1,197 @@
+schema_version: 1
+packet_id: EP-MVP-T011
+task_id: T011
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t002: Accepted after rereview on 2026-05-11
+    dependency_t003: Accepted after rereview on 2026-05-12
+    dependency_t004: Accepted after rereview on 2026-05-12
+    dependency_t005: Accepted after rereview on 2026-05-12
+    dependency_t006: Accepted after rereview on 2026-05-12
+    dependency_t007: Accepted after rereview on 2026-05-12
+    dependency_t008: Accepted after rereview on 2026-05-12
+    dependency_t009: Accepted after rereview on 2026-05-12
+    dependency_t010: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Complete Refund Hero Example, Business Examples, And Full Test Strategy Validation
+  goal: Polish the refund hero example, README, business examples, and end-to-end validation so the MVP is ready for user review.
+  epic: E005 End-to-End Refund And Business Proof Slice
+  story: US-001..US-006
+  requirements:
+    - FR-001
+    - FR-002
+    - FR-003
+    - FR-004
+    - FR-005
+    - FR-006
+    - FR-007
+    - FR-008
+    - FR-009
+    - NFR-001
+    - NFR-002
+    - NFR-003
+    - NFR-004
+    - NFR-005
+    - NFR-006
+  priority: P0
+  depends_on:
+    - T002
+    - T003
+    - T004
+    - T005
+    - T006
+    - T007
+    - T008
+    - T009
+    - T010
+  blocks:
+    - Release acceptance
+  parallel: false
+  conflicts_with:
+    - All implementation tasks
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - .ai-platform/docs/test-strategy.md
+    - docs/business-examples.md
+    - README.md
+    - README.zh-CN.md
+    - src/adapters/python.rs
+    - tests/errors.rs
+    - tests/pack.rs
+    - tests/mcp_server.rs
+  existing_patterns:
+    - Integration tests use the real skillrun binary and temporary capsule directories.
+    - Runtime tests parse JSON output envelopes and inspect run records.
+    - Pack tests unpack .skr archives and inspect the unpacked capsule.
+    - Business examples are documented in docs/business-examples.md and only B001 refund is implemented in v0.1.
+  interfaces_or_contracts:
+    - examples/refund is the B001 hero example and must run through manifest, inspect, test, run, serve --mcp --dry-run, and pack.
+    - B002-B004 remain documentation-level examples and must not expand v0.1 runtime scope.
+    - A001-A013 require fresh automated command evidence.
+    - N001-N016 require automated coverage or explicit documented exception in the release report.
+    - Release report should become Ready_For_User_Review when T011 evidence is complete.
+  forbidden_changes:
+    - Do not add Node adapter, OpenAPI wrapper, HTTP server, registry, marketplace, scheduler, or dependency vendoring.
+    - Do not change project name or add v2 branding.
+    - Do not mark T011 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - docs/business-examples.md
+    - examples/refund/SKILL.md
+    - examples/refund/action.py
+    - examples/refund/examples/default.input.json
+    - examples/refund/examples/policy_violation.input.json
+    - examples/refund/examples/invalid.input.json
+    - src/adapters/python.rs
+    - tests/e2e_matrix.rs
+    - tests/business_examples.rs
+    - tests/errors.rs
+    - .ai-platform/docs/release-report.md
+  test_targets:
+    - tests/e2e_matrix.rs
+    - tests/business_examples.rs
+  ownership_notes:
+    - src/adapters/python.rs may be changed only to align ValidationError recoverable behavior with A006.
+    - tests/errors.rs may be changed only to assert the A006 recoverable behavior.
+    - Do not modify pack, MCP, runtime, or manifest code unless a full-suite regression proves a T011 release gate blocker.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test e2e_matrix --test business_examples
+    expected_failure: Tests fail because examples/refund and full release-level business/example assertions are not complete yet.
+  green:
+    command: cargo test --test e2e_matrix --test business_examples
+    expected_signal: A001-A013 paths and B001-B004 business examples are covered.
+  refactor:
+    command: cargo test
+    expected_signal: Full suite passes with release-level coverage.
+
+validation_loop:
+  commands:
+    - cargo test --test e2e_matrix --test business_examples
+    - cargo test
+    - cargo run -- init refund --python --output tmp/e2e-full
+    - cargo run -- manifest --cwd tmp/e2e-full/refund
+    - cargo run -- inspect --cwd tmp/e2e-full/refund
+    - cargo run -- test --cwd tmp/e2e-full/refund
+    - cargo run -- run --cwd tmp/e2e-full/refund --input examples/default.input.json
+    - cargo run -- serve --mcp --cwd tmp/e2e-full/refund --dry-run
+    - cargo run -- pack --cwd tmp/e2e-full/refund
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to release matrix coverage, refund example quality, business example docs, or ValidationError recoverable behavior.
+    second_failure: Determine whether a release gate needs a documented exception in release-report.md.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T011/summary.md
+  diff: .ai-platform/evidence/T011/diff.patch
+  test_results: .ai-platform/evidence/T011/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - full validation command results
+    - A001-A013 coverage summary
+    - N001-N016 coverage or documented exceptions
+    - B001-B004 business example summary
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T011 Accepted.
+  review_focus:
+    - A001-A013 release matrix has fresh evidence.
+    - B001 refund is complete and tested end-to-end.
+    - B002-B004 remain documentation-level examples.
+    - Negative/Security Matrix is covered or explicitly documented.
+    - Release report is Ready_For_User_Review, not Accepted.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - dirty worktree touching allowed files with unrelated changes
+  - release-level acceptance matrix cannot be reconciled with implementation
+  - missing approval gate
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that 
 
 SkillRun is in the v0.1.0 MVP buildout.
 
-- Current implementation: through `T009` Manifest-driven MCP dry-run exposure.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP paths.
-- Planned MVP commands are listed by the CLI, but long-running `serve --mcp` server mode and `pack` are not implemented yet.
+- Current implementation: v0.1 MVP behavior through `.skr` packaging, with release-level T011 validation ready for review.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, `.skr` package generation, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+- Long-running `serve --mcp` server mode is not implemented in v0.1; `serve --mcp --dry-run` verifies the Manifest-derived MCP contract.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
 
@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
 
 ## What Works Today
 
-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, and MCP dry-run contract renderer:
+The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
 
 ```bash
 cargo test
@@ -106,6 +106,7 @@ cargo run -- inspect --cwd tmp/e2e-init/refund
 cargo run -- test --cwd tmp/e2e-init/refund
 cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
 cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
+cargo run -- pack --cwd tmp/e2e-init/refund
 ```
 
 Example output:
@@ -114,7 +115,9 @@ Example output:
 skillrun 0.1.0
 ```
 
-Long-running MCP server mode and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+Long-running MCP server mode intentionally fails with `command not implemented yet`; the v0.1 MCP path is dry-run contract exposure.
+
+The `.skr` package is a source/Manifest distribution archive. It does not vendor dependencies or provide a reproducible runtime image.
 
 ## Security Model
 
@@ -143,6 +146,17 @@ The MVP goal is a small, hard boundary: no implicit execution of instruction-onl
 | `T009` | Manifest-driven MCP exposure |
 | `T010` | `.skr` packaging |
 | `T011` | End-to-end acceptance matrix and business examples |
+
+## Classic Business Examples
+
+SkillRun's v0.1 business proof is intentionally narrow:
+
+- `B001: Refund Decision` is implemented in `examples/refund` and tested end-to-end with success, `PolicyViolation`, `ValidationError`, run records, MCP dry-run exposure, and `.skr` packaging.
+- `B002: Support Triage` is a docs-level example showing stable routing labels and missing-context recovery.
+- `B003: Access Request Approval` is a docs-level example showing approval boundaries, declared environment, and audit notes.
+- `B004: Vendor Risk Review` is a docs-level example showing artifact-first review summaries and package distribution without dependency vendoring.
+
+The v0.1 MVP only implements the refund capsule. The other examples explain where the same SOP + action + Manifest pattern is valuable without expanding the runtime scope.
 
 ## Documentation
 

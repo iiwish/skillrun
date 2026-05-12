@@ -134,7 +134,7 @@ try:
     try:
         input_model = Input.model_validate_json(input_path.read_text(encoding="utf-8"))
     except PydanticValidationError as exc:
-        write_error("ValidationError", str(exc), False)
+        write_error("ValidationError", str(exc), True)
         sys.exit(1)
 
     preflight = getattr(module, "preflight", None)

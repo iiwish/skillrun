@@ -1,0 +1,6 @@
+{
+  "order_id": "order_1001",
+  "amount": 120,
+  "reason": "damaged",
+  "customer_tier": "standard"
+}

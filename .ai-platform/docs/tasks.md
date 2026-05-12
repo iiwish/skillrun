@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004、T005、T006、T007、T008、T009 和 T010 均已通过复审并进入 `Accepted`。T011 仍为 `Draft`，需要在依赖满足后再 packetize 和执行。
+T001、T002、T003、T004、T005、T006、T007、T008、T009、T010 和 T011 均已通过复审并进入 `Accepted`。MVP 实现任务已完成，后续进入最终 handoff / release acceptance。
 
 ## Epic E001: Capsule And Manifest
 
@@ -758,7 +758,7 @@ Evidence required:
 
 ### T011: Complete Refund Hero Example, Business Examples, And Full Test Strategy Validation
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T002, T003, T004, T005, T006, T007, T008, T009, T010
 Blocks: Release acceptance
@@ -771,14 +771,17 @@ Polish the `refund` hero example, README and end-to-end validation so the full t
 
 Allowed files:
 - `README.md`
+- `README.zh-CN.md`
 - `docs/business-examples.md`
 - `examples/refund/SKILL.md`
 - `examples/refund/action.py`
 - `examples/refund/examples/default.input.json`
 - `examples/refund/examples/policy_violation.input.json`
 - `examples/refund/examples/invalid.input.json`
+- `src/adapters/python.rs`
 - `tests/e2e_matrix.rs`
 - `tests/business_examples.rs`
+- `tests/errors.rs`
 - `.ai-platform/docs/release-report.md`
 
 Test targets:

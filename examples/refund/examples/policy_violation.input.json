@@ -1,0 +1,6 @@
+{
+  "order_id": "order_9001",
+  "amount": 900,
+  "reason": "damaged",
+  "customer_tier": "gold"
+}

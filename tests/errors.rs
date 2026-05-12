@@ -98,7 +98,7 @@ fn invalid_input_returns_validation_error_envelope() {
     let input_arg = invalid_input.to_string_lossy().to_string();
     let run = run_skillrun(&["run", "--cwd", &cwd_arg, "--input", &input_arg]);
     let envelope = assert_error_envelope(&run, "ValidationError");
-    assert_eq!(envelope["error"]["recoverable"], false);
+    assert_eq!(envelope["error"]["recoverable"], true);
 
     let run_id = envelope["run_id"].as_str().unwrap();
     let record = read_json(&run_dir(&capsule, run_id).join("record.json"));
