@@ -3,6 +3,12 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Serialize)]
+pub struct CapsuleConfig {
+    pub runtime: RuntimeConfig,
+    pub permissions: ManifestPermissions,
+}
+
+#[derive(Debug, Serialize)]
 pub struct RuntimeConfig {
     pub adapter: String,
     pub entrypoint: String,
@@ -32,9 +38,12 @@ pub struct EnvPermissions {
     pub read: Vec<String>,
 }
 
-pub fn load_runtime_config(path: &Path) -> Result<RuntimeConfig, String> {
+pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
     if !path.exists() {
-        return Ok(default_runtime_config());
+        return Ok(CapsuleConfig {
+            runtime: default_runtime_config(),
+            permissions: default_permissions(),
+        });
     }
 
     let text = fs::read_to_string(path)
@@ -44,22 +53,25 @@ pub fn load_runtime_config(path: &Path) -> Result<RuntimeConfig, String> {
 
     let runtime = json.get("runtime").unwrap_or(&serde_json::Value::Null);
 
-    Ok(RuntimeConfig {
-        adapter: runtime
-            .get("adapter")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("python")
-            .to_string(),
-        entrypoint: runtime
-            .get("entrypoint")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("action.py")
-            .to_string(),
-        timeout: runtime
-            .get("timeout")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("30s")
-            .to_string(),
+    Ok(CapsuleConfig {
+        runtime: RuntimeConfig {
+            adapter: runtime
+                .get("adapter")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("python")
+                .to_string(),
+            entrypoint: runtime
+                .get("entrypoint")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("action.py")
+                .to_string(),
+            timeout: runtime
+                .get("timeout")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("30s")
+                .to_string(),
+        },
+        permissions: parse_permissions(json.get("permissions"))?,
     })
 }
 
@@ -74,6 +86,61 @@ pub fn default_permissions() -> ManifestPermissions {
         },
         env: EnvPermissions { read: Vec::new() },
     }
+}
+
+fn parse_permissions(value: Option<&serde_json::Value>) -> Result<ManifestPermissions, String> {
+    let defaults = default_permissions();
+    let Some(value) = value else {
+        return Ok(defaults);
+    };
+    if value.is_null() {
+        return Ok(defaults);
+    }
+
+    Ok(ManifestPermissions {
+        files: FilePermissions {
+            read: string_array_at(value, &["files", "read"], defaults.files.read)?,
+            write: string_array_at(value, &["files", "write"], defaults.files.write)?,
+        },
+        network: NetworkPermissions {
+            outbound: string_array_at(value, &["network", "outbound"], defaults.network.outbound)?,
+        },
+        env: EnvPermissions {
+            read: string_array_at(value, &["env", "read"], defaults.env.read)?,
+        },
+    })
+}
+
+fn string_array_at(
+    value: &serde_json::Value,
+    path: &[&str],
+    default: Vec<String>,
+) -> Result<Vec<String>, String> {
+    let Some(value) = json_value_at(value, path) else {
+        return Ok(default);
+    };
+    if value.is_null() {
+        return Ok(default);
+    }
+    let values = value
+        .as_array()
+        .ok_or_else(|| format!("permissions.{} must be an array", path.join(".")))?;
+    values
+        .iter()
+        .map(|item| {
+            item.as_str()
+                .map(str::to_string)
+                .ok_or_else(|| format!("permissions.{} must contain only strings", path.join(".")))
+        })
+        .collect()
+}
+
+fn json_value_at<'a>(value: &'a serde_json::Value, path: &[&str]) -> Option<&'a serde_json::Value> {
+    let mut current = value;
+    for segment in path {
+        current = current.get(*segment)?;
+    }
+    Some(current)
 }
 
 fn default_runtime_config() -> RuntimeConfig {

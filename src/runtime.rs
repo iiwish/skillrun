@@ -10,6 +10,7 @@ use crate::adapters::python::{self, ActionRunRequest};
 use crate::errors;
 use crate::hashing;
 use crate::manifest;
+use crate::permissions;
 use crate::run_record::{self, RunRecordInput};
 
 static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -74,6 +75,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
     let input_source = resolve_input_path(&capsule_dir, input);
     let input_value = read_input_json(&input_source)?;
     let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
+    let declared_env = permissions::declared_env_values(&manifest.value);
     let started_at = Utc::now();
     let started = Instant::now();
 
@@ -95,6 +97,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
         input_json: &paths.input_json,
         output_json: &paths.output_json,
         artifact_dir: &paths.artifact_dir,
+        env: &declared_env,
         timeout,
     }) {
         Ok(output) => output,
@@ -233,7 +236,12 @@ fn adapter_envelope(paths: &RunPaths, adapter_success: bool) -> (Value, bool) {
     };
 
     match envelope.get("ok").and_then(Value::as_bool) {
-        Some(true) if adapter_success => (envelope, true),
+        Some(true) if adapter_success => {
+            match permissions::validate_artifacts(&envelope, &paths.artifact_dir) {
+                Ok(()) => (envelope, true),
+                Err(error) => (errors::permission_denied(error), false),
+            }
+        }
         Some(true) => (
             errors::protocol_violation("adapter exited with failure after writing ok: true"),
             false,

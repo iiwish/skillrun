@@ -94,7 +94,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     require_file(&action_path, "missing action.py")?;
 
     let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
-    let runtime = config::load_runtime_config(&config_path)?;
+    let config = config::load_config(&config_path)?;
     let skill_hash = hashing::sha256_file(&skill_path)?;
     let action_hash = hashing::sha256_file(&action_path)?;
     let config_source = if config_path.exists() {
@@ -136,8 +136,8 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
             description: format!("Execute the {name} SkillRun capsule."),
         },
         schemas,
-        runtime,
-        permissions: config::default_permissions(),
+        runtime: config.runtime,
+        permissions: config.permissions,
         ipc: IpcInfo {
             protocol_version: "0.1.0".to_string(),
         },

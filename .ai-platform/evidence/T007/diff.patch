@@ -1,0 +1,1341 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 8db0a4c..45fa6ff 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T006 acceptance and ready for T007 packetization
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T007 acceptance and ready for T008 packetization
+ 
+ ## Accepted Tasks
+ 
+@@ -27,6 +27,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
+ - T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
+ - T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
++- T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -39,20 +40,21 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T004 validation recorded in `.ai-platform/evidence/T004/`.
+ - T005 validation recorded in `.ai-platform/evidence/T005/`.
+ - T006 validation recorded in `.ai-platform/evidence/T006/`.
++- T007 validation recorded in `.ai-platform/evidence/T007/`.
+ 
+ ## Known Limitations
+ 
+-- T001-T006 have been accepted.
++- T001-T007 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- Artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
++- Stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- Keep T007-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T008-T011 Draft until their packets are generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T007.
++- Packetize and execute T008.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index e357995..1a5f7f5 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005 和 T006 均已通过复审并进入 `Accepted`。T007-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -76,7 +76,7 @@ Validation:
+ Tasks:
+ - [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
+ - [x] T006 [US-003] Implement structured error envelope handling
+-- [ ] T007 [US-003] Enforce artifact and declared permission boundaries
++- [x] T007 [US-003] Enforce artifact and declared permission boundaries
+ 
+ ## Epic E003: Inspect And Failure Discipline
+ 
+@@ -516,7 +516,7 @@ Evidence required:
+ 
+ ### T007: Enforce Artifact And Declared Permission Boundaries
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T005
+ Blocks: T011
+@@ -528,6 +528,12 @@ Goal:
+ Validate artifact path boundaries and declared env injection behavior for run/test.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
++- `src/main.rs`
++- `src/config.rs`
++- `src/manifest.rs`
++- `src/errors.rs`
+ - `src/runtime.rs`
+ - `src/run_record.rs`
+ - `src/permissions.rs`
+diff --git a/.ai-platform/evidence/T007/summary.md b/.ai-platform/evidence/T007/summary.md
+new file mode 100644
+index 0000000..8c6329b
+--- /dev/null
++++ b/.ai-platform/evidence/T007/summary.md
+@@ -0,0 +1,61 @@
++# T007 Evidence Summary
++
++Task: T007 Enforce Artifact And Declared Permission Boundaries
++Status: Accepted
++Executor: codex direct execute fallback
++Date: 2026-05-12
++
++## Direct Execute Fallback
++
++用户要求继续推进 T007，但没有显式要求 delegation。当前宿主指令要求只有用户明确要求 subagents 时才能创建 subagent，因此 T007 在当前 worktree 中由 Codex direct execute fallback 完成。
++
++## Changed Files
++
++- `README.md`
++- `README.zh-CN.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/docs/release-report.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T007.yaml`
++- `.ai-platform/evidence/T007/summary.md`
++- `.ai-platform/evidence/T007/test-results.md`
++- `.ai-platform/evidence/T007/diff.patch`
++- `src/main.rs`
++- `src/cli.rs`
++- `src/config.rs`
++- `src/manifest.rs`
++- `src/errors.rs`
++- `src/permissions.rs`
++- `src/runtime.rs`
++- `src/adapters/python.rs`
++- `tests/artifacts.rs`
++- `tests/permissions.rs`
++
++## Implementation Summary
++
++- 新增 `src/permissions.rs`，集中处理 declared env 收集和 artifact path containment。
++- `skillrun.config.json` 的 `permissions` 现在会进入 generated Manifest，`permissions.env.read` 可声明允许注入的环境变量。
++- runtime 只向 Python Action 子进程注入 Manifest 声明且宿主存在的 env；IPC control env 最后写入，避免被用户声明覆盖。
++- Python Action adapter 支持成功结果返回 `{ "output": ..., "artifacts": [...] }`，并继续校验 typed `Output`。
++- runtime 对 success envelope 中的 `artifacts` 做相对路径、parent traversal、drive/root prefix、canonical containment 和文件存在性校验。
++- artifact 或 env 权限边界失败返回 `PermissionDenied` structured error envelope。
++
++## TDD Summary
++
++- RED: `cargo test --test artifacts --test permissions` 失败。artifact tests 因 adapter 还不支持 artifacts envelope、缺少 `PermissionDenied` 而失败；declared env 注入测试显示 env 仍为 `missing`。
++- GREEN: 实现 permission helper、config permissions parsing、adapter artifacts passthrough 和 runtime containment 后，`cargo test --test artifacts --test permissions` 通过。
++- REFACTOR/validation: 清理未使用 helper 后，`cargo fmt -- --check` 和 `cargo test` 均通过。
++
++## Review
++
++- Spec compliance: Pass。`../outside.txt`、绝对路径、缺失 artifact 文件均返回 `PermissionDenied`；合法 artifact 被接受。
++- Bug/code quality: Pass。路径校验集中在 `src/permissions.rs`，并使用 canonical containment 防止已存在文件经由链接或路径解析逃逸。
++- QA acceptance: Pass。undeclared env 不注入，declared env 注入并记录到 run record，IPC env 不会被 declared env 覆盖。
++- Rereview: Pass。2026-05-12 复审无 blocking findings，用户要求复审通过后提交并继续 T008。
++
++## Residual Risk
++
++- T007 不提供 OS-level sandbox；Python Action 仍然是被执行代码，不能阻止其自行读取本地文件或访问网络。
++- Stale Manifest fail-closed guard 留到 T008。
++- MCP exposure 和 `.skr` packaging 留到 T009/T010。
+diff --git a/.ai-platform/evidence/T007/test-results.md b/.ai-platform/evidence/T007/test-results.md
+new file mode 100644
+index 0000000..4eea2f0
+--- /dev/null
++++ b/.ai-platform/evidence/T007/test-results.md
+@@ -0,0 +1,76 @@
++# T007 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++Command: `cargo test --test artifacts --test permissions`
++Result: 按预期失败，exit code 1。
++Signal:
++- `artifact_parent_traversal_returns_permission_denied` 失败，因为当前实现返回 `ProtocolViolation` 而不是 `PermissionDenied`。
++- `absolute_artifact_path_returns_permission_denied` 失败，因为当前实现返回 `ProtocolViolation` 而不是 `PermissionDenied`。
++- `missing_artifact_file_returns_permission_denied` 失败，因为当前实现返回 `ProtocolViolation` 而不是 `PermissionDenied`。
++- `valid_declared_artifact_is_accepted` 失败，因为 adapter 把 `{ output, artifacts }` 当作 typed `Output` 校验。
++
++Command: `cargo test --test permissions`
++Result: 按预期失败，exit code 1。
++Signal:
++- `declared_env_is_injected_and_recorded` 失败，因为 declared env 尚未从 Manifest 注入 action process。
++- `undeclared_env_is_not_injected_into_action_process` 已通过，证明 `env_clear` 的基础隔离已经存在。
++- `declared_env_cannot_override_ipc_envs` 已通过，当前 IPC env 写入顺序未暴露覆盖问题。
++
++## GREEN
++
++Command: `cargo test --test artifacts --test permissions`
++Result: 通过，exit code 0。
++Summary:
++- Artifact tests: 4 passed.
++- Permission tests: 3 passed.
++
++## Full Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test`
++Result: 通过，exit code 0。
++Summary:
++- Artifacts tests: 4 passed.
++- CLI tests: 3 passed.
++- Errors tests: 4 passed.
++- Init tests: 4 passed.
++- Inspect tests: 3 passed.
++- Manifest tests: 3 passed.
++- Permissions tests: 3 passed.
++- Runtime tests: 4 passed.
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++## Governance Validation
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T007`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
++
++## Rereview Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test --test artifacts --test permissions`
++Result: 通过，exit code 0。Artifact tests 4 passed；permission tests 3 passed。
++
++Command: `cargo test`
++Result: 通过，exit code 0。28 integration tests passed, 0 failed。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T007`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index 469661d..ec4a383 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,7 +2,7 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T006 acceptance
++Scope: SkillRun MVP planning artifacts after T007 acceptance
+ Last updated: 2026-05-12
+ 
+ ## Inputs
+@@ -13,15 +13,15 @@ Last updated: 2026-05-12
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T006 is accepted with evidence in `.ai-platform/evidence/T006/`.
+-- Packets missing required fields: None for T006.
++- Ready tasks without packet: None. T007 is accepted with evidence in `.ai-platform/evidence/T007/`.
++- Packets missing required fields: None for T007.
+ 
+ ## Constitution Check
+ 
+@@ -38,7 +38,7 @@ Last updated: 2026-05-12
+ ## Non-Functional Requirements
+ 
+ - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
+-- Gaps: No blocking gaps for T007 packetization. Later tasks must create their own packets before becoming Ready.
++- Gaps: No blocking gaps for T008 packetization. Later tasks must create their own packets before becoming Ready.
+ 
+ ## Findings
+ 
+@@ -49,10 +49,10 @@ Last updated: 2026-05-12
+ 
+ ## Execute Gate
+ 
+-- Result: Clear to packetize T007.
+-- Reason: T001 through T006 have passed review and are `Accepted`. T007 dependencies are satisfied, but T007 still needs a self-contained packet and analysis update before execution.
++- Result: Clear to packetize T008.
++- Reason: T001 through T007 have passed review and are `Accepted`. T008 dependencies are satisfied, but T008 still needs a self-contained packet and analysis update before execution.
+ 
+ ## Scope Guard
+ 
+-- T007 may be packetized next.
+-- T008-T011 remain Draft until each task has a packet, dependencies are satisfied, current review gate is cleared, and analysis remains clear for that task.
++- T008 may be packetized next.
++- T009-T011 remain Draft until each task has a packet, dependencies are satisfied, current review gate is cleared, and analysis remains clear for that task.
+diff --git a/.ai-platform/specs/mvp/packets/T007.yaml b/.ai-platform/specs/mvp/packets/T007.yaml
+new file mode 100644
+index 0000000..621b4cc
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T007.yaml
+@@ -0,0 +1,172 @@
++schema_version: 1
++packet_id: EP-MVP-T007
++task_id: T007
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t005: Accepted after rereview on 2026-05-12
++    dependency_t006: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Enforce Artifact And Declared Permission Boundaries
++  goal: Validate artifact path boundaries and declared env injection behavior for run/test.
++  epic: E002 IPC And Run
++  story: US-003
++  requirements:
++    - FR-004
++    - FR-005
++    - FR-006
++    - NFR-004
++    - NFR-005
++    - TDR-003
++  priority: P1
++  depends_on:
++    - T005
++    - T006
++  blocks:
++    - T011
++  parallel: false
++  conflicts_with:
++    - T005
++    - T006
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - docs/ssot.md
++    - .ai-platform/docs/test-strategy.md
++    - .ai-platform/docs/technology-decision-record.md
++    - src/config.rs
++    - src/manifest.rs
++    - src/errors.rs
++    - src/runtime.rs
++    - src/run_record.rs
++    - src/adapters/python.rs
++    - tests/runtime.rs
++    - tests/errors.rs
++  existing_patterns:
++    - T005 creates run-local input, context, output, stdout, stderr, artifacts, and record files.
++    - T006 normalizes runtime failures into structured ok false error envelopes.
++    - Python adapter already uses env_clear and only receives explicit IPC environment variables from Rust Core.
++    - Run record persists declared permissions copied from Manifest.
++  interfaces_or_contracts:
++    - Manifest permissions.env.read declares which host env vars may be injected into the child process.
++    - IPC env vars remain SkillRun control-channel variables and must not be overridden by user declarations.
++    - Success envelope may include artifacts as an array of objects with a relative path field.
++    - Artifact paths must be relative, must not contain parent traversal, must not use root or Windows drive prefixes, must resolve inside SKILLRUN_ARTIFACT_DIR, and must exist before being recorded as successful artifacts.
++    - Permission boundary failures return PermissionDenied structured error envelopes.
++    - MVP does not provide OS-level sandboxing; it limits env injection and accepted artifact records.
++  forbidden_changes:
++    - Do not implement stale Manifest fail-closed guard; T008 owns that.
++    - Do not implement MCP serving or packaging.
++    - Do not add OS sandbox claims or broad filesystem/network isolation.
++    - Do not mark T007 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/config.rs
++    - src/manifest.rs
++    - src/errors.rs
++    - src/runtime.rs
++    - src/run_record.rs
++    - src/permissions.rs
++    - src/adapters/python.rs
++    - tests/artifacts.rs
++    - tests/permissions.rs
++    - tests/fixtures/artifact_cases/
++  test_targets:
++    - tests/artifacts.rs
++    - tests/permissions.rs
++  ownership_notes:
++    - README updates are allowed only to reflect T007 runtime boundary status accurately.
++    - Keep T008/T009/T010 behavior untouched.
++    - Preserve existing runtime envelope fields from T005/T006.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test artifacts --test permissions
++    expected_failure: Tests fail because artifact containment, PermissionDenied, and declared env injection are not implemented yet.
++  green:
++    command: cargo test --test artifacts --test permissions
++    expected_signal: artifact traversal/absolute path cases are rejected, declared env is injected, and undeclared env is absent.
++  refactor:
++    command: cargo test
++    expected_signal: Full test suite passes after centralizing permission helpers.
++
++validation_loop:
++  commands:
++    - cargo test --test artifacts --test permissions
++    - cargo test
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to path containment, artifact existence checks, env collection, adapter env injection, or PermissionDenied envelope shape.
++    second_failure: Determine whether T007 scope needs to defer a case or adjust packet boundaries.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T007/summary.md
++  diff: .ai-platform/evidence/T007/diff.patch
++  test_results: .ai-platform/evidence/T007/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T007 Accepted.
++  review_focus:
++    - only declared env vars are injected into the child process.
++    - IPC env vars cannot be overridden by declared env values.
++    - artifact paths cannot escape the run-local artifact directory.
++    - non-existent artifacts cannot be recorded as successful artifacts.
++    - T007 does not claim full OS sandboxing.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep current worktree for review
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - Python subprocess cannot import Pydantic in the local environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear permission or artifact boundary semantics
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index e357995..1a5f7f5 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005 和 T006 均已通过复审并进入 `Accepted`。T007-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -76,7 +76,7 @@ Validation:
+ Tasks:
+ - [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
+ - [x] T006 [US-003] Implement structured error envelope handling
+-- [ ] T007 [US-003] Enforce artifact and declared permission boundaries
++- [x] T007 [US-003] Enforce artifact and declared permission boundaries
+ 
+ ## Epic E003: Inspect And Failure Discipline
+ 
+@@ -516,7 +516,7 @@ Evidence required:
+ 
+ ### T007: Enforce Artifact And Declared Permission Boundaries
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T005
+ Blocks: T011
+@@ -528,6 +528,12 @@ Goal:
+ Validate artifact path boundaries and declared env injection behavior for run/test.
+ 
+ Allowed files:
++- `README.md`
++- `README.zh-CN.md`
++- `src/main.rs`
++- `src/config.rs`
++- `src/manifest.rs`
++- `src/errors.rs`
+ - `src/runtime.rs`
+ - `src/run_record.rs`
+ - `src/permissions.rs`
+diff --git a/README.md b/README.md
+index 781a9ee..381ef6b 100644
+--- a/README.md
++++ b/README.md
+@@ -12,8 +12,8 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T006` Rust structured error envelopes.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, and contract tests for the skeleton/init/manifest/inspect/runtime/error path.
++- Current implementation: through `T007` artifact containment and declared env handling.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, artifact validation, declared env injection, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission paths.
+ - Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 5dd4620..a9a8687 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,8 +12,8 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T006` Rust structured error envelopes。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、structured error envelopes，以及 CLI/init/manifest/inspect/runtime/error 路径的 contract tests。
++- 当前实现：已推进到 `T007` artifact containment 和 declared env handling。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、structured error envelopes、artifact validation、declared env injection，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission 路径的 contract tests。
+ - CLI 已列出计划中的 MVP 命令，但 `serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+diff --git a/src/adapters/python.rs b/src/adapters/python.rs
+index 5fce072..7b5b7d0 100644
+--- a/src/adapters/python.rs
++++ b/src/adapters/python.rs
+@@ -12,6 +12,7 @@ pub struct ActionRunRequest<'a> {
+     pub input_json: &'a Path,
+     pub output_json: &'a Path,
+     pub artifact_dir: &'a Path,
++    pub env: &'a [(String, String)],
+     pub timeout: Duration,
+ }
+ 
+@@ -164,21 +165,39 @@ try:
+         write_error("RuntimeError", str(exc), False)
+         sys.exit(1)
+ 
++    artifacts = []
++    display_markdown = None
+     try:
+         if isinstance(result, Output):
+             output_model = result
++        elif isinstance(result, dict) and (
++            "output" in result or "result" in result or "artifacts" in result or "display" in result
++        ):
++            output_value = result.get("output", result.get("result"))
++            if output_value is None:
++                raise ValueError("action result envelope must contain output")
++            artifacts = result.get("artifacts", [])
++            display = result.get("display")
++            if isinstance(display, dict):
++                display_markdown = display.get("markdown")
++            elif isinstance(display, str):
++                display_markdown = display
++            output_model = Output.model_validate(output_value)
+         else:
+             output_model = Output.model_validate(result)
+-    except PydanticValidationError as exc:
++    except (PydanticValidationError, ValueError) as exc:
+         write_error("ProtocolViolation", str(exc), False)
+         sys.exit(1)
+ 
+     payload = output_model.model_dump(mode="json")
++    if display_markdown is None:
++        display_markdown = payload.get("reasoning_summary", "Run completed.")
+     output_path.write_text(json.dumps({
+         "ok": True,
+         "output": payload,
++        "artifacts": artifacts,
+         "display": {
+-            "markdown": payload.get("reasoning_summary", "Run completed.")
++            "markdown": display_markdown
+         }
+     }, ensure_ascii=False, indent=2), encoding="utf-8")
+ except Exception as exc:
+@@ -193,7 +212,11 @@ except Exception as exc:
+         .arg(script)
+         .arg(&action_path)
+         .current_dir(request.capsule_dir)
+-        .env_clear()
++        .env_clear();
++    for (key, value) in request.env {
++        command.env(key, value);
++    }
++    command
+         .env("SKILLRUN_CONTEXT_JSON", request.context_json)
+         .env("SKILLRUN_INPUT_JSON", request.input_json)
+         .env("SKILLRUN_OUTPUT_JSON", request.output_json)
+diff --git a/src/cli.rs b/src/cli.rs
+index e0b1c84..809d99d 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -286,6 +286,6 @@ Implemented:
+   test
+   run
+ 
+-Later tasks implement structured errors, permissions, MCP, and packaging behavior."
++Later tasks implement stale Manifest guards, MCP, and packaging behavior."
+     );
+ }
+diff --git a/src/config.rs b/src/config.rs
+index b1de620..b24ddec 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -2,6 +2,12 @@ use serde::Serialize;
+ use std::fs;
+ use std::path::Path;
+ 
++#[derive(Debug, Serialize)]
++pub struct CapsuleConfig {
++    pub runtime: RuntimeConfig,
++    pub permissions: ManifestPermissions,
++}
++
+ #[derive(Debug, Serialize)]
+ pub struct RuntimeConfig {
+     pub adapter: String,
+@@ -32,9 +38,12 @@ pub struct EnvPermissions {
+     pub read: Vec<String>,
+ }
+ 
+-pub fn load_runtime_config(path: &Path) -> Result<RuntimeConfig, String> {
++pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
+     if !path.exists() {
+-        return Ok(default_runtime_config());
++        return Ok(CapsuleConfig {
++            runtime: default_runtime_config(),
++            permissions: default_permissions(),
++        });
+     }
+ 
+     let text = fs::read_to_string(path)
+@@ -44,22 +53,25 @@ pub fn load_runtime_config(path: &Path) -> Result<RuntimeConfig, String> {
+ 
+     let runtime = json.get("runtime").unwrap_or(&serde_json::Value::Null);
+ 
+-    Ok(RuntimeConfig {
+-        adapter: runtime
+-            .get("adapter")
+-            .and_then(serde_json::Value::as_str)
+-            .unwrap_or("python")
+-            .to_string(),
+-        entrypoint: runtime
+-            .get("entrypoint")
+-            .and_then(serde_json::Value::as_str)
+-            .unwrap_or("action.py")
+-            .to_string(),
+-        timeout: runtime
+-            .get("timeout")
+-            .and_then(serde_json::Value::as_str)
+-            .unwrap_or("30s")
+-            .to_string(),
++    Ok(CapsuleConfig {
++        runtime: RuntimeConfig {
++            adapter: runtime
++                .get("adapter")
++                .and_then(serde_json::Value::as_str)
++                .unwrap_or("python")
++                .to_string(),
++            entrypoint: runtime
++                .get("entrypoint")
++                .and_then(serde_json::Value::as_str)
++                .unwrap_or("action.py")
++                .to_string(),
++            timeout: runtime
++                .get("timeout")
++                .and_then(serde_json::Value::as_str)
++                .unwrap_or("30s")
++                .to_string(),
++        },
++        permissions: parse_permissions(json.get("permissions"))?,
+     })
+ }
+ 
+@@ -76,6 +88,61 @@ pub fn default_permissions() -> ManifestPermissions {
+     }
+ }
+ 
++fn parse_permissions(value: Option<&serde_json::Value>) -> Result<ManifestPermissions, String> {
++    let defaults = default_permissions();
++    let Some(value) = value else {
++        return Ok(defaults);
++    };
++    if value.is_null() {
++        return Ok(defaults);
++    }
++
++    Ok(ManifestPermissions {
++        files: FilePermissions {
++            read: string_array_at(value, &["files", "read"], defaults.files.read)?,
++            write: string_array_at(value, &["files", "write"], defaults.files.write)?,
++        },
++        network: NetworkPermissions {
++            outbound: string_array_at(value, &["network", "outbound"], defaults.network.outbound)?,
++        },
++        env: EnvPermissions {
++            read: string_array_at(value, &["env", "read"], defaults.env.read)?,
++        },
++    })
++}
++
++fn string_array_at(
++    value: &serde_json::Value,
++    path: &[&str],
++    default: Vec<String>,
++) -> Result<Vec<String>, String> {
++    let Some(value) = json_value_at(value, path) else {
++        return Ok(default);
++    };
++    if value.is_null() {
++        return Ok(default);
++    }
++    let values = value
++        .as_array()
++        .ok_or_else(|| format!("permissions.{} must be an array", path.join(".")))?;
++    values
++        .iter()
++        .map(|item| {
++            item.as_str()
++                .map(str::to_string)
++                .ok_or_else(|| format!("permissions.{} must contain only strings", path.join(".")))
++        })
++        .collect()
++}
++
++fn json_value_at<'a>(value: &'a serde_json::Value, path: &[&str]) -> Option<&'a serde_json::Value> {
++    let mut current = value;
++    for segment in path {
++        current = current.get(*segment)?;
++    }
++    Some(current)
++}
++
+ fn default_runtime_config() -> RuntimeConfig {
+     RuntimeConfig {
+         adapter: "python".to_string(),
+diff --git a/src/errors.rs b/src/errors.rs
+index 43bec22..fd7f5c1 100644
+--- a/src/errors.rs
++++ b/src/errors.rs
+@@ -2,6 +2,7 @@ use serde_json::{json, Value};
+ 
+ pub const VALIDATION_ERROR: &str = "ValidationError";
+ pub const POLICY_VIOLATION: &str = "PolicyViolation";
++pub const PERMISSION_DENIED: &str = "PermissionDenied";
+ pub const PROTOCOL_VIOLATION: &str = "ProtocolViolation";
+ pub const RUNTIME_ERROR: &str = "RuntimeError";
+ 
+@@ -13,6 +14,10 @@ pub fn runtime_error(message: impl Into<String>) -> Value {
+     envelope(RUNTIME_ERROR, message, false, None)
+ }
+ 
++pub fn permission_denied(message: impl Into<String>) -> Value {
++    envelope(PERMISSION_DENIED, message, false, None)
++}
++
+ pub fn envelope(
+     code: &str,
+     message: impl Into<String>,
+@@ -55,6 +60,7 @@ pub fn validate_error_envelope(value: &Value) -> Result<(), String> {
+     if ![
+         VALIDATION_ERROR,
+         POLICY_VIOLATION,
++        PERMISSION_DENIED,
+         PROTOCOL_VIOLATION,
+         RUNTIME_ERROR,
+     ]
+diff --git a/src/main.rs b/src/main.rs
+index f1fe28a..44107d7 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -7,6 +7,7 @@ mod hashing;
+ mod init;
+ mod inspect;
+ mod manifest;
++mod permissions;
+ mod run_record;
+ mod runtime;
+ mod schemas;
+diff --git a/src/manifest.rs b/src/manifest.rs
+index f3e7ccd..2a026b6 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -94,7 +94,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+     require_file(&action_path, "missing action.py")?;
+ 
+     let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
+-    let runtime = config::load_runtime_config(&config_path)?;
++    let config = config::load_config(&config_path)?;
+     let skill_hash = hashing::sha256_file(&skill_path)?;
+     let action_hash = hashing::sha256_file(&action_path)?;
+     let config_source = if config_path.exists() {
+@@ -136,8 +136,8 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+             description: format!("Execute the {name} SkillRun capsule."),
+         },
+         schemas,
+-        runtime,
+-        permissions: config::default_permissions(),
++        runtime: config.runtime,
++        permissions: config.permissions,
+         ipc: IpcInfo {
+             protocol_version: "0.1.0".to_string(),
+         },
+diff --git a/src/permissions.rs b/src/permissions.rs
+new file mode 100644
+index 0000000..c5d6df7
+--- /dev/null
++++ b/src/permissions.rs
+@@ -0,0 +1,103 @@
++use serde_json::Value;
++use serde_yaml::Value as YamlValue;
++use std::path::{Component, Path};
++
++pub fn declared_env_values(manifest: &YamlValue) -> Vec<(String, String)> {
++    declared_env_keys(manifest)
++        .into_iter()
++        .filter(|key| !key.is_empty())
++        .filter_map(|key| std::env::var(&key).ok().map(|value| (key, value)))
++        .collect()
++}
++
++pub fn validate_artifacts(envelope: &Value, artifact_dir: &Path) -> Result<(), String> {
++    let Some(artifacts) = envelope.get("artifacts") else {
++        return Ok(());
++    };
++    let artifacts = artifacts
++        .as_array()
++        .ok_or_else(|| "artifacts must be an array".to_string())?;
++    let artifact_root = artifact_dir.canonicalize().map_err(|error| {
++        format!(
++            "SKILLRUN_ARTIFACT_DIR is not accessible at {}: {error}",
++            artifact_dir.display()
++        )
++    })?;
++
++    for (index, artifact) in artifacts.iter().enumerate() {
++        let path = artifact
++            .get("path")
++            .and_then(Value::as_str)
++            .ok_or_else(|| format!("artifact[{index}].path must be a string"))?;
++        validate_relative_artifact_path(path)
++            .map_err(|error| format!("artifact[{index}].path {error}: {path}"))?;
++
++        let artifact_path = artifact_dir.join(path);
++        let artifact_path = artifact_path.canonicalize().map_err(|error| {
++            format!(
++                "artifact[{index}].path must point to an existing file inside SKILLRUN_ARTIFACT_DIR: {path}: {error}"
++            )
++        })?;
++        if !artifact_path.starts_with(&artifact_root) {
++            return Err(format!(
++                "artifact[{index}].path resolves outside SKILLRUN_ARTIFACT_DIR: {path}"
++            ));
++        }
++        if !artifact_path.is_file() {
++            return Err(format!("artifact[{index}].path is not a file: {path}"));
++        }
++    }
++
++    Ok(())
++}
++
++fn declared_env_keys(manifest: &YamlValue) -> Vec<String> {
++    yaml_value_at(manifest, &["permissions", "env", "read"])
++        .and_then(YamlValue::as_sequence)
++        .map(|items| {
++            items
++                .iter()
++                .filter_map(YamlValue::as_str)
++                .map(str::to_string)
++                .collect()
++        })
++        .unwrap_or_default()
++}
++
++fn validate_relative_artifact_path(path: &str) -> Result<(), &'static str> {
++    if path.trim().is_empty() {
++        return Err("must not be empty");
++    }
++
++    let path = Path::new(path);
++    if path.is_absolute() {
++        return Err("must be relative");
++    }
++
++    let mut has_normal_component = false;
++    for component in path.components() {
++        match component {
++            Component::Normal(_) => has_normal_component = true,
++            Component::CurDir => {}
++            Component::ParentDir => return Err("must not contain parent directory traversal"),
++            Component::Prefix(_) | Component::RootDir => {
++                return Err("must not contain a drive prefix or root")
++            }
++        }
++    }
++
++    if has_normal_component {
++        Ok(())
++    } else {
++        Err("must include a file name")
++    }
++}
++
++fn yaml_value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
++    let mut current = value;
++    for segment in path {
++        let key = YamlValue::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
+diff --git a/src/runtime.rs b/src/runtime.rs
+index dd6d98f..b4ce2ce 100644
+--- a/src/runtime.rs
++++ b/src/runtime.rs
+@@ -10,6 +10,7 @@ use crate::adapters::python::{self, ActionRunRequest};
+ use crate::errors;
+ use crate::hashing;
+ use crate::manifest;
++use crate::permissions;
+ use crate::run_record::{self, RunRecordInput};
+ 
+ static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
+@@ -74,6 +75,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+     let input_source = resolve_input_path(&capsule_dir, input);
+     let input_value = read_input_json(&input_source)?;
+     let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
++    let declared_env = permissions::declared_env_values(&manifest.value);
+     let started_at = Utc::now();
+     let started = Instant::now();
+ 
+@@ -95,6 +97,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+         input_json: &paths.input_json,
+         output_json: &paths.output_json,
+         artifact_dir: &paths.artifact_dir,
++        env: &declared_env,
+         timeout,
+     }) {
+         Ok(output) => output,
+@@ -233,7 +236,12 @@ fn adapter_envelope(paths: &RunPaths, adapter_success: bool) -> (Value, bool) {
+     };
+ 
+     match envelope.get("ok").and_then(Value::as_bool) {
+-        Some(true) if adapter_success => (envelope, true),
++        Some(true) if adapter_success => {
++            match permissions::validate_artifacts(&envelope, &paths.artifact_dir) {
++                Ok(()) => (envelope, true),
++                Err(error) => (errors::permission_denied(error), false),
++            }
++        }
+         Some(true) => (
+             errors::protocol_violation("adapter exited with failure after writing ok: true"),
+             false,
+diff --git a/tests/artifacts.rs b/tests/artifacts.rs
+new file mode 100644
+index 0000000..46726ee
+--- /dev/null
++++ b/tests/artifacts.rs
+@@ -0,0 +1,180 @@
++use serde_json::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    (output_root, capsule)
++}
++
++fn write_manifest(capsule: &Path) {
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++}
++
++fn patch_action_run(capsule: &Path, run_body: &str) {
++    let action_path = capsule.join("action.py");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let action = action
++        .replace(
++            "from typing import Literal\n",
++            "from typing import Literal\nimport os\nfrom pathlib import Path\n",
++        )
++        .replace("def run(input: Input, ctx) -> Output:\n", run_body);
++    fs::write(&action_path, action).expect("action should be updated");
++}
++
++fn read_json(path: &Path) -> Value {
++    let text = fs::read_to_string(path).expect("json file should be readable");
++    serde_json::from_str(&text).expect("json file should parse")
++}
++
++fn run_dir(capsule: &Path, run_id: &str) -> PathBuf {
++    capsule.join(".skillrun").join("runs").join(run_id)
++}
++
++fn assert_error_envelope(output: &std::process::Output, code: &str) -> Value {
++    assert!(
++        !output.status.success(),
++        "command should fail with a structured error\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be a JSON envelope");
++    assert_eq!(envelope["ok"], false);
++    assert_eq!(envelope["error"]["code"], code);
++    assert!(envelope["display"]["markdown"].as_str().unwrap().len() > 3);
++    assert!(!envelope["display"]["markdown"]
++        .as_str()
++        .unwrap()
++        .contains("Traceback"));
++    envelope
++}
++
++fn assert_success_envelope(output: &std::process::Output) -> Value {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be a JSON envelope");
++    assert_eq!(envelope["ok"], true);
++    envelope
++}
++
++#[test]
++fn artifact_parent_traversal_returns_permission_denied() {
++    let (output_root, capsule) = init_capsule("artifact-traversal");
++    patch_action_run(
++        &capsule,
++        "def run(input: Input, ctx) -> Output:\n    return {\n        \"output\": Output(\n            decision=\"approved\",\n            amount=input.amount,\n            reasoning_summary=\"Declared artifact escapes the run artifact directory.\",\n            audit_note=\"artifact traversal should fail\",\n        ).model_dump(mode=\"json\"),\n        \"artifacts\": [{\"name\": \"receipt\", \"kind\": \"text\", \"path\": \"../outside.txt\"}],\n    }\n",
++    );
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let envelope = assert_error_envelope(&run, "PermissionDenied");
++
++    let run_id = envelope["run_id"].as_str().unwrap();
++    let record = read_json(&run_dir(&capsule, run_id).join("record.json"));
++    assert_eq!(record["status"], "failed");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn absolute_artifact_path_returns_permission_denied() {
++    let (output_root, capsule) = init_capsule("artifact-absolute");
++    let outside_path = output_root
++        .join("outside.txt")
++        .to_string_lossy()
++        .to_string();
++    let outside_path = serde_json::to_string(&outside_path).expect("path should serialize");
++    patch_action_run(
++        &capsule,
++        &format!(
++            "def run(input: Input, ctx) -> Output:\n    return {{\n        \"output\": Output(\n            decision=\"approved\",\n            amount=input.amount,\n            reasoning_summary=\"Declared artifact uses an absolute path.\",\n            audit_note=\"absolute artifact should fail\",\n        ).model_dump(mode=\"json\"),\n        \"artifacts\": [{{\"name\": \"receipt\", \"kind\": \"text\", \"path\": {outside_path}}}],\n    }}\n"
++        ),
++    );
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    assert_error_envelope(&run, "PermissionDenied");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn missing_artifact_file_returns_permission_denied() {
++    let (output_root, capsule) = init_capsule("artifact-missing");
++    patch_action_run(
++        &capsule,
++        "def run(input: Input, ctx) -> Output:\n    return {\n        \"output\": Output(\n            decision=\"approved\",\n            amount=input.amount,\n            reasoning_summary=\"Declared artifact file was never written.\",\n            audit_note=\"missing artifact should fail\",\n        ).model_dump(mode=\"json\"),\n        \"artifacts\": [{\"name\": \"receipt\", \"kind\": \"text\", \"path\": \"receipt.txt\"}],\n    }\n",
++    );
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    assert_error_envelope(&run, "PermissionDenied");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn valid_declared_artifact_is_accepted() {
++    let (output_root, capsule) = init_capsule("artifact-valid");
++    patch_action_run(
++        &capsule,
++        "def run(input: Input, ctx) -> Output:\n    artifact = Path(os.environ[\"SKILLRUN_ARTIFACT_DIR\"]) / \"receipt.txt\"\n    artifact.write_text(\"refund receipt\", encoding=\"utf-8\")\n    return {\n        \"output\": Output(\n            decision=\"approved\",\n            amount=input.amount,\n            reasoning_summary=\"Declared artifact stays inside the run artifact directory.\",\n            audit_note=\"artifact accepted\",\n        ).model_dump(mode=\"json\"),\n        \"artifacts\": [{\"name\": \"receipt\", \"kind\": \"text\", \"path\": \"receipt.txt\"}],\n    }\n",
++    );
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let envelope = assert_success_envelope(&run);
++    assert_eq!(envelope["artifacts"][0]["path"], "receipt.txt");
++
++    let run_id = envelope["run_id"].as_str().unwrap();
++    assert!(run_dir(&capsule, run_id)
++        .join("artifacts")
++        .join("receipt.txt")
++        .is_file());
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/permissions.rs b/tests/permissions.rs
+new file mode 100644
+index 0000000..05021da
+--- /dev/null
++++ b/tests/permissions.rs
+@@ -0,0 +1,168 @@
++use serde_json::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn run_skillrun_with_env(args: &[&str], key: &str, value: &str) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .env(key, value)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    (output_root, capsule)
++}
++
++fn write_config_env(capsule: &Path, env_reads: &[&str]) {
++    let reads = env_reads
++        .iter()
++        .map(|name| format!("\"{name}\""))
++        .collect::<Vec<_>>()
++        .join(", ");
++    let config = format!(
++        "{{\n  \"runtime\": {{\n    \"adapter\": \"python\",\n    \"entrypoint\": \"action.py\",\n    \"timeout\": \"30s\"\n  }},\n  \"permissions\": {{\n    \"files\": {{\n      \"read\": [],\n      \"write\": [\".skillrun/runs/**\"]\n    }},\n    \"network\": {{\n      \"outbound\": []\n    }},\n    \"env\": {{\n      \"read\": [{reads}]\n    }}\n  }}\n}}\n"
++    );
++    fs::write(capsule.join("skillrun.config.json"), config).expect("config should be written");
++}
++
++fn write_manifest(capsule: &Path) {
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++}
++
++fn patch_action_audit_note_from_env(capsule: &Path, env_name: &str) {
++    let action_path = capsule.join("action.py");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let env_name = serde_json::to_string(env_name).expect("env name should serialize");
++    let action = action
++        .replace(
++            "from typing import Literal\n",
++            "from typing import Literal\nimport os\n",
++        )
++        .replace(
++            "def run(input: Input, ctx) -> Output:\n",
++            &format!(
++                "def run(input: Input, ctx) -> Output:\n    return Output(\n        decision=\"approved\",\n        amount=input.amount,\n        reasoning_summary=\"Environment visibility was captured by the action.\",\n        audit_note=os.environ.get({env_name}, \"missing\"),\n    )\n"
++            ),
++        );
++    fs::write(&action_path, action).expect("action should be updated");
++}
++
++fn read_json(path: &Path) -> Value {
++    let text = fs::read_to_string(path).expect("json file should be readable");
++    serde_json::from_str(&text).expect("json file should parse")
++}
++
++fn run_dir(capsule: &Path, run_id: &str) -> PathBuf {
++    capsule.join(".skillrun").join("runs").join(run_id)
++}
++
++fn assert_success_envelope(output: &std::process::Output) -> Value {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be a JSON envelope");
++    assert_eq!(envelope["ok"], true);
++    envelope
++}
++
++#[test]
++fn undeclared_env_is_not_injected_into_action_process() {
++    let (output_root, capsule) = init_capsule("permissions-undeclared-env");
++    patch_action_audit_note_from_env(&capsule, "SKILLRUN_SECRET");
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun_with_env(&["test", "--cwd", &cwd_arg], "SKILLRUN_SECRET", "secret");
++    let envelope = assert_success_envelope(&run);
++    assert_eq!(envelope["output"]["audit_note"], "missing");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn declared_env_is_injected_and_recorded() {
++    let (output_root, capsule) = init_capsule("permissions-declared-env");
++    write_config_env(&capsule, &["SKILLRUN_ALLOWED_ENV"]);
++    patch_action_audit_note_from_env(&capsule, "SKILLRUN_ALLOWED_ENV");
++    write_manifest(&capsule);
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun_with_env(
++        &["test", "--cwd", &cwd_arg],
++        "SKILLRUN_ALLOWED_ENV",
++        "allowed-value",
++    );
++    let envelope = assert_success_envelope(&run);
++    assert_eq!(envelope["output"]["audit_note"], "allowed-value");
++
++    let run_id = envelope["run_id"].as_str().unwrap();
++    let record = read_json(&run_dir(&capsule, run_id).join("record.json"));
++    assert_eq!(
++        record["permissions"]["env"]["read"][0],
++        "SKILLRUN_ALLOWED_ENV"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn declared_env_cannot_override_ipc_envs() {
++    let (output_root, capsule) = init_capsule("permissions-ipc-env");
++    write_config_env(&capsule, &["SKILLRUN_OUTPUT_JSON"]);
++    write_manifest(&capsule);
++
++    let outside_output = output_root.join("outside-output.json");
++    let outside_arg = outside_output.to_string_lossy().to_string();
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun_with_env(
++        &["test", "--cwd", &cwd_arg],
++        "SKILLRUN_OUTPUT_JSON",
++        &outside_arg,
++    );
++    let envelope = assert_success_envelope(&run);
++    assert!(!outside_output.exists());
++
++    let run_id = envelope["run_id"].as_str().unwrap();
++    assert!(run_dir(&capsule, run_id).join("output.json").is_file());
++
++    fs::remove_dir_all(output_root).ok();
++}

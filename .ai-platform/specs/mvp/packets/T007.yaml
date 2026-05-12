@@ -1,0 +1,172 @@
+schema_version: 1
+packet_id: EP-MVP-T007
+task_id: T007
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t005: Accepted after rereview on 2026-05-12
+    dependency_t006: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Enforce Artifact And Declared Permission Boundaries
+  goal: Validate artifact path boundaries and declared env injection behavior for run/test.
+  epic: E002 IPC And Run
+  story: US-003
+  requirements:
+    - FR-004
+    - FR-005
+    - FR-006
+    - NFR-004
+    - NFR-005
+    - TDR-003
+  priority: P1
+  depends_on:
+    - T005
+    - T006
+  blocks:
+    - T011
+  parallel: false
+  conflicts_with:
+    - T005
+    - T006
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - docs/ssot.md
+    - .ai-platform/docs/test-strategy.md
+    - .ai-platform/docs/technology-decision-record.md
+    - src/config.rs
+    - src/manifest.rs
+    - src/errors.rs
+    - src/runtime.rs
+    - src/run_record.rs
+    - src/adapters/python.rs
+    - tests/runtime.rs
+    - tests/errors.rs
+  existing_patterns:
+    - T005 creates run-local input, context, output, stdout, stderr, artifacts, and record files.
+    - T006 normalizes runtime failures into structured ok false error envelopes.
+    - Python adapter already uses env_clear and only receives explicit IPC environment variables from Rust Core.
+    - Run record persists declared permissions copied from Manifest.
+  interfaces_or_contracts:
+    - Manifest permissions.env.read declares which host env vars may be injected into the child process.
+    - IPC env vars remain SkillRun control-channel variables and must not be overridden by user declarations.
+    - Success envelope may include artifacts as an array of objects with a relative path field.
+    - Artifact paths must be relative, must not contain parent traversal, must not use root or Windows drive prefixes, must resolve inside SKILLRUN_ARTIFACT_DIR, and must exist before being recorded as successful artifacts.
+    - Permission boundary failures return PermissionDenied structured error envelopes.
+    - MVP does not provide OS-level sandboxing; it limits env injection and accepted artifact records.
+  forbidden_changes:
+    - Do not implement stale Manifest fail-closed guard; T008 owns that.
+    - Do not implement MCP serving or packaging.
+    - Do not add OS sandbox claims or broad filesystem/network isolation.
+    - Do not mark T007 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/config.rs
+    - src/manifest.rs
+    - src/errors.rs
+    - src/runtime.rs
+    - src/run_record.rs
+    - src/permissions.rs
+    - src/adapters/python.rs
+    - tests/artifacts.rs
+    - tests/permissions.rs
+    - tests/fixtures/artifact_cases/
+  test_targets:
+    - tests/artifacts.rs
+    - tests/permissions.rs
+  ownership_notes:
+    - README updates are allowed only to reflect T007 runtime boundary status accurately.
+    - Keep T008/T009/T010 behavior untouched.
+    - Preserve existing runtime envelope fields from T005/T006.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test artifacts --test permissions
+    expected_failure: Tests fail because artifact containment, PermissionDenied, and declared env injection are not implemented yet.
+  green:
+    command: cargo test --test artifacts --test permissions
+    expected_signal: artifact traversal/absolute path cases are rejected, declared env is injected, and undeclared env is absent.
+  refactor:
+    command: cargo test
+    expected_signal: Full test suite passes after centralizing permission helpers.
+
+validation_loop:
+  commands:
+    - cargo test --test artifacts --test permissions
+    - cargo test
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to path containment, artifact existence checks, env collection, adapter env injection, or PermissionDenied envelope shape.
+    second_failure: Determine whether T007 scope needs to defer a case or adjust packet boundaries.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T007/summary.md
+  diff: .ai-platform/evidence/T007/diff.patch
+  test_results: .ai-platform/evidence/T007/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T007 Accepted.
+  review_focus:
+    - only declared env vars are injected into the child process.
+    - IPC env vars cannot be overridden by declared env values.
+    - artifact paths cannot escape the run-local artifact directory.
+    - non-existent artifacts cannot be recorded as successful artifacts.
+    - T007 does not claim full OS sandboxing.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - Python subprocess cannot import Pydantic in the local environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear permission or artifact boundary semantics
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

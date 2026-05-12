@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004、T005 和 T006 均已通过复审并进入 `Accepted`。T007-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -76,7 +76,7 @@ Validation:
 Tasks:
 - [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
 - [x] T006 [US-003] Implement structured error envelope handling
-- [ ] T007 [US-003] Enforce artifact and declared permission boundaries
+- [x] T007 [US-003] Enforce artifact and declared permission boundaries
 
 ## Epic E003: Inspect And Failure Discipline
 
@@ -516,7 +516,7 @@ Evidence required:
 
 ### T007: Enforce Artifact And Declared Permission Boundaries
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T005
 Blocks: T011
@@ -528,6 +528,12 @@ Goal:
 Validate artifact path boundaries and declared env injection behavior for run/test.
 
 Allowed files:
+- `README.md`
+- `README.zh-CN.md`
+- `src/main.rs`
+- `src/config.rs`
+- `src/manifest.rs`
+- `src/errors.rs`
 - `src/runtime.rs`
 - `src/run_record.rs`
 - `src/permissions.rs`

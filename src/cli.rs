@@ -286,6 +286,6 @@ Implemented:
   test
   run
 
-Later tasks implement structured errors, permissions, MCP, and packaging behavior."
+Later tasks implement stale Manifest guards, MCP, and packaging behavior."
     );
 }

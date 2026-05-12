@@ -2,6 +2,7 @@ use serde_json::{json, Value};
 
 pub const VALIDATION_ERROR: &str = "ValidationError";
 pub const POLICY_VIOLATION: &str = "PolicyViolation";
+pub const PERMISSION_DENIED: &str = "PermissionDenied";
 pub const PROTOCOL_VIOLATION: &str = "ProtocolViolation";
 pub const RUNTIME_ERROR: &str = "RuntimeError";
 
@@ -11,6 +12,10 @@ pub fn protocol_violation(message: impl Into<String>) -> Value {
 
 pub fn runtime_error(message: impl Into<String>) -> Value {
     envelope(RUNTIME_ERROR, message, false, None)
+}
+
+pub fn permission_denied(message: impl Into<String>) -> Value {
+    envelope(PERMISSION_DENIED, message, false, None)
 }
 
 pub fn envelope(
@@ -55,6 +60,7 @@ pub fn validate_error_envelope(value: &Value) -> Result<(), String> {
     if ![
         VALIDATION_ERROR,
         POLICY_VIOLATION,
+        PERMISSION_DENIED,
         PROTOCOL_VIOLATION,
         RUNTIME_ERROR,
     ]

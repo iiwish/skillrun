@@ -12,6 +12,7 @@ pub struct ActionRunRequest<'a> {
     pub input_json: &'a Path,
     pub output_json: &'a Path,
     pub artifact_dir: &'a Path,
+    pub env: &'a [(String, String)],
     pub timeout: Duration,
 }
 
@@ -164,21 +165,39 @@ try:
         write_error("RuntimeError", str(exc), False)
         sys.exit(1)
 
+    artifacts = []
+    display_markdown = None
     try:
         if isinstance(result, Output):
             output_model = result
+        elif isinstance(result, dict) and (
+            "output" in result or "result" in result or "artifacts" in result or "display" in result
+        ):
+            output_value = result.get("output", result.get("result"))
+            if output_value is None:
+                raise ValueError("action result envelope must contain output")
+            artifacts = result.get("artifacts", [])
+            display = result.get("display")
+            if isinstance(display, dict):
+                display_markdown = display.get("markdown")
+            elif isinstance(display, str):
+                display_markdown = display
+            output_model = Output.model_validate(output_value)
         else:
             output_model = Output.model_validate(result)
-    except PydanticValidationError as exc:
+    except (PydanticValidationError, ValueError) as exc:
         write_error("ProtocolViolation", str(exc), False)
         sys.exit(1)
 
     payload = output_model.model_dump(mode="json")
+    if display_markdown is None:
+        display_markdown = payload.get("reasoning_summary", "Run completed.")
     output_path.write_text(json.dumps({
         "ok": True,
         "output": payload,
+        "artifacts": artifacts,
         "display": {
-            "markdown": payload.get("reasoning_summary", "Run completed.")
+            "markdown": display_markdown
         }
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 except Exception as exc:
@@ -193,7 +212,11 @@ except Exception as exc:
         .arg(script)
         .arg(&action_path)
         .current_dir(request.capsule_dir)
-        .env_clear()
+        .env_clear();
+    for (key, value) in request.env {
+        command.env(key, value);
+    }
+    command
         .env("SKILLRUN_CONTEXT_JSON", request.context_json)
         .env("SKILLRUN_INPUT_JSON", request.input_json)
         .env("SKILLRUN_OUTPUT_JSON", request.output_json)
