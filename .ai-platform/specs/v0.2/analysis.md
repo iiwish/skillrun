@@ -110,23 +110,29 @@ Contradictions: None.
 - Medium: 0
 - Low: 0
 
+## T017 Release Matrix Update
+
+- T017 adds release-level MCP stdio coverage for initialize, initialized notification, tools/list, tools/call success, tools/call structured error, resources/list and resources/read.
+- T017 explicitly checks stdout discipline by injecting action stdout noise and proving it is captured in the SkillRun run log rather than emitted into MCP JSON-RPC stdout.
+- Critical and High findings remain 0.
+
 ## Execute Gate
 
-Result: Clear for T012.
+Result: Clear for T017.
 
 Reason:
 
 - SOP, spec, plan and work graph are Confirmed.
 - Requirements checklist is Completed.
 - Analysis has no Critical or High findings.
-- T012 has a complete packet and its dependency is satisfied.
+- T015 and T016 are Accepted.
+- T017 has a complete packet and its dependencies are satisfied.
 
 Dependency note:
 
-- T013-T018 have packets but remain dependency-gated. They must not execute until their `depends_on` tasks are accepted.
+- T018 remains dependency-gated until T017 is accepted.
 
 ## User Review Gate
 
 - Approval: Analysis completed by Codex on 2026-05-12 per user request.
 - Reviewer notes: T012 can proceed after the user asks to execute it. Later tasks require dependency satisfaction and normal evidence/review gates.
-

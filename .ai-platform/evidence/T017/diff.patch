@@ -1,0 +1,358 @@
+﻿diff --git a/.ai-platform/specs/v0.2/analysis.md b/.ai-platform/specs/v0.2/analysis.md
+index e62db93..89d987e 100644
+--- a/.ai-platform/specs/v0.2/analysis.md
++++ b/.ai-platform/specs/v0.2/analysis.md
+@@ -110,23 +110,29 @@ Contradictions: None.
+ - Medium: 0
+ - Low: 0
+ 
++## T017 Release Matrix Update
++
++- T017 adds release-level MCP stdio coverage for initialize, initialized notification, tools/list, tools/call success, tools/call structured error, resources/list and resources/read.
++- T017 explicitly checks stdout discipline by injecting action stdout noise and proving it is captured in the SkillRun run log rather than emitted into MCP JSON-RPC stdout.
++- Critical and High findings remain 0.
++
+ ## Execute Gate
+ 
+-Result: Clear for T012.
++Result: Clear for T017.
+ 
+ Reason:
+ 
+ - SOP, spec, plan and work graph are Confirmed.
+ - Requirements checklist is Completed.
+ - Analysis has no Critical or High findings.
+-- T012 has a complete packet and its dependency is satisfied.
++- T015 and T016 are Accepted.
++- T017 has a complete packet and its dependencies are satisfied.
+ 
+ Dependency note:
+ 
+-- T013-T018 have packets but remain dependency-gated. They must not execute until their `depends_on` tasks are accepted.
++- T018 remains dependency-gated until T017 is accepted.
+ 
+ ## User Review Gate
+ 
+ - Approval: Analysis completed by Codex on 2026-05-12 per user request.
+ - Reviewer notes: T012 can proceed after the user asks to execute it. Later tasks require dependency satisfaction and normal evidence/review gates.
+-
+diff --git a/.ai-platform/specs/v0.2/tasks.md b/.ai-platform/specs/v0.2/tasks.md
+index 9e97c22..757837a 100644
+--- a/.ai-platform/specs/v0.2/tasks.md
++++ b/.ai-platform/specs/v0.2/tasks.md
+@@ -367,7 +367,7 @@ Packet path:
+ 
+ ### T017: Complete MCP E2E Fixture And Release Matrix
+ 
+-Status: Ready
++Status: Accepted
+ Priority: P0
+ Depends on: T015, T016
+ Blocks: T018
+@@ -444,7 +444,7 @@ Stories:
+ 
+ ### T018: Prepare v0.2 Release Candidate
+ 
+-Status: Draft
++Status: Ready
+ Priority: P0
+ Depends on: T012, T017
+ Blocks: Release decision
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index 8b789e4..7503a9d 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -1,11 +1,16 @@
+ use flate2::read::GzDecoder;
+-use serde_json::Value;
++use serde_json::{json, Value};
+ use std::fs;
+ use std::path::{Path, PathBuf};
+ use std::process::Command;
+ use std::time::{SystemTime, UNIX_EPOCH};
+ use tar::Archive;
+ 
++#[path = "fixtures/mcp_stdio.rs"]
++mod mcp_stdio;
++
++use mcp_stdio::ScriptedMcpClient;
++
+ fn run_skillrun(args: &[&str]) -> std::process::Output {
+     Command::new(env!("CARGO_BIN_EXE_skillrun"))
+         .args(args)
+@@ -296,3 +301,152 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn a014_mcp_stdio_release_matrix_exercises_full_client_flow() {
++    let output_root = temp_dir("e2e-mcp-stdio");
++    let capsule = init_capsule(&output_root, "refund");
++    replace_in_file(
++        &capsule.join("action.py"),
++        "def run(input: Input, ctx) -> Output:\n",
++        "def run(input: Input, ctx) -> Output:\n    print(\"MCP_STDOUT_NOISE\", flush=True)\n",
++    );
++    manifest(&capsule);
++
++    let mut client = ScriptedMcpClient::spawn(&capsule);
++    let initialize = client.initialize();
++    assert_eq!(initialize["id"], 1);
++    assert_eq!(initialize["result"]["protocolVersion"], "2025-11-25");
++    assert!(initialize["result"]["capabilities"]["tools"].is_object());
++    assert!(initialize["result"]["capabilities"]["resources"].is_object());
++    client.initialized();
++    client.expect_no_stdout_line("initialized notification");
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 2,
++        "method": "tools/list",
++        "params": {}
++    }));
++    let tools = client.read_response("release tools/list response");
++    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
++    assert_eq!(
++        tools["result"]["tools"][0]["inputSchema"]["properties"]["order_id"]["type"],
++        "string"
++    );
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 3,
++        "method": "tools/call",
++        "params": {
++            "name": "refund",
++            "arguments": {
++                "order_id": "order_1001",
++                "amount": 120,
++                "reason": "damaged",
++                "customer_tier": "standard"
++            }
++        }
++    }));
++    let call = client.read_response("release tools/call success response");
++    assert_eq!(call["result"]["isError"], false);
++    let call_text = call["result"]["content"][0]["text"]
++        .as_str()
++        .expect("tool result text should be present");
++    assert!(call_text.contains("approved"));
++    assert!(!call_text.contains("MCP_STDOUT_NOISE"));
++    let mcp_run_dir = fs::read_dir(capsule.join(".skillrun").join("runs"))
++        .expect("runs directory should be readable")
++        .filter_map(Result::ok)
++        .map(|entry| entry.path())
++        .find(|path| path.join("record.json").is_file())
++        .expect("MCP tools/call should create a run directory");
++    let stdout_log =
++        fs::read_to_string(mcp_run_dir.join("stdout.log")).expect("stdout log should be readable");
++    assert!(stdout_log.contains("MCP_STDOUT_NOISE"));
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 4,
++        "method": "tools/call",
++        "params": {
++            "name": "refund",
++            "arguments": {
++                "order_id": "order_1002",
++                "amount": 1200,
++                "reason": "damaged",
++                "customer_tier": "standard"
++            }
++        }
++    }));
++    let error_call = client.read_response("release tools/call error response");
++    assert_eq!(error_call["result"]["isError"], true);
++    assert!(error_call["result"]["content"][0]["text"]
++        .as_str()
++        .unwrap_or_default()
++        .contains("PolicyViolation"));
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 5,
++        "method": "resources/list",
++        "params": {}
++    }));
++    let resources = client.read_response("release resources/list response");
++    let listed = resources["result"]["resources"]
++        .as_array()
++        .expect("resources should be listed");
++    let listed_uris = listed
++        .iter()
++        .map(|resource| resource["uri"].as_str().unwrap_or_default().to_string())
++        .collect::<Vec<_>>();
++    assert!(listed_uris.iter().all(|uri| !uri.contains("action.py")));
++    assert!(listed_uris.iter().all(|uri| !uri.contains(".skillrun")));
++    let skill_uri = listed_uris
++        .iter()
++        .find(|uri| uri.ends_with("SKILL.md"))
++        .expect("SKILL.md should be an MCP resource")
++        .to_string();
++    let example_uri = listed_uris
++        .iter()
++        .find(|uri| uri.ends_with("examples/default.input.json"))
++        .expect("default example should be an MCP resource")
++        .to_string();
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 6,
++        "method": "resources/read",
++        "params": {
++            "uri": skill_uri
++        }
++    }));
++    let skill_read = client.read_response("release resources/read skill response");
++    assert_eq!(
++        skill_read["result"]["contents"][0]["mimeType"],
++        "text/markdown"
++    );
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 7,
++        "method": "resources/read",
++        "params": {
++            "uri": example_uri
++        }
++    }));
++    let example_read = client.read_response("release resources/read example response");
++    assert_eq!(
++        example_read["result"]["contents"][0]["mimeType"],
++        "application/json"
++    );
++    assert!(example_read["result"]["contents"][0]["text"]
++        .as_str()
++        .unwrap_or_default()
++        .contains("order_1001"));
++    client.expect_no_stdout_line("completed MCP release flow");
++
++    drop(client);
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+index ee6d248..e946273 100644
+--- a/tests/mcp_server.rs
++++ b/tests/mcp_server.rs
+@@ -1,10 +1,13 @@
+ use serde_json::{json, Value};
+ use std::fs;
+-use std::io::{BufRead, BufReader, Write};
+ use std::path::{Path, PathBuf};
+-use std::process::{Child, ChildStdin, Command, Stdio};
+-use std::sync::mpsc::{self, Receiver};
+-use std::time::{Duration, SystemTime, UNIX_EPOCH};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++#[path = "fixtures/mcp_stdio.rs"]
++mod mcp_stdio;
++
++use mcp_stdio::ScriptedMcpClient;
+ 
+ fn run_skillrun(args: &[&str]) -> std::process::Output {
+     Command::new(env!("CARGO_BIN_EXE_skillrun"))
+@@ -63,100 +66,6 @@ fn assert_success_json(output: &std::process::Output) -> Value {
+     serde_json::from_str(&stdout).expect("stdout should be JSON")
+ }
+ 
+-struct ScriptedMcpClient {
+-    child: Child,
+-    stdin: ChildStdin,
+-    stdout_lines: Receiver<String>,
+-}
+-
+-impl ScriptedMcpClient {
+-    fn spawn(capsule: &Path) -> Self {
+-        let cwd = capsule.to_string_lossy().to_string();
+-        let mut child = Command::new(env!("CARGO_BIN_EXE_skillrun"))
+-            .args(["serve", "--mcp", "--cwd", &cwd])
+-            .stdin(Stdio::piped())
+-            .stdout(Stdio::piped())
+-            .stderr(Stdio::piped())
+-            .spawn()
+-            .expect("MCP server process should spawn");
+-
+-        let stdin = child.stdin.take().expect("MCP stdin should be piped");
+-        let stdout = child.stdout.take().expect("MCP stdout should be piped");
+-        let (stdout_tx, stdout_rx) = mpsc::channel();
+-
+-        std::thread::spawn(move || {
+-            let mut reader = BufReader::new(stdout);
+-            let mut line = String::new();
+-            loop {
+-                line.clear();
+-                let read = reader.read_line(&mut line).unwrap_or(0);
+-                if read == 0 {
+-                    break;
+-                }
+-                let _ = stdout_tx.send(line.trim_end_matches(['\r', '\n']).to_string());
+-            }
+-        });
+-
+-        Self {
+-            child,
+-            stdin,
+-            stdout_lines: stdout_rx,
+-        }
+-    }
+-
+-    fn send(&mut self, message: Value) {
+-        let line = serde_json::to_string(&message).expect("MCP request should serialize");
+-        self.stdin
+-            .write_all(line.as_bytes())
+-            .expect("MCP request should write to stdin");
+-        self.stdin
+-            .write_all(b"\n")
+-            .expect("MCP request newline should write");
+-        self.stdin.flush().expect("MCP stdin should flush");
+-    }
+-
+-    fn read_response(&mut self, label: &str) -> Value {
+-        let line = self
+-            .stdout_lines
+-            .recv_timeout(Duration::from_secs(2))
+-            .unwrap_or_else(|error| panic!("timed out waiting for {label}: {error}"));
+-        serde_json::from_str(&line)
+-            .unwrap_or_else(|error| panic!("{label} should be JSON-RPC, got {line:?}: {error}"))
+-    }
+-
+-    fn initialize(&mut self) -> Value {
+-        self.send(json!({
+-            "jsonrpc": "2.0",
+-            "id": 1,
+-            "method": "initialize",
+-            "params": {
+-                "protocolVersion": "2025-11-25",
+-                "capabilities": {},
+-                "clientInfo": {
+-                    "name": "skillrun-test-client",
+-                    "version": "0.0.0"
+-                }
+-            }
+-        }));
+-        self.read_response("initialize response")
+-    }
+-
+-    fn initialized(&mut self) {
+-        self.send(json!({
+-            "jsonrpc": "2.0",
+-            "method": "notifications/initialized",
+-            "params": {}
+-        }));
+-    }
+-}
+-
+-impl Drop for ScriptedMcpClient {
+-    fn drop(&mut self) {
+-        let _ = self.child.kill();
+-        let _ = self.child.wait();
+-    }
+-}
+-
+ #[test]
+ fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
+     let (output_root, capsule) = generated_capsule("mcp-dry-run");

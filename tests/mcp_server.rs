@@ -1,10 +1,13 @@
 use serde_json::{json, Value};
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::mpsc::{self, Receiver};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[path = "fixtures/mcp_stdio.rs"]
+mod mcp_stdio;
+
+use mcp_stdio::ScriptedMcpClient;
 
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
@@ -61,100 +64,6 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     );
     let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
     serde_json::from_str(&stdout).expect("stdout should be JSON")
-}
-
-struct ScriptedMcpClient {
-    child: Child,
-    stdin: ChildStdin,
-    stdout_lines: Receiver<String>,
-}
-
-impl ScriptedMcpClient {
-    fn spawn(capsule: &Path) -> Self {
-        let cwd = capsule.to_string_lossy().to_string();
-        let mut child = Command::new(env!("CARGO_BIN_EXE_skillrun"))
-            .args(["serve", "--mcp", "--cwd", &cwd])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("MCP server process should spawn");
-
-        let stdin = child.stdin.take().expect("MCP stdin should be piped");
-        let stdout = child.stdout.take().expect("MCP stdout should be piped");
-        let (stdout_tx, stdout_rx) = mpsc::channel();
-
-        std::thread::spawn(move || {
-            let mut reader = BufReader::new(stdout);
-            let mut line = String::new();
-            loop {
-                line.clear();
-                let read = reader.read_line(&mut line).unwrap_or(0);
-                if read == 0 {
-                    break;
-                }
-                let _ = stdout_tx.send(line.trim_end_matches(['\r', '\n']).to_string());
-            }
-        });
-
-        Self {
-            child,
-            stdin,
-            stdout_lines: stdout_rx,
-        }
-    }
-
-    fn send(&mut self, message: Value) {
-        let line = serde_json::to_string(&message).expect("MCP request should serialize");
-        self.stdin
-            .write_all(line.as_bytes())
-            .expect("MCP request should write to stdin");
-        self.stdin
-            .write_all(b"\n")
-            .expect("MCP request newline should write");
-        self.stdin.flush().expect("MCP stdin should flush");
-    }
-
-    fn read_response(&mut self, label: &str) -> Value {
-        let line = self
-            .stdout_lines
-            .recv_timeout(Duration::from_secs(2))
-            .unwrap_or_else(|error| panic!("timed out waiting for {label}: {error}"));
-        serde_json::from_str(&line)
-            .unwrap_or_else(|error| panic!("{label} should be JSON-RPC, got {line:?}: {error}"))
-    }
-
-    fn initialize(&mut self) -> Value {
-        self.send(json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-11-25",
-                "capabilities": {},
-                "clientInfo": {
-                    "name": "skillrun-test-client",
-                    "version": "0.0.0"
-                }
-            }
-        }));
-        self.read_response("initialize response")
-    }
-
-    fn initialized(&mut self) {
-        self.send(json!({
-            "jsonrpc": "2.0",
-            "method": "notifications/initialized",
-            "params": {}
-        }));
-    }
-}
-
-impl Drop for ScriptedMcpClient {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-    }
 }
 
 #[test]

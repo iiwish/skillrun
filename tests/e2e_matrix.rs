@@ -1,10 +1,15 @@
 use flate2::read::GzDecoder;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tar::Archive;
+
+#[path = "fixtures/mcp_stdio.rs"]
+mod mcp_stdio;
+
+use mcp_stdio::ScriptedMcpClient;
 
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
@@ -294,5 +299,154 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
         );
     }
 
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn a014_mcp_stdio_release_matrix_exercises_full_client_flow() {
+    let output_root = temp_dir("e2e-mcp-stdio");
+    let capsule = init_capsule(&output_root, "refund");
+    replace_in_file(
+        &capsule.join("action.py"),
+        "def run(input: Input, ctx) -> Output:\n",
+        "def run(input: Input, ctx) -> Output:\n    print(\"MCP_STDOUT_NOISE\", flush=True)\n",
+    );
+    manifest(&capsule);
+
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    let initialize = client.initialize();
+    assert_eq!(initialize["id"], 1);
+    assert_eq!(initialize["result"]["protocolVersion"], "2025-11-25");
+    assert!(initialize["result"]["capabilities"]["tools"].is_object());
+    assert!(initialize["result"]["capabilities"]["resources"].is_object());
+    client.initialized();
+    client.expect_no_stdout_line("initialized notification");
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    }));
+    let tools = client.read_response("release tools/list response");
+    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+    assert_eq!(
+        tools["result"]["tools"][0]["inputSchema"]["properties"]["order_id"]["type"],
+        "string"
+    );
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_1001",
+                "amount": 120,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let call = client.read_response("release tools/call success response");
+    assert_eq!(call["result"]["isError"], false);
+    let call_text = call["result"]["content"][0]["text"]
+        .as_str()
+        .expect("tool result text should be present");
+    assert!(call_text.contains("approved"));
+    assert!(!call_text.contains("MCP_STDOUT_NOISE"));
+    let mcp_run_dir = fs::read_dir(capsule.join(".skillrun").join("runs"))
+        .expect("runs directory should be readable")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| path.join("record.json").is_file())
+        .expect("MCP tools/call should create a run directory");
+    let stdout_log =
+        fs::read_to_string(mcp_run_dir.join("stdout.log")).expect("stdout log should be readable");
+    assert!(stdout_log.contains("MCP_STDOUT_NOISE"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_1002",
+                "amount": 1200,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let error_call = client.read_response("release tools/call error response");
+    assert_eq!(error_call["result"]["isError"], true);
+    assert!(error_call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("PolicyViolation"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "resources/list",
+        "params": {}
+    }));
+    let resources = client.read_response("release resources/list response");
+    let listed = resources["result"]["resources"]
+        .as_array()
+        .expect("resources should be listed");
+    let listed_uris = listed
+        .iter()
+        .map(|resource| resource["uri"].as_str().unwrap_or_default().to_string())
+        .collect::<Vec<_>>();
+    assert!(listed_uris.iter().all(|uri| !uri.contains("action.py")));
+    assert!(listed_uris.iter().all(|uri| !uri.contains(".skillrun")));
+    let skill_uri = listed_uris
+        .iter()
+        .find(|uri| uri.ends_with("SKILL.md"))
+        .expect("SKILL.md should be an MCP resource")
+        .to_string();
+    let example_uri = listed_uris
+        .iter()
+        .find(|uri| uri.ends_with("examples/default.input.json"))
+        .expect("default example should be an MCP resource")
+        .to_string();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "resources/read",
+        "params": {
+            "uri": skill_uri
+        }
+    }));
+    let skill_read = client.read_response("release resources/read skill response");
+    assert_eq!(
+        skill_read["result"]["contents"][0]["mimeType"],
+        "text/markdown"
+    );
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "resources/read",
+        "params": {
+            "uri": example_uri
+        }
+    }));
+    let example_read = client.read_response("release resources/read example response");
+    assert_eq!(
+        example_read["result"]["contents"][0]["mimeType"],
+        "application/json"
+    );
+    assert!(example_read["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("order_1001"));
+    client.expect_no_stdout_line("completed MCP release flow");
+
+    drop(client);
     fs::remove_dir_all(output_root).ok();
 }

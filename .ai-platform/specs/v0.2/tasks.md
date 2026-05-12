@@ -367,7 +367,7 @@ Packet path:
 
 ### T017: Complete MCP E2E Fixture And Release Matrix
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T015, T016
 Blocks: T018
@@ -444,7 +444,7 @@ Stories:
 
 ### T018: Prepare v0.2 Release Candidate
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T012, T017
 Blocks: Release decision
