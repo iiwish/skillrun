@@ -168,7 +168,7 @@ Packet path:
 
 ### T014: Implement Long-running MCP Stdio Lifecycle
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T013
 Blocks: T015, T016, T017
@@ -236,7 +236,7 @@ Packet path:
 
 ### T015: Wire MCP Tools To SkillRun Runtime
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T014
 Blocks: T017

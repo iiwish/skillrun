@@ -215,6 +215,32 @@ fn mcp_stdio_initializes_with_2025_11_25_protocol() {
 }
 
 #[test]
+fn mcp_stdio_returns_jsonrpc_error_for_unrecognized_method() {
+    let (output_root, capsule) = generated_capsule("mcp-stdio-unrecognized");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 99,
+        "method": "skillrun/not-a-method",
+        "params": {}
+    }));
+    let response = client.read_response("unrecognized method response");
+
+    assert_eq!(response["jsonrpc"], "2.0");
+    assert_eq!(response["id"], 99);
+    assert_eq!(response["error"]["code"], -32601);
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("Method not found"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 #[ignore = "T015 enables this contract when tools/list and tools/call are wired to runtime"]
 fn mcp_stdio_lists_and_calls_manifest_tool() {
     let (output_root, capsule) = generated_capsule("mcp-stdio-tools");

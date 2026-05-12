@@ -132,9 +132,12 @@ where
                         }
                     }
                 }
-                Ok(_) => {
-                    eprintln!("error: command not implemented yet: serve --mcp server mode; use --dry-run to verify the Manifest-derived MCP contract");
-                    ExitCode::from(2)
+                Ok(manifest) => match mcp::serve_stdio(&manifest) {
+                    Ok(()) => ExitCode::SUCCESS,
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
                 }
                 Err(error) => {
                     eprintln!("error: {error}");
@@ -387,9 +390,10 @@ Implemented:
   inspect
   test
   run
+  serve --mcp
   serve --mcp --dry-run
   pack
 
-Later tasks implement long-running MCP server mode."
+Later tasks wire tools/call and resources/read into the MCP server."
     );
 }
