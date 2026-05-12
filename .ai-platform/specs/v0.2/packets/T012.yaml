@@ -1,0 +1,83 @@
+schema_version: "1.0"
+packet_id: "v0.2-T012"
+task_id: "T012"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Rewrite README Release Narrative"
+  current_status: "Ready"
+  goal: "Update the public project narrative so SkillRun is presented as a manifest-driven Agent skill capsule runtime, with honest v0.2 MCP and security boundaries."
+  requirements:
+    - "US-201"
+    - "FR-201"
+    - "NFR-202"
+  dependencies:
+    - "v0.2 SOP Confirmed"
+  blocks:
+    - "T018"
+codebase_context:
+  relevant_files:
+    - "README.md"
+    - "README.zh-CN.md"
+    - "Cargo.toml"
+    - "tests/business_examples.rs"
+    - "tests/cli.rs"
+  existing_patterns:
+    - "English README is primary and Chinese README mirrors it."
+    - "README currently distinguishes current implementation from planned behavior."
+    - "Cargo description appears in CLI/package metadata and must not overclaim MCP completion."
+  forbidden_changes:
+    - "Do not modify Rust runtime behavior in this task."
+    - "Do not introduce release tagging or GitHub workflow files."
+execution_constraints:
+  allowed_files:
+    - "README.md"
+    - "README.zh-CN.md"
+    - "Cargo.toml"
+    - "tests/business_examples.rs"
+    - "tests/cli.rs"
+  conflicts_with:
+    - "T018"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if git status shows no conflicting user changes."
+tdd_plan:
+  red: "If existing tests do not check the release narrative boundary, add or update a focused README/Cargo content assertion and confirm it fails before editing docs."
+  green: "Rewrite README, Chinese README and Cargo description to satisfy the assertions and v0.2 spec."
+  refactor: "Remove duplicated status wording while keeping current vs planned behavior unambiguous."
+validation_loop:
+  commands:
+    - "cargo test"
+  expected_signals:
+    - "All tests pass."
+    - "README no longer frames SkillRun primarily as a tested MCP skill package."
+    - "Docs state v0.2 is not sandbox, registry, signed package or dependency bundle."
+  failure_handling: "Fix only content or tests in allowed files. Stop if changes require runtime implementation."
+evidence_contract:
+  path: ".ai-platform/evidence/T012/"
+  required:
+    - "summary.md with changed files, commands and residual risk."
+    - "diff.patch from real git diff."
+    - "test-results.md with fresh command output summary."
+review_contract:
+  spec_compliance:
+    - "README explains FastMCP boundary in first screen."
+    - "README and Chinese README are semantically aligned."
+    - "Security and package limitations remain honest."
+  bug_quality:
+    - "No broken links to local docs."
+    - "No release claim unsupported by implementation."
+handoff:
+  next_task: "T013 after T012 is accepted."
+  finish_state: "Needs_Review until validation, review and user acceptance are complete."
+stop_conditions:
+  - "Worktree contains conflicting user edits in README.md, README.zh-CN.md, Cargo.toml or listed tests."
+  - "A required narrative claim depends on runtime behavior that does not exist yet."
+

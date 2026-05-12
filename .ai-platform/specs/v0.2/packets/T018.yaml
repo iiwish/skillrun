@@ -1,0 +1,101 @@
+schema_version: "1.0"
+packet_id: "v0.2-T018"
+task_id: "T018"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Prepare v0.2 Release Candidate"
+  current_status: "Draft dependency-gated"
+  goal: "Update version, release report and public documentation so v0.2 can be reviewed as the first public release candidate."
+  requirements:
+    - "US-205"
+    - "FR-209"
+    - "NFR-202"
+    - "NFR-205"
+    - "NFR-206"
+  dependencies:
+    - "T012 Accepted"
+    - "T017 Accepted"
+  blocks:
+    - "Release decision"
+codebase_context:
+  relevant_files:
+    - "Cargo.toml"
+    - "Cargo.lock"
+    - "README.md"
+    - "README.zh-CN.md"
+    - ".ai-platform/docs/release-report.md"
+    - ".ai-platform/specs/v0.2/analysis.md"
+    - "docs/ssot.md"
+    - "docs/mvp.md"
+    - "tests/cli.rs"
+    - "tests/business_examples.rs"
+    - "tests/e2e_matrix.rs"
+  existing_patterns:
+    - "Release report must be evidence-based."
+    - "Version comes from Cargo.toml env CARGO_PKG_VERSION."
+    - "README distinguishes implemented behavior from limitations."
+  forbidden_changes:
+    - "Do not create git tag or publish release in this task."
+    - "Do not mark release accepted without user decision."
+execution_constraints:
+  allowed_files:
+    - "Cargo.toml"
+    - "Cargo.lock"
+    - "README.md"
+    - "README.zh-CN.md"
+    - ".ai-platform/docs/release-report.md"
+    - ".ai-platform/specs/v0.2/analysis.md"
+    - "docs/ssot.md"
+    - "docs/mvp.md"
+    - "tests/cli.rs"
+    - "tests/business_examples.rs"
+    - "tests/e2e_matrix.rs"
+  conflicts_with:
+    - "T012"
+    - "T017"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting release-doc or version changes exist."
+tdd_plan:
+  red: "If version/docs consistency is not tested, add a focused assertion that fails before version or docs update."
+  green: "Update version and release documents to v0.2 release candidate state."
+  refactor: "Remove stale v0.1 public release wording."
+validation_loop:
+  commands:
+    - "cargo test"
+    - "cargo run -- --version"
+    - "cargo run -- serve --mcp --cwd examples/refund"
+  expected_signals:
+    - "Full test suite passes."
+    - "Version output matches target v0.2 version."
+    - "MCP server command can be exercised by scripted client or equivalent test harness."
+  failure_handling: "Fix release docs/version/test assertions only. Stop before tag or publish."
+evidence_contract:
+  path: ".ai-platform/evidence/T018/"
+  required:
+    - "summary.md with release readiness summary."
+    - "diff.patch from real git diff."
+    - "test-results.md with full validation."
+review_contract:
+  spec_compliance:
+    - "Release report only claims accepted tasks with evidence."
+    - "Known limitations are explicit."
+    - "No sandbox/package/security overclaim."
+  bug_quality:
+    - "Version is consistent across CLI and docs."
+    - "No stale dry-run-only language remains for v0.2 behavior."
+handoff:
+  next_task: "User release decision after T018 review."
+  finish_state: "Ready_For_User_Review release report; no tag until user approves."
+stop_conditions:
+  - "Any P0 task lacks accepted evidence."
+  - "Full validation fails for reasons outside release-doc scope."
+

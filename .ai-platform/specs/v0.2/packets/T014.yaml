@@ -1,0 +1,92 @@
+schema_version: "1.0"
+packet_id: "v0.2-T014"
+task_id: "T014"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Implement Long-running MCP Stdio Lifecycle"
+  current_status: "Draft dependency-gated"
+  goal: "Implement the stdio JSON-RPC loop, initialize response, initialized notification handling, deterministic errors and EOF shutdown for serve --mcp."
+  requirements:
+    - "US-202"
+    - "FR-202"
+    - "FR-203"
+    - "NFR-201"
+    - "NFR-204"
+    - "NFR-205"
+  dependencies:
+    - "T013 Accepted"
+  blocks:
+    - "T015"
+    - "T016"
+    - "T017"
+codebase_context:
+  relevant_files:
+    - "src/mcp.rs"
+    - "src/cli.rs"
+    - "src/main.rs"
+    - "tests/mcp_server.rs"
+    - "tests/cli.rs"
+  existing_patterns:
+    - "consumer::validate provides ValidManifest for serve."
+    - "mcp::dry_run_contract already maps ValidManifest into a contract JSON."
+    - "CLI currently rejects non-dry-run serve --mcp with a not implemented error."
+  forbidden_changes:
+    - "Do not implement tools/call runtime wiring in this task."
+    - "Do not implement resources handlers beyond capability stubs unless needed for lifecycle tests."
+execution_constraints:
+  allowed_files:
+    - "src/mcp.rs"
+    - "src/cli.rs"
+    - "src/main.rs"
+    - "tests/mcp_server.rs"
+  conflicts_with:
+    - "T013"
+    - "T015"
+    - "T016"
+    - "T017"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting changes touch MCP or CLI files."
+tdd_plan:
+  red: "Use T013 lifecycle tests as failing baseline."
+  green: "Implement minimal JSON-RPC line loop and initialize/capabilities response while keeping dry-run unchanged."
+  refactor: "Extract response/error helpers in src/mcp.rs."
+validation_loop:
+  commands:
+    - "cargo test --test mcp_server"
+    - "cargo test --test cli"
+    - "cargo test"
+  expected_signals:
+    - "Lifecycle tests pass."
+    - "Dry-run tests still pass."
+    - "Stale Manifest startup fails before server loop starts."
+  failure_handling: "Fix lifecycle or CLI routing regressions only. Stop if tools/resources implementation becomes necessary beyond capability declaration."
+evidence_contract:
+  path: ".ai-platform/evidence/T014/"
+  required:
+    - "summary.md with RED/GREEN evidence."
+    - "diff.patch from real git diff."
+    - "test-results.md with listed commands."
+review_contract:
+  spec_compliance:
+    - "Protocol version is MCP 2025-11-25 or documented negotiated equivalent."
+    - "stdout carries only JSON-RPC messages."
+    - "Diagnostics go to stderr."
+  bug_quality:
+    - "No panic on invalid request shape."
+    - "Child exits cleanly on stdin EOF."
+handoff:
+  next_task: "T015 or T016 after T014 is accepted."
+  finish_state: "Needs_Review until validation and user acceptance."
+stop_conditions:
+  - "JSON-RPC framing requires a dependency decision not covered by plan."
+  - "Existing CLI tests become incompatible with v0.2 status messaging."
+

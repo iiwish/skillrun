@@ -1,0 +1,83 @@
+schema_version: "1.0"
+packet_id: "v0.2-T016"
+task_id: "T016"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Expose MCP Resources From Manifest"
+  current_status: "Draft dependency-gated"
+  goal: "Implement resources/list and resources/read for SKILL.md and examples using a controlled Manifest-derived resource registry."
+  requirements:
+    - "US-204"
+    - "FR-206"
+    - "FR-207"
+    - "NFR-203"
+  dependencies:
+    - "T014 Accepted"
+  blocks:
+    - "T017"
+codebase_context:
+  relevant_files:
+    - "src/mcp.rs"
+    - "tests/mcp_server.rs"
+    - "examples/refund/SKILL.md"
+    - "examples/refund/examples/default.input.json"
+  existing_patterns:
+    - "mcp::dry_run_contract already reads SKILL.md for dry-run resources."
+    - "Manifest sources contain SKILL.md path and examples list."
+    - "pack excludes run history; resources should follow the same trust boundary."
+  forbidden_changes:
+    - "Do not expose arbitrary local files."
+    - "Do not expose .skillrun/runs."
+    - "Do not import action source."
+execution_constraints:
+  allowed_files:
+    - "src/mcp.rs"
+    - "tests/mcp_server.rs"
+  conflicts_with:
+    - "T015"
+    - "T017"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting changes touch MCP files."
+tdd_plan:
+  red: "Use resources/list/read tests as failing baseline after lifecycle works."
+  green: "Build a small resource registry from Manifest sources and examples."
+  refactor: "Share resource path normalization between dry-run and server handlers if useful."
+validation_loop:
+  commands:
+    - "cargo test --test mcp_server"
+    - "cargo test"
+  expected_signals:
+    - "resources/list returns skillrun URI entries."
+    - "resources/read returns SKILL.md markdown text and examples JSON text."
+    - "Traversal and unlisted URI reads fail deterministically."
+  failure_handling: "Fix resource registry or path containment only. Stop if adding new public resource types becomes necessary."
+evidence_contract:
+  path: ".ai-platform/evidence/T016/"
+  required:
+    - "summary.md with resource boundary evidence."
+    - "diff.patch from real git diff."
+    - "test-results.md with listed commands."
+review_contract:
+  spec_compliance:
+    - "Only listed resources are readable."
+    - "No dynamic action import."
+    - "Run history remains private."
+  bug_quality:
+    - "Path traversal and absolute path attempts fail."
+    - "URI mapping is deterministic on Windows and Unix path forms."
+handoff:
+  next_task: "T017 after T015 is also accepted."
+  finish_state: "Needs_Review until validation and user acceptance."
+stop_conditions:
+  - "Manifest examples format is insufficient to derive resources without a schema change."
+  - "Cross-platform URI/path handling creates ambiguous behavior."
+

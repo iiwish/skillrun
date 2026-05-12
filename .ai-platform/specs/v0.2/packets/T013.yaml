@@ -1,0 +1,88 @@
+schema_version: "1.0"
+packet_id: "v0.2-T013"
+task_id: "T013"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Add v0.2 MCP Protocol Contract Tests"
+  current_status: "Draft dependency-gated"
+  goal: "Create a bounded scripted MCP client fixture and RED tests that define the v0.2 stdio protocol contract before production implementation."
+  requirements:
+    - "US-202"
+    - "US-203"
+    - "US-204"
+    - "FR-202"
+    - "FR-203"
+    - "FR-208"
+    - "NFR-201"
+    - "NFR-204"
+  dependencies:
+    - "T012 Accepted"
+  blocks:
+    - "T014"
+    - "T015"
+    - "T016"
+    - "T017"
+codebase_context:
+  relevant_files:
+    - "tests/mcp_server.rs"
+    - "src/mcp.rs"
+    - "src/cli.rs"
+  existing_patterns:
+    - "tests/mcp_server.rs currently tests dry-run contract behavior."
+    - "CLI binary is available to integration tests through CARGO_BIN_EXE_skillrun."
+    - "Generated capsules are used for isolated integration tests."
+  forbidden_changes:
+    - "Do not implement production MCP server behavior in this task."
+    - "Do not change runtime execution logic."
+execution_constraints:
+  allowed_files:
+    - "tests/mcp_server.rs"
+    - "tests/fixtures/"
+    - ".ai-platform/specs/v0.2/plan.md"
+  conflicts_with:
+    - "T014"
+    - "T015"
+    - "T016"
+    - "T017"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting user changes touch allowed files."
+tdd_plan:
+  red: "Add protocol-level tests for initialize, initialized notification, tools/list, tools/call, resources/list, resources/read and stdout discipline; confirm they fail against current non-dry-run serve behavior."
+  green: "Not in this task. Production GREEN is delivered by T014-T016."
+  refactor: "Keep fixture helpers small, deterministic and timeout-bounded."
+validation_loop:
+  commands:
+    - "cargo test --test mcp_server"
+  expected_signals:
+    - "New tests fail for expected server-not-implemented or missing protocol behavior."
+    - "No child process remains running after test failure."
+  failure_handling: "Fix fixture bugs only. Stop if passing requires production behavior."
+evidence_contract:
+  path: ".ai-platform/evidence/T013/"
+  required:
+    - "summary.md with RED evidence."
+    - "diff.patch from real git diff."
+    - "test-results.md with failing command and expected failure reason."
+review_contract:
+  spec_compliance:
+    - "Fixture targets MCP specification 2025-11-25."
+    - "Tests prove stdout is reserved for JSON-RPC messages."
+  bug_quality:
+    - "Tests use timeouts and clean child processes."
+    - "No production code changed."
+handoff:
+  next_task: "T014 after T013 is accepted."
+  finish_state: "Needs_Review with intentional RED evidence."
+stop_conditions:
+  - "Official MCP specification changed in a way that invalidates method names or lifecycle assumptions."
+  - "The test harness cannot reliably terminate the child process."
+

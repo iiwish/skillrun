@@ -1,0 +1,88 @@
+schema_version: "1.0"
+packet_id: "v0.2-T017"
+task_id: "T017"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Complete MCP E2E Fixture And Release Matrix"
+  current_status: "Draft dependency-gated"
+  goal: "Promote MCP stdio coverage to release-level validation across lifecycle, tools, resources and stdout discipline."
+  requirements:
+    - "US-202"
+    - "US-203"
+    - "US-204"
+    - "FR-208"
+    - "NFR-201"
+    - "NFR-204"
+  dependencies:
+    - "T015 Accepted"
+    - "T016 Accepted"
+  blocks:
+    - "T018"
+codebase_context:
+  relevant_files:
+    - "tests/mcp_server.rs"
+    - "tests/e2e_matrix.rs"
+    - ".ai-platform/specs/v0.2/analysis.md"
+  existing_patterns:
+    - "tests/e2e_matrix.rs is the release-level acceptance matrix."
+    - "MVP release evidence uses .ai-platform/evidence/T011."
+    - "MCP server fixture should be bounded and deterministic."
+  forbidden_changes:
+    - "Do not add new runtime features beyond coverage stabilization."
+    - "Do not weaken previous v0.1 acceptance cases."
+execution_constraints:
+  allowed_files:
+    - "tests/mcp_server.rs"
+    - "tests/e2e_matrix.rs"
+    - "tests/fixtures/"
+    - ".ai-platform/specs/v0.2/analysis.md"
+  conflicts_with:
+    - "T014"
+    - "T015"
+    - "T016"
+    - "T018"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting changes touch tests or analysis."
+tdd_plan:
+  red: "Identify release-level coverage gap and add E2E matrix assertion if absent."
+  green: "Wire existing MCP fixture into release matrix without duplicating fragile setup."
+  refactor: "Deduplicate fixture helpers and stabilize timeouts."
+validation_loop:
+  commands:
+    - "cargo test --test mcp_server"
+    - "cargo test --test e2e_matrix"
+    - "cargo test"
+  expected_signals:
+    - "Scripted client covers initialize, tools/list, tools/call, resources/list and resources/read."
+    - "Full test suite passes."
+    - "Analysis records no Critical or High findings."
+  failure_handling: "Fix tests or analysis only. Stop if behavior changes require reopening T014-T016."
+evidence_contract:
+  path: ".ai-platform/evidence/T017/"
+  required:
+    - "summary.md with full validation result."
+    - "diff.patch from real git diff."
+    - "test-results.md with listed commands."
+review_contract:
+  spec_compliance:
+    - "Release matrix covers all v0.2 MCP P0 behavior."
+    - "stdout discipline is explicitly tested."
+  bug_quality:
+    - "No flaky hanging process behavior."
+    - "No broad unrelated test churn."
+handoff:
+  next_task: "T018 after T017 is accepted."
+  finish_state: "Needs_Review until validation and user acceptance."
+stop_conditions:
+  - "Full test suite reveals unrelated failures outside v0.2 scope."
+  - "E2E fixture remains flaky after one focused retry."
+

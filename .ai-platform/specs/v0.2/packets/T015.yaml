@@ -1,0 +1,86 @@
+schema_version: "1.0"
+packet_id: "v0.2-T015"
+task_id: "T015"
+feature_id: "v0.2"
+mode: "governed_execution"
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  sop: ".ai-platform/specs/v0.2/sop.md"
+  spec: ".ai-platform/specs/v0.2/spec.md"
+  checklist: ".ai-platform/specs/v0.2/checklists/requirements.md"
+  plan: ".ai-platform/specs/v0.2/plan.md"
+  work_graph: ".ai-platform/specs/v0.2/tasks.md"
+  analysis: ".ai-platform/specs/v0.2/analysis.md"
+work_unit:
+  title: "Wire MCP Tools To SkillRun Runtime"
+  current_status: "Draft dependency-gated"
+  goal: "Implement tools/list and tools/call using Manifest-derived schema and existing runtime execution discipline."
+  requirements:
+    - "US-203"
+    - "FR-204"
+    - "FR-205"
+    - "NFR-203"
+  dependencies:
+    - "T014 Accepted"
+  blocks:
+    - "T017"
+codebase_context:
+  relevant_files:
+    - "src/mcp.rs"
+    - "src/runtime.rs"
+    - "tests/mcp_server.rs"
+    - "tests/runtime.rs"
+  existing_patterns:
+    - "runtime::run_with_input executes explicit input files and writes run records."
+    - "runtime::run_test uses examples/default.input.json."
+    - "ValidManifest contains Manifest YAML value, path and sha256."
+  forbidden_changes:
+    - "Do not duplicate Python adapter execution logic in src/mcp.rs."
+    - "Do not bypass artifact validation, declared env injection or run records."
+execution_constraints:
+  allowed_files:
+    - "src/mcp.rs"
+    - "src/runtime.rs"
+    - "tests/mcp_server.rs"
+    - "tests/runtime.rs"
+  conflicts_with:
+    - "T014"
+    - "T016"
+    - "T017"
+  branch_prefix: "codex/"
+  worktree: "Use current workspace only if no conflicting changes touch runtime or MCP files."
+tdd_plan:
+  red: "Use T013 tools/list and tools/call tests as failing baseline after lifecycle works."
+  green: "Expose one Manifest-derived tool and route call arguments through a small runtime API."
+  refactor: "Keep runtime public API narrow and preserve CLI run/test outputs."
+validation_loop:
+  commands:
+    - "cargo test --test mcp_server"
+    - "cargo test --test runtime"
+    - "cargo test"
+  expected_signals:
+    - "tools/list schema matches Manifest input schema."
+    - "tools/call success creates run record."
+    - "ValidationError or PolicyViolation maps to MCP isError true."
+  failure_handling: "Fix runtime API or MCP mapping only. Stop if output schema semantics require broader protocol decision."
+evidence_contract:
+  path: ".ai-platform/evidence/T015/"
+  required:
+    - "summary.md with run record evidence."
+    - "diff.patch from real git diff."
+    - "test-results.md with listed commands."
+review_contract:
+  spec_compliance:
+    - "Tool schema is Manifest-derived."
+    - "Tool call does not import action for metadata."
+    - "Runtime discipline remains intact."
+  bug_quality:
+    - "No absolute internal paths exposed in user-facing MCP content unless deliberately documented."
+    - "CLI run/test behavior unchanged."
+handoff:
+  next_task: "T017 after T016 is also accepted."
+  finish_state: "Needs_Review until validation and user acceptance."
+stop_conditions:
+  - "Existing runtime API cannot support in-memory MCP arguments without unsafe temp file design."
+  - "MCP result shape requires a spec clarification."
+
