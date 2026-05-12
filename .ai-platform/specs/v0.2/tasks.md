@@ -236,7 +236,7 @@ Packet path:
 
 ### T015: Wire MCP Tools To SkillRun Runtime
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T014
 Blocks: T017
@@ -305,7 +305,7 @@ Packet path:
 
 ### T016: Expose MCP Resources From Manifest
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T014
 Blocks: T017

@@ -132,13 +132,13 @@ where
                         }
                     }
                 }
-                Ok(manifest) => match mcp::serve_stdio(&manifest) {
+                Ok(manifest) => match mcp::serve_stdio(&options.cwd, &manifest) {
                     Ok(()) => ExitCode::SUCCESS,
                     Err(error) => {
                         eprintln!("error: {error}");
                         ExitCode::from(2)
                     }
-                }
+                },
                 Err(error) => {
                     eprintln!("error: {error}");
                     ExitCode::from(2)

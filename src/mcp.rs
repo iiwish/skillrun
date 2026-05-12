@@ -5,6 +5,7 @@ use std::io::{self, BufRead, Write};
 use std::path::Path;
 
 use crate::consumer::ValidManifest;
+use crate::runtime;
 
 const MCP_PROTOCOL_VERSION: &str = "2025-11-25";
 
@@ -56,13 +57,18 @@ pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<
         .map_err(|error| format!("failed to serialize MCP dry-run contract: {error}"))
 }
 
-pub fn serve_stdio(_manifest: &ValidManifest) -> Result<(), String> {
+pub fn serve_stdio(capsule_dir: &Path, manifest: &ValidManifest) -> Result<(), String> {
     let stdin = io::stdin();
     let stdout = io::stdout();
-    serve_stdio_io(stdin.lock(), stdout.lock())
+    serve_stdio_io(stdin.lock(), stdout.lock(), capsule_dir, manifest)
 }
 
-fn serve_stdio_io<R, W>(reader: R, mut writer: W) -> Result<(), String>
+fn serve_stdio_io<R, W>(
+    reader: R,
+    mut writer: W,
+    capsule_dir: &Path,
+    manifest: &ValidManifest,
+) -> Result<(), String>
 where
     R: BufRead,
     W: Write,
@@ -74,7 +80,7 @@ where
         }
 
         let response = match serde_json::from_str::<JsonValue>(&line) {
-            Ok(message) => handle_message(message),
+            Ok(message) => handle_message(message, capsule_dir, manifest),
             Err(error) => Some(error_response(
                 JsonValue::Null,
                 -32700,
@@ -90,7 +96,11 @@ where
     Ok(())
 }
 
-fn handle_message(message: JsonValue) -> Option<JsonValue> {
+fn handle_message(
+    message: JsonValue,
+    capsule_dir: &Path,
+    manifest: &ValidManifest,
+) -> Option<JsonValue> {
     let Some(object) = message.as_object() else {
         return Some(error_response(
             JsonValue::Null,
@@ -118,6 +128,14 @@ fn handle_message(message: JsonValue) -> Option<JsonValue> {
             }),
         )),
         Some("notifications/initialized") => None,
+        Some("tools/list") => Some(success_response(
+            id.unwrap_or(JsonValue::Null),
+            tools_list_result(manifest),
+        )),
+        Some("tools/call") => {
+            let id = id.unwrap_or(JsonValue::Null);
+            Some(handle_tools_call(id, object, capsule_dir, manifest))
+        }
         Some(method) => {
             let id = id.unwrap_or(JsonValue::Null);
             if id.is_null() {
@@ -138,6 +156,119 @@ fn handle_message(message: JsonValue) -> Option<JsonValue> {
     }
 }
 
+fn tools_list_result(manifest: &ValidManifest) -> JsonValue {
+    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
+    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
+    let tool_description =
+        string_at(&manifest.value, &["tool", "description"]).unwrap_or("SkillRun MCP tool.");
+    let input_schema =
+        json_value_at(&manifest.value, &["schemas", "input"]).unwrap_or_else(|| json!({}));
+    let output_schema =
+        json_value_at(&manifest.value, &["schemas", "output"]).unwrap_or_else(|| json!({}));
+
+    json!({
+        "tools": [
+            {
+                "name": tool_name,
+                "description": tool_description,
+                "inputSchema": input_schema,
+                "outputSchema": output_schema
+            }
+        ]
+    })
+}
+
+fn handle_tools_call(
+    id: JsonValue,
+    request: &serde_json::Map<String, JsonValue>,
+    capsule_dir: &Path,
+    manifest: &ValidManifest,
+) -> JsonValue {
+    let Some(params) = request.get("params").and_then(JsonValue::as_object) else {
+        return error_response(id, -32602, "Invalid params: tools/call requires params");
+    };
+    let Some(name) = params.get("name").and_then(JsonValue::as_str) else {
+        return error_response(id, -32602, "Invalid params: tools/call requires name");
+    };
+
+    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
+    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
+    if name != tool_name {
+        return error_response(id, -32602, format!("Unknown tool: {name}"));
+    }
+
+    let arguments = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if !arguments.is_object() {
+        return error_response(id, -32602, "Invalid params: arguments must be an object");
+    }
+
+    match runtime::run_with_json_input(capsule_dir, arguments, "mcp") {
+        Ok(outcome) => match serde_json::from_str::<JsonValue>(&outcome.envelope) {
+            Ok(envelope) => success_response(id, tool_call_result(&envelope, outcome.success)),
+            Err(error) => error_response(
+                id,
+                -32603,
+                format!("SkillRun envelope was not valid JSON: {error}"),
+            ),
+        },
+        Err(error) => error_response(id, -32603, error),
+    }
+}
+
+fn tool_call_result(envelope: &JsonValue, success: bool) -> JsonValue {
+    json!({
+        "content": [
+            {
+                "type": "text",
+                "text": tool_call_text(envelope, success)
+            }
+        ],
+        "isError": !success
+    })
+}
+
+fn tool_call_text(envelope: &JsonValue, success: bool) -> String {
+    if success {
+        let display = envelope
+            .get("display")
+            .and_then(|display| display.get("markdown"))
+            .and_then(JsonValue::as_str);
+        let output = envelope.get("output").or_else(|| envelope.get("result"));
+        match (display, output) {
+            (Some(display), Some(output)) => {
+                format!("{display}\n\n{}", pretty_json(output))
+            }
+            (Some(display), None) => display.to_string(),
+            (None, Some(output)) => pretty_json(output),
+            (None, None) => "SkillRun tool completed.".to_string(),
+        }
+    } else {
+        let error = envelope.get("error");
+        let code = error
+            .and_then(|error| error.get("code"))
+            .and_then(JsonValue::as_str)
+            .unwrap_or("RuntimeError");
+        let message = error
+            .and_then(|error| error.get("message"))
+            .and_then(JsonValue::as_str)
+            .unwrap_or("SkillRun tool failed.");
+        let hint = error
+            .and_then(|error| error.get("llm_hint"))
+            .and_then(JsonValue::as_str);
+        match hint {
+            Some(hint) => format!("{code}: {message}\n\nllm_hint: {hint}"),
+            None => format!("{code}: {message}"),
+        }
+    }
+}
+
+fn pretty_json(value: &JsonValue) -> String {
+    serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+}
+
 fn success_response(id: JsonValue, result: JsonValue) -> JsonValue {
     json!({
         "jsonrpc": "2.0",
@@ -146,11 +277,7 @@ fn success_response(id: JsonValue, result: JsonValue) -> JsonValue {
     })
 }
 
-fn error_response(
-    id: JsonValue,
-    code: i64,
-    message: impl Into<String>,
-) -> JsonValue {
+fn error_response(id: JsonValue, code: i64, message: impl Into<String>) -> JsonValue {
     json!({
         "jsonrpc": "2.0",
         "id": id,

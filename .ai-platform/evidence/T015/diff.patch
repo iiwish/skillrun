@@ -1,0 +1,330 @@
+﻿diff --git a/.ai-platform/specs/v0.2/tasks.md b/.ai-platform/specs/v0.2/tasks.md
+index 38b8777..3f5246f 100644
+--- a/.ai-platform/specs/v0.2/tasks.md
++++ b/.ai-platform/specs/v0.2/tasks.md
+@@ -236,7 +236,7 @@ Packet path:
+ 
+ ### T015: Wire MCP Tools To SkillRun Runtime
+ 
+-Status: Ready
++Status: Accepted
+ Priority: P0
+ Depends on: T014
+ Blocks: T017
+@@ -305,7 +305,7 @@ Packet path:
+ 
+ ### T016: Expose MCP Resources From Manifest
+ 
+-Status: Draft
++Status: Ready
+ Priority: P0
+ Depends on: T014
+ Blocks: T017
+diff --git a/src/cli.rs b/src/cli.rs
+index dd91b57..55e2eed 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -132,13 +132,13 @@ where
+                         }
+                     }
+                 }
+-                Ok(manifest) => match mcp::serve_stdio(&manifest) {
++                Ok(manifest) => match mcp::serve_stdio(&options.cwd, &manifest) {
+                     Ok(()) => ExitCode::SUCCESS,
+                     Err(error) => {
+                         eprintln!("error: {error}");
+                         ExitCode::from(2)
+                     }
+-                }
++                },
+                 Err(error) => {
+                     eprintln!("error: {error}");
+                     ExitCode::from(2)
+diff --git a/src/mcp.rs b/src/mcp.rs
+index 7a17731..c7bc140 100644
+--- a/src/mcp.rs
++++ b/src/mcp.rs
+@@ -5,6 +5,7 @@ use std::io::{self, BufRead, Write};
+ use std::path::Path;
+ 
+ use crate::consumer::ValidManifest;
++use crate::runtime;
+ 
+ const MCP_PROTOCOL_VERSION: &str = "2025-11-25";
+ 
+@@ -56,13 +57,18 @@ pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<
+         .map_err(|error| format!("failed to serialize MCP dry-run contract: {error}"))
+ }
+ 
+-pub fn serve_stdio(_manifest: &ValidManifest) -> Result<(), String> {
++pub fn serve_stdio(capsule_dir: &Path, manifest: &ValidManifest) -> Result<(), String> {
+     let stdin = io::stdin();
+     let stdout = io::stdout();
+-    serve_stdio_io(stdin.lock(), stdout.lock())
++    serve_stdio_io(stdin.lock(), stdout.lock(), capsule_dir, manifest)
+ }
+ 
+-fn serve_stdio_io<R, W>(reader: R, mut writer: W) -> Result<(), String>
++fn serve_stdio_io<R, W>(
++    reader: R,
++    mut writer: W,
++    capsule_dir: &Path,
++    manifest: &ValidManifest,
++) -> Result<(), String>
+ where
+     R: BufRead,
+     W: Write,
+@@ -74,7 +80,7 @@ where
+         }
+ 
+         let response = match serde_json::from_str::<JsonValue>(&line) {
+-            Ok(message) => handle_message(message),
++            Ok(message) => handle_message(message, capsule_dir, manifest),
+             Err(error) => Some(error_response(
+                 JsonValue::Null,
+                 -32700,
+@@ -90,7 +96,11 @@ where
+     Ok(())
+ }
+ 
+-fn handle_message(message: JsonValue) -> Option<JsonValue> {
++fn handle_message(
++    message: JsonValue,
++    capsule_dir: &Path,
++    manifest: &ValidManifest,
++) -> Option<JsonValue> {
+     let Some(object) = message.as_object() else {
+         return Some(error_response(
+             JsonValue::Null,
+@@ -118,6 +128,14 @@ fn handle_message(message: JsonValue) -> Option<JsonValue> {
+             }),
+         )),
+         Some("notifications/initialized") => None,
++        Some("tools/list") => Some(success_response(
++            id.unwrap_or(JsonValue::Null),
++            tools_list_result(manifest),
++        )),
++        Some("tools/call") => {
++            let id = id.unwrap_or(JsonValue::Null);
++            Some(handle_tools_call(id, object, capsule_dir, manifest))
++        }
+         Some(method) => {
+             let id = id.unwrap_or(JsonValue::Null);
+             if id.is_null() {
+@@ -138,6 +156,119 @@ fn handle_message(message: JsonValue) -> Option<JsonValue> {
+     }
+ }
+ 
++fn tools_list_result(manifest: &ValidManifest) -> JsonValue {
++    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
++    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
++    let tool_description =
++        string_at(&manifest.value, &["tool", "description"]).unwrap_or("SkillRun MCP tool.");
++    let input_schema =
++        json_value_at(&manifest.value, &["schemas", "input"]).unwrap_or_else(|| json!({}));
++    let output_schema =
++        json_value_at(&manifest.value, &["schemas", "output"]).unwrap_or_else(|| json!({}));
++
++    json!({
++        "tools": [
++            {
++                "name": tool_name,
++                "description": tool_description,
++                "inputSchema": input_schema,
++                "outputSchema": output_schema
++            }
++        ]
++    })
++}
++
++fn handle_tools_call(
++    id: JsonValue,
++    request: &serde_json::Map<String, JsonValue>,
++    capsule_dir: &Path,
++    manifest: &ValidManifest,
++) -> JsonValue {
++    let Some(params) = request.get("params").and_then(JsonValue::as_object) else {
++        return error_response(id, -32602, "Invalid params: tools/call requires params");
++    };
++    let Some(name) = params.get("name").and_then(JsonValue::as_str) else {
++        return error_response(id, -32602, "Invalid params: tools/call requires name");
++    };
++
++    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
++    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
++    if name != tool_name {
++        return error_response(id, -32602, format!("Unknown tool: {name}"));
++    }
++
++    let arguments = params
++        .get("arguments")
++        .cloned()
++        .unwrap_or_else(|| json!({}));
++    if !arguments.is_object() {
++        return error_response(id, -32602, "Invalid params: arguments must be an object");
++    }
++
++    match runtime::run_with_json_input(capsule_dir, arguments, "mcp") {
++        Ok(outcome) => match serde_json::from_str::<JsonValue>(&outcome.envelope) {
++            Ok(envelope) => success_response(id, tool_call_result(&envelope, outcome.success)),
++            Err(error) => error_response(
++                id,
++                -32603,
++                format!("SkillRun envelope was not valid JSON: {error}"),
++            ),
++        },
++        Err(error) => error_response(id, -32603, error),
++    }
++}
++
++fn tool_call_result(envelope: &JsonValue, success: bool) -> JsonValue {
++    json!({
++        "content": [
++            {
++                "type": "text",
++                "text": tool_call_text(envelope, success)
++            }
++        ],
++        "isError": !success
++    })
++}
++
++fn tool_call_text(envelope: &JsonValue, success: bool) -> String {
++    if success {
++        let display = envelope
++            .get("display")
++            .and_then(|display| display.get("markdown"))
++            .and_then(JsonValue::as_str);
++        let output = envelope.get("output").or_else(|| envelope.get("result"));
++        match (display, output) {
++            (Some(display), Some(output)) => {
++                format!("{display}\n\n{}", pretty_json(output))
++            }
++            (Some(display), None) => display.to_string(),
++            (None, Some(output)) => pretty_json(output),
++            (None, None) => "SkillRun tool completed.".to_string(),
++        }
++    } else {
++        let error = envelope.get("error");
++        let code = error
++            .and_then(|error| error.get("code"))
++            .and_then(JsonValue::as_str)
++            .unwrap_or("RuntimeError");
++        let message = error
++            .and_then(|error| error.get("message"))
++            .and_then(JsonValue::as_str)
++            .unwrap_or("SkillRun tool failed.");
++        let hint = error
++            .and_then(|error| error.get("llm_hint"))
++            .and_then(JsonValue::as_str);
++        match hint {
++            Some(hint) => format!("{code}: {message}\n\nllm_hint: {hint}"),
++            None => format!("{code}: {message}"),
++        }
++    }
++}
++
++fn pretty_json(value: &JsonValue) -> String {
++    serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
++}
++
+ fn success_response(id: JsonValue, result: JsonValue) -> JsonValue {
+     json!({
+         "jsonrpc": "2.0",
+@@ -146,11 +277,7 @@ fn success_response(id: JsonValue, result: JsonValue) -> JsonValue {
+     })
+ }
+ 
+-fn error_response(
+-    id: JsonValue,
+-    code: i64,
+-    message: impl Into<String>,
+-) -> JsonValue {
++fn error_response(id: JsonValue, code: i64, message: impl Into<String>) -> JsonValue {
+     json!({
+         "jsonrpc": "2.0",
+         "id": id,
+diff --git a/src/runtime.rs b/src/runtime.rs
+index 7d6725b..3d45cb8 100644
+--- a/src/runtime.rs
++++ b/src/runtime.rs
+@@ -56,9 +56,25 @@ pub fn run_with_input(options: &RunOptions) -> Result<RunOutcome, String> {
+     execute(&options.cwd, &options.input, "run")
+ }
+ 
++pub fn run_with_json_input(
++    cwd: &Path,
++    input_value: Value,
++    mode: &str,
++) -> Result<RunOutcome, String> {
++    let capsule_dir = absolute_path(cwd)?;
++    require_dir(&capsule_dir)?;
++    execute_value(&capsule_dir, input_value, mode)
++}
++
+ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+     let capsule_dir = absolute_path(cwd)?;
+     require_dir(&capsule_dir)?;
++    let input_source = resolve_input_path(&capsule_dir, input);
++    let input_value = read_input_json(&input_source)?;
++    execute_value(&capsule_dir, input_value, mode)
++}
++
++fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
+     let manifest = load_manifest(&capsule_dir, mode)?;
+     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
+     if adapter != "python" {
+@@ -71,8 +87,6 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+         .unwrap_or_else(|| Duration::from_secs(30));
+     let run_id = new_run_id();
+     let paths = create_run_paths(&capsule_dir, &run_id)?;
+-    let input_source = resolve_input_path(&capsule_dir, input);
+-    let input_value = read_input_json(&input_source)?;
+     let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
+     let declared_env = permissions::declared_env_values(&manifest.value);
+     let started_at = Utc::now();
+@@ -277,10 +291,10 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
+ }
+ 
+ fn load_manifest(cwd: &Path, mode: &str) -> Result<RuntimeManifest, String> {
+-    let command = if mode == "test" {
+-        "skillrun test"
+-    } else {
+-        "skillrun run"
++    let command = match mode {
++        "test" => "skillrun test",
++        "mcp" => "skillrun serve --mcp",
++        _ => "skillrun run",
+     };
+     let valid = consumer::validate(cwd, command)?;
+     Ok(RuntimeManifest {
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+index 662a2b1..40e4e9b 100644
+--- a/tests/mcp_server.rs
++++ b/tests/mcp_server.rs
+@@ -241,7 +241,6 @@ fn mcp_stdio_returns_jsonrpc_error_for_unrecognized_method() {
+ }
+ 
+ #[test]
+-#[ignore = "T015 enables this contract when tools/list and tools/call are wired to runtime"]
+ fn mcp_stdio_lists_and_calls_manifest_tool() {
+     let (output_root, capsule) = generated_capsule("mcp-stdio-tools");
+     let mut client = ScriptedMcpClient::spawn(&capsule);
+@@ -284,6 +283,17 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
+         .as_str()
+         .unwrap_or_default()
+         .contains("approved"));
++    let run_record = fs::read_dir(capsule.join(".skillrun").join("runs"))
++        .expect("runs directory should be readable")
++        .filter_map(Result::ok)
++        .map(|entry| entry.path().join("record.json"))
++        .find(|path| path.is_file())
++        .expect("tools/call should create a SkillRun run record");
++    let record: Value = serde_json::from_str(
++        &fs::read_to_string(run_record).expect("run record should be readable"),
++    )
++    .expect("run record should parse");
++    assert_eq!(record["mode"], "mcp");
+ 
+     client.send(json!({
+         "jsonrpc": "2.0",

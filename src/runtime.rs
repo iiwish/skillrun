@@ -56,9 +56,25 @@ pub fn run_with_input(options: &RunOptions) -> Result<RunOutcome, String> {
     execute(&options.cwd, &options.input, "run")
 }
 
+pub fn run_with_json_input(
+    cwd: &Path,
+    input_value: Value,
+    mode: &str,
+) -> Result<RunOutcome, String> {
+    let capsule_dir = absolute_path(cwd)?;
+    require_dir(&capsule_dir)?;
+    execute_value(&capsule_dir, input_value, mode)
+}
+
 fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
     let capsule_dir = absolute_path(cwd)?;
     require_dir(&capsule_dir)?;
+    let input_source = resolve_input_path(&capsule_dir, input);
+    let input_value = read_input_json(&input_source)?;
+    execute_value(&capsule_dir, input_value, mode)
+}
+
+fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
     let manifest = load_manifest(&capsule_dir, mode)?;
     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
     if adapter != "python" {
@@ -71,8 +87,6 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
         .unwrap_or_else(|| Duration::from_secs(30));
     let run_id = new_run_id();
     let paths = create_run_paths(&capsule_dir, &run_id)?;
-    let input_source = resolve_input_path(&capsule_dir, input);
-    let input_value = read_input_json(&input_source)?;
     let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
     let declared_env = permissions::declared_env_values(&manifest.value);
     let started_at = Utc::now();
@@ -277,10 +291,10 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
 }
 
 fn load_manifest(cwd: &Path, mode: &str) -> Result<RuntimeManifest, String> {
-    let command = if mode == "test" {
-        "skillrun test"
-    } else {
-        "skillrun run"
+    let command = match mode {
+        "test" => "skillrun test",
+        "mcp" => "skillrun serve --mcp",
+        _ => "skillrun run",
     };
     let valid = consumer::validate(cwd, command)?;
     Ok(RuntimeManifest {

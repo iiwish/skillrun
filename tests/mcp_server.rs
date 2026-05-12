@@ -241,7 +241,6 @@ fn mcp_stdio_returns_jsonrpc_error_for_unrecognized_method() {
 }
 
 #[test]
-#[ignore = "T015 enables this contract when tools/list and tools/call are wired to runtime"]
 fn mcp_stdio_lists_and_calls_manifest_tool() {
     let (output_root, capsule) = generated_capsule("mcp-stdio-tools");
     let mut client = ScriptedMcpClient::spawn(&capsule);
@@ -284,6 +283,17 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
         .as_str()
         .unwrap_or_default()
         .contains("approved"));
+    let run_record = fs::read_dir(capsule.join(".skillrun").join("runs"))
+        .expect("runs directory should be readable")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("record.json"))
+        .find(|path| path.is_file())
+        .expect("tools/call should create a SkillRun run record");
+    let record: Value = serde_json::from_str(
+        &fs::read_to_string(run_record).expect("run record should be readable"),
+    )
+    .expect("run record should parse");
+    assert_eq!(record["mode"], "mcp");
 
     client.send(json!({
         "jsonrpc": "2.0",
