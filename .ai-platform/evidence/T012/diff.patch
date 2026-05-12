@@ -1,0 +1,314 @@
+﻿diff --git a/.ai-platform/specs/v0.2/tasks.md b/.ai-platform/specs/v0.2/tasks.md
+index d3b4583..ebe1664 100644
+--- a/.ai-platform/specs/v0.2/tasks.md
++++ b/.ai-platform/specs/v0.2/tasks.md
+@@ -31,7 +31,7 @@ Stories:
+ 
+ ### T012: Rewrite README Release Narrative
+ 
+-Status: Ready
++Status: Accepted
+ Priority: P0
+ Depends on: v0.2 SOP Confirmed
+ Blocks: T018
+@@ -106,7 +106,7 @@ Stories:
+ 
+ ### T013: Add v0.2 MCP Protocol Contract Tests
+ 
+-Status: Draft
++Status: Ready
+ Priority: P0
+ Depends on: T012
+ Blocks: T014, T015, T016, T017
+diff --git a/Cargo.toml b/Cargo.toml
+index 672a622..a240951 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,7 +2,7 @@
+ name = "skillrun"
+ version = "0.1.0"
+ edition = "2021"
+-description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
++description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
+ license = "Apache-2.0"
+ 
+ [dependencies]
+diff --git a/README.md b/README.md
+index 03430a9..f0c431c 100644
+--- a/README.md
++++ b/README.md
+@@ -1,22 +1,25 @@
+ # SkillRun
+ 
+-> Turn one SOP and one action into a tested MCP skill package with a Rust CLI/Core.
++> Turn one SOP and one action into a manifest-driven Agent skill capsule.
+ 
+ [简体中文](README.zh-CN.md)
+ 
+-SkillRun is a Rust-first local CLI/Core for building **SOP-backed Skill Capsules**. It turns a human-readable operating procedure, an explicit action, schemas, examples, and permissions into a manifest-driven skill package that can be inspected, tested, run, exposed to MCP clients, and distributed.
++FastMCP turns functions into MCP tools.
++SkillRun turns SOP-backed capabilities into **Skill Capsules**.
+ 
+-SkillRun is not another "wrap a function as a tool" layer. It is for teams that need the business context, recovery rules, audit trail, and runtime contract to travel with the action.
++A Skill Capsule carries what a function signature cannot: typed input/output, preflight checks, structured errors, artifacts, run evidence, declared permissions, and a Manifest-derived MCP contract.
++
++SkillRun is for teams that need the business context, recovery rules, audit trail, and runtime contract to travel with the action. Use FastMCP when you only need to expose a function; use SkillRun when the SOP matters as much as the code.
+ 
+ ## Status
+ 
+-SkillRun is in the v0.1.0 MVP buildout.
++SkillRun is not published yet. The repository is moving from the completed v0.1 internal MVP to the v0.2 public release candidate.
+ 
+-- Current implementation: v0.1 MVP behavior through `.skr` packaging, with release-level T011 validation ready for review.
++- Current implementation: v0.1 internal MVP behavior through `.skr` packaging, with release-level validation complete.
+ - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, `.skr` package generation, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+-- Long-running `serve --mcp` server mode is not implemented in v0.1; `serve --mcp --dry-run` verifies the Manifest-derived MCP contract.
++- v0.2 release target: replace dry-run-only MCP exposure with a real long-running MCP stdio server while keeping `serve --mcp --dry-run` for contract inspection.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+-- Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
++- Python `action.py` is the first action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+ ## Why SkillRun
+ 
+@@ -25,9 +28,9 @@ Most agent tool systems start with a callable function. SkillRun starts with a b
+ ```text
+ Skill Capsule = SOP + action code + schema + examples + permissions
+ Manifest      = compiled runtime contract
+-Core          = Rust manifest-driven runtime and MCP server
++Core          = Rust manifest-driven runtime
+ Adapter       = language bridge for user actions
+-Package       = immutable .skr distribution artifact
++Package       = .skr source + Manifest archive
+ ```
+ 
+ Use SkillRun when you want an agent-callable capability to carry more than a function signature:
+@@ -38,7 +41,7 @@ Use SkillRun when you want an agent-callable capability to carry more than a fun
+ - Structured success and error envelopes.
+ - Artifacts that are recorded as first-class outputs.
+ - Run records that preserve hashes, logs, and evidence.
+-- Manifest-driven MCP exposure that does not re-import source code in consumer mode.
++- Manifest-derived MCP exposure that does not re-import source code in consumer mode.
+ 
+ If you only need to expose a Python function as an MCP tool, a lighter tool such as FastMCP may be the better fit. SkillRun is designed for SOP-backed capabilities that must be inspectable, testable, and distributable.
+ 
+@@ -69,12 +72,14 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp --dry-run
++        +-- skillrun serve --mcp --dry-run   # current contract inspection
+         +-- skillrun pack
+ ```
+ 
+ The generated Manifest is the runtime contract. Author mode can regenerate it from local sources. Consumer mode reads it, validates source hashes, and refuses to guess when the Manifest is missing or stale.
+ 
++The v0.2 release target is to make `skillrun serve --mcp` a real MCP stdio server whose tools and resources are still derived from the Manifest.
++
+ ## Planned MVP Workflow
+ 
+ ```bash
+@@ -115,9 +120,9 @@ Example output:
+ skillrun 0.1.0
+ ```
+ 
+-Long-running MCP server mode intentionally fails with `command not implemented yet`; the v0.1 MCP path is dry-run contract exposure.
++Long-running MCP server mode intentionally fails with `command not implemented yet` today; the v0.2 release target is real MCP stdio serving.
+ 
+-The `.skr` package is a source/Manifest distribution archive. It does not vendor dependencies or provide a reproducible runtime image.
++The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image.
+ 
+ ## Security Model
+ 
+@@ -127,9 +132,10 @@ SkillRun is honest about trust boundaries:
+ - Consumer mode must not dynamically import untrusted source code to extract metadata.
+ - Stale or missing Manifests fail closed.
+ - Declared environment variables and artifact paths are part of the runtime contract.
+-- v0.1 does not claim to be a full OS sandbox. Running a third-party action still means executing third-party code.
++- SkillRun does not claim to be a full OS sandbox. Running a third-party action still means executing third-party code.
++- `.skr` is not a secure install format, registry package, or dependency bundle.
+ 
+-The MVP goal is a small, hard boundary: no implicit execution of instruction-only skills, no stdout success fallback, and no source-code metadata import in consumer mode.
++The goal is a small, hard boundary: no implicit execution of instruction-only skills, no stdout success fallback, and no source-code metadata import in consumer mode.
+ 
+ ## Roadmap
+ 
+@@ -146,17 +152,18 @@ The MVP goal is a small, hard boundary: no implicit execution of instruction-onl
+ | `T009` | Manifest-driven MCP exposure |
+ | `T010` | `.skr` packaging |
+ | `T011` | End-to-end acceptance matrix and business examples |
++| `v0.2` | Real MCP stdio server and public release candidate |
+ 
+ ## Classic Business Examples
+ 
+-SkillRun's v0.1 business proof is intentionally narrow:
++SkillRun's business proof is intentionally narrow:
+ 
+ - `B001: Refund Decision` is implemented in `examples/refund` and tested end-to-end with success, `PolicyViolation`, `ValidationError`, run records, MCP dry-run exposure, and `.skr` packaging.
+ - `B002: Support Triage` is a docs-level example showing stable routing labels and missing-context recovery.
+ - `B003: Access Request Approval` is a docs-level example showing approval boundaries, declared environment, and audit notes.
+ - `B004: Vendor Risk Review` is a docs-level example showing artifact-first review summaries and package distribution without dependency vendoring.
+ 
+-The v0.1 MVP only implements the refund capsule. The other examples explain where the same SOP + action + Manifest pattern is valuable without expanding the runtime scope.
++The current runtime only implements the refund capsule. The other examples explain where the same SOP + action + Manifest pattern is valuable without expanding the runtime scope.
+ 
+ ## Documentation
+ 
+@@ -169,7 +176,7 @@ Project governance documents are primarily written in Chinese so future agents c
+ 
+ ## Contributing
+ 
+-SkillRun is intentionally narrow at v0.1. Contributions should preserve these project rules:
++SkillRun is intentionally narrow. Contributions should preserve these project rules:
+ 
+ - Use `SkillRun` for the project name and `skillrun` for the CLI, crate, commands, and code identifiers.
+ - Keep SkillRun core behavior in Rust.
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 2416fb5..ae4437d 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -1,22 +1,25 @@
+ # SkillRun
+ 
+-> 用一份 SOP 和一个 Action，生成一个可测试、可检查、可给 Agent 调用、可打包分发的 MCP 技能包。
++> 用一份 SOP 和一个 Action，生成一个 Manifest 驱动的 Agent 技能胶囊。
+ 
+ [English](README.md)
+ 
+-SkillRun 是 Rust-first 的本地 CLI/Core，用来构建 **SOP-backed Skill Capsule**。它把一份面向人和 Agent 的业务 SOP、一个显式 Action、schema、examples 和 permissions 编译成 Manifest 驱动的技能包，使它可以被检查、测试、运行、暴露给 MCP client，并作为 `.skr` artifact 分发。
++FastMCP turns functions into MCP tools。
++SkillRun turns SOP-backed capabilities into **Skill Capsules**。
+ 
+-SkillRun 不是又一个“把函数包装成工具”的层。它关注的是：当 Agent 调用一个动作时，业务上下文、恢复规则、审计证据和运行契约也必须一起到场。
++一个 Skill Capsule 携带函数签名无法表达的内容：typed input/output、preflight、structured errors、artifacts、run evidence、declared permissions，以及 Manifest-derived MCP contract。
++
++SkillRun 关注的是：当 Agent 调用一个动作时，业务上下文、恢复规则、审计证据和运行契约也必须一起到场。如果你只想暴露一个函数，FastMCP 更轻；如果 SOP 和代码同样重要，SkillRun 才有价值。
+ 
+ ## 当前状态
+ 
+-SkillRun 正处在 v0.1.0 MVP 建设阶段。
++SkillRun 尚未公开发布。当前仓库正从已完成的 v0.1 内部 MVP 推进到 v0.2 public release candidate。
+ 
+-- 当前实现：v0.1 MVP 行为已推进到 `.skr` packaging，T011 release-level validation 已进入待复审状态。
++- 当前实现：v0.1 内部 MVP 行为已推进到 `.skr` packaging，release-level validation 已完成。
+ - 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、`skillrun pack --cwd <capsule>`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP contract inspection、`.skr` package generation，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack 路径的 contract tests。
+-- long-running `serve --mcp` server mode 不在 v0.1 中实现；`serve --mcp --dry-run` 用于验证 Manifest-derived MCP contract。
++- v0.2 release target：把 dry-run-only MCP 暴露推进为真实 long-running MCP stdio server，同时保留 `serve --mcp --dry-run` 作为 contract inspection。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+-- Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
++- Python `action.py` 是首个 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+ ## 为什么需要 SkillRun
+ 
+@@ -25,9 +28,9 @@ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ ```text
+ Skill Capsule = SOP + action code + schema + examples + permissions
+ Manifest      = compiled runtime contract
+-Core          = Rust manifest-driven runtime and MCP server
++Core          = Rust manifest-driven runtime
+ Adapter       = language bridge for user actions
+-Package       = immutable .skr distribution artifact
++Package       = .skr source + Manifest archive
+ ```
+ 
+ 当你希望一个 Agent 可调用能力不只携带函数签名时，SkillRun 才有价值：
+@@ -38,7 +41,7 @@ Package       = immutable .skr distribution artifact
+ - 结构化 success/error envelope。
+ - artifact 是一等输出，而不是 stdout 附属品。
+ - run record 保留 hash、日志和执行证据。
+-- MCP 暴露基于 Manifest，Consumer Mode 不重新 import 源码提取 metadata。
++- MCP 暴露来自 Manifest，Consumer Mode 不重新 import 源码提取 metadata。
+ 
+ 如果你只想把一个 Python 函数暴露成 MCP tool，FastMCP 这类轻量工具可能更合适。SkillRun 面向的是需要可检查、可测试、可分发的 SOP-backed capability。
+ 
+@@ -69,12 +72,14 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp --dry-run
++        +-- skillrun serve --mcp --dry-run   # 当前用于 contract inspection
+         +-- skillrun pack
+ ```
+ 
+ 生成的 Manifest 是运行契约。Author Mode 可以从本地源文件重新生成它；Consumer Mode 只读取 Manifest，校验 source hashes，并在 Manifest 缺失或过期时 fail closed。
+ 
++v0.2 的发布目标是让 `skillrun serve --mcp` 成为真实 MCP stdio server，同时 tool 和 resource 仍然从 Manifest 派生。
++
+ ## MVP 计划工作流
+ 
+ ```bash
+@@ -115,9 +120,9 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ skillrun 0.1.0
+ ```
+ 
+-long-running MCP server mode 会明确返回 `command not implemented yet`；v0.1 的 MCP 路径是 dry-run contract exposure。
++long-running MCP server mode 当前会明确返回 `command not implemented yet`；v0.2 的发布目标是真实 MCP stdio serving。
+ 
+-`.skr` package 是 source/Manifest distribution archive。它 does not vendor dependencies，也不提供 reproducible runtime image。
++`.skr` package 是 source/Manifest archive。它不是 signed package，不 vendor dependencies，也不提供 reproducible runtime image。
+ 
+ ## 安全模型
+ 
+@@ -127,9 +132,10 @@ SkillRun 对信任边界保持诚实：
+ - Consumer Mode 不应该为了提取 metadata 而动态 import 未信任源码。
+ - Manifest 缺失或 stale 时 fail closed。
+ - 声明过的环境变量和 artifact path 属于运行契约。
+-- v0.1 不声称提供完整 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
++- SkillRun 不声称提供完整 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
++- `.skr` 不是 secure install format、registry package 或 dependency bundle。
+ 
+-MVP 的目标是建立小而硬的边界：不隐式执行 instruction-only skill，不把 stdout 当成功兜底，不在 Consumer Mode 为 metadata import 源码。
++目标是建立小而硬的边界：不隐式执行 instruction-only skill，不把 stdout 当成功兜底，不在 Consumer Mode 为 metadata import 源码。
+ 
+ ## 路线图
+ 
+@@ -146,17 +152,18 @@ MVP 的目标是建立小而硬的边界：不隐式执行 instruction-only skil
+ | `T009` | Manifest-driven MCP exposure |
+ | `T010` | `.skr` packaging |
+ | `T011` | E2E acceptance matrix 和 business examples |
++| `v0.2` | Real MCP stdio server 和 public release candidate |
+ 
+ ## 经典业务示例
+ 
+-SkillRun 的 v0.1 业务证明刻意保持收敛：
++SkillRun 的业务证明刻意保持收敛：
+ 
+ - `B001: Refund Decision` 已在 `examples/refund` 中完整实现，并通过 success、`PolicyViolation`、`ValidationError`、run record、MCP dry-run exposure 和 `.skr` packaging 做端到端验证。
+ - `B002: Support Triage` 是 docs-level example，用于说明 stable routing labels 和 missing-context recovery。
+ - `B003: Access Request Approval` 是 docs-level example，用于说明 approval boundary、declared env 和 audit note。
+ - `B004: Vendor Risk Review` 是 docs-level example，用于说明 artifact-first review summary，以及不 vendor dependencies 的 package distribution。
+ 
+-v0.1 MVP 只完整实现 `refund` capsule。其他示例只解释同一套 SOP + action + Manifest 模式的业务价值，不扩大 runtime scope。
++当前 runtime 只完整实现 `refund` capsule。其他示例只解释同一套 SOP + action + Manifest 模式的业务价值，不扩大 runtime scope。
+ 
+ ## 文档
+ 
+@@ -169,7 +176,7 @@ v0.1 MVP 只完整实现 `refund` capsule。其他示例只解释同一套 SOP +
+ 
+ ## 贡献
+ 
+-SkillRun 在 v0.1 阶段有意保持尖锐和克制。贡献时请保持这些项目约定：
++SkillRun 有意保持尖锐和克制。贡献时请保持这些项目约定：
+ 
+ - 项目名使用 `SkillRun`，CLI、crate、命令和代码标识使用 `skillrun`。
+ - SkillRun Core 行为使用 Rust 实现。
+diff --git a/tests/business_examples.rs b/tests/business_examples.rs
+index 76f9a4d..7c8651b 100644
+--- a/tests/business_examples.rs
++++ b/tests/business_examples.rs
+@@ -148,6 +148,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
+ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
+     let docs = fs::read_to_string("docs/business-examples.md").expect("business docs readable");
+     let readme = fs::read_to_string("README.md").expect("README readable");
++    let cargo_toml = fs::read_to_string("Cargo.toml").expect("Cargo.toml readable");
+ 
+     for expected in [
+         "B001: Refund Decision",
+@@ -170,4 +171,8 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
+     assert!(readme.contains("Support Triage"));
+     assert!(readme.contains("Access Request Approval"));
+     assert!(readme.contains("Vendor Risk Review"));
++    assert!(readme.contains("manifest-driven Agent skill capsule"));
++    assert!(readme.contains("FastMCP turns functions into MCP tools"));
++    assert!(!readme.contains("tested MCP skill package"));
++    assert!(!cargo_toml.contains("tested MCP skill package"));
+ }

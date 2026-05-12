@@ -31,7 +31,7 @@ Stories:
 
 ### T012: Rewrite README Release Narrative
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: v0.2 SOP Confirmed
 Blocks: T018
@@ -106,7 +106,7 @@ Stories:
 
 ### T013: Add v0.2 MCP Protocol Contract Tests
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T012
 Blocks: T014, T015, T016, T017

@@ -2,7 +2,7 @@
 name = "skillrun"
 version = "0.1.0"
 edition = "2021"
-description = "Rust CLI for turning one SOP and one action into a tested MCP skill package."
+description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
 license = "Apache-2.0"
 
 [dependencies]

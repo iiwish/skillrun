@@ -148,6 +148,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     let docs = fs::read_to_string("docs/business-examples.md").expect("business docs readable");
     let readme = fs::read_to_string("README.md").expect("README readable");
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("Cargo.toml readable");
 
     for expected in [
         "B001: Refund Decision",
@@ -170,4 +171,8 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     assert!(readme.contains("Support Triage"));
     assert!(readme.contains("Access Request Approval"));
     assert!(readme.contains("Vendor Risk Review"));
+    assert!(readme.contains("manifest-driven Agent skill capsule"));
+    assert!(readme.contains("FastMCP turns functions into MCP tools"));
+    assert!(!readme.contains("tested MCP skill package"));
+    assert!(!cargo_toml.contains("tested MCP skill package"));
 }
