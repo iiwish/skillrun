@@ -13,11 +13,11 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun is not published yet. The repository is moving from the completed v0.1 internal MVP to the v0.2 public release candidate.
+SkillRun v0.2.0 is ready for user review as the first public release candidate. No tag or public package has been published yet.
 
-- Current implementation: v0.1 internal MVP behavior through `.skr` packaging, with release-level validation complete.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, `.skr` package generation, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
-- v0.2 release target: replace dry-run-only MCP exposure with a real long-running MCP stdio server while keeping `serve --mcp --dry-run` for contract inspection.
+- Current implementation: v0.2 release-candidate behavior through a real MCP stdio server, `.skr` packaging, and release-level validation.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+- v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first action adapter target. It is the user action language, not the SkillRun implementation language.
 
@@ -72,15 +72,16 @@ Manifest-driven contract
         +-- skillrun inspect
         +-- skillrun test
         +-- skillrun run --input examples/default.input.json
-        +-- skillrun serve --mcp --dry-run   # current contract inspection
+        +-- skillrun serve --mcp             # MCP stdio server
+        +-- skillrun serve --mcp --dry-run   # contract inspection
         +-- skillrun pack
 ```
 
 The generated Manifest is the runtime contract. Author mode can regenerate it from local sources. Consumer mode reads it, validates source hashes, and refuses to guess when the Manifest is missing or stale.
 
-The v0.2 release target is to make `skillrun serve --mcp` a real MCP stdio server whose tools and resources are still derived from the Manifest.
+In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and resources are still derived from the Manifest.
 
-## Planned MVP Workflow
+## Release Candidate Workflow
 
 ```bash
 skillrun init refund --python
@@ -91,7 +92,7 @@ skillrun manifest
 skillrun inspect
 skillrun test
 skillrun run --input examples/default.input.json
-skillrun serve --mcp --dry-run
+skillrun serve --mcp
 skillrun pack
 ```
 
@@ -99,7 +100,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
 
 ## What Works Today
 
-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
+The repository currently contains the Rust CLI, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
 
 ```bash
 cargo test
@@ -117,12 +118,23 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Example output:
 
 ```text
-skillrun 0.1.0
+skillrun 0.2.0
 ```
 
-Long-running MCP server mode intentionally fails with `command not implemented yet` today; the v0.2 release target is real MCP stdio serving.
+The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
 
 The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image.
+
+## Release Candidate Limits
+
+v0.2.0 is intentionally narrow:
+
+- MCP transport is stdio only.
+- Each capsule exposes one primary Manifest-derived tool.
+- Python `action.py` is the only blessed action adapter target.
+- `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
+- SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
+- No tag or public release should be created until the release report is accepted by the maintainer.
 
 ## Security Model
 
@@ -152,7 +164,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `T009` | Manifest-driven MCP exposure |
 | `T010` | `.skr` packaging |
 | `T011` | End-to-end acceptance matrix and business examples |
-| `v0.2` | Real MCP stdio server and public release candidate |
+| `v0.2` | Real MCP stdio server and public release candidate readiness |
 
 ## Classic Business Examples
 

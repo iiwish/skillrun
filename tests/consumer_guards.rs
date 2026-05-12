@@ -145,7 +145,7 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
     assert!(pack.status.success());
     let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
-    assert!(pack_stdout.contains("refund-0.1.0.skr"));
+    assert!(pack_stdout.contains("refund-0.2.0.skr"));
     assert!(pack_stdout.contains("does not vendor dependencies"));
 
     fs::remove_dir_all(output_root).ok();

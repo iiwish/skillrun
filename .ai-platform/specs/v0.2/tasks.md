@@ -444,7 +444,7 @@ Stories:
 
 ### T018: Prepare v0.2 Release Candidate
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T012, T017
 Blocks: Release decision

@@ -8,7 +8,7 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
 }
 
 #[test]
-fn help_lists_planned_mvp_commands() {
+fn help_lists_core_commands() {
     let output = run_skillrun(&["--help"]);
 
     assert!(output.status.success());
@@ -34,12 +34,12 @@ fn version_uses_approved_project_name() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).expect("version output should be utf-8"),
-        "skillrun 0.1.0\n"
+        "skillrun 0.2.0\n"
     );
 }
 
 #[test]
-fn serve_requires_explicit_mcp_mode_until_implemented() {
+fn serve_requires_explicit_mcp_mode() {
     let output = run_skillrun(&["serve"]);
 
     assert!(!output.status.success());

@@ -249,7 +249,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.1.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
     assert!(archive_path.is_file(), "A012 archive should exist");
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack target should exist");

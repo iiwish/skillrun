@@ -1,7 +1,7 @@
 # SkillRun MVP: Rust-first SkillRun Runtime
 
 **文档状态**：Confirmed  
-**版本**：v0.1.0 MVP contract  
+**版本**：v0.1.0 MVP contract；v0.1 未单独公开发布，v0.2.0 是第一版 public release candidate
 **来源**：`docs/ssot.md`  
 **最后更新**：2026-05-11  
 **审批记录**：2026-05-11 用户批准进入 Plan / Work Graph 阶段；项目名称统一为 SkillRun / `skillrun`。

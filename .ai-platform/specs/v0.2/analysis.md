@@ -116,21 +116,28 @@ Contradictions: None.
 - T017 explicitly checks stdout discipline by injecting action stdout noise and proving it is captured in the SkillRun run log rather than emitted into MCP JSON-RPC stdout.
 - Critical and High findings remain 0.
 
+## T018 Release Candidate Update
+
+- T018 updates package/version metadata to `0.2.0`.
+- README and Chinese README now describe v0.2.0 as ready for public release candidate review rather than as a future target.
+- Release report is `Ready_For_User_Review` and explicitly records known limitations, no-tag status and maintainer release-decision checklist.
+- Critical and High findings remain 0.
+
 ## Execute Gate
 
-Result: Clear for T017.
+Result: Clear for user review of T018.
 
 Reason:
 
 - SOP, spec, plan and work graph are Confirmed.
 - Requirements checklist is Completed.
 - Analysis has no Critical or High findings.
-- T015 and T016 are Accepted.
-- T017 has a complete packet and its dependencies are satisfied.
+- T012 through T017 are Accepted.
+- T018 has complete release-candidate evidence and is Accepted.
 
 Dependency note:
 
-- T018 remains dependency-gated until T017 is accepted.
+- No further implementation task is unblocked automatically. The next gate is maintainer release decision: publish, hold, or revise.
 
 ## User Review Gate
 

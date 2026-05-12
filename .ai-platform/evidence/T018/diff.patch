@@ -1,0 +1,604 @@
+﻿diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 84f9e25..b6a50f6 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -1,114 +1,88 @@
+-# SkillRun Release Report
++# SkillRun v0.2.0 Release Candidate Report
+ 
+-Version: v0.1
+-Status: Ready_For_Final_Handoff
++Version: v0.2.0
++Status: Ready_For_User_Review
+ Last updated: 2026-05-12
+-Review: Implementation tasks accepted; final release acceptance can be decided next
++Review gate: Maintainer release decision pending
+ 
+-## 范围
++## Scope
+ 
+-The MVP implementation work is complete. This report records accepted task slices, T011 release-level evidence, and remaining explicit limitations for the SkillRun MVP.
++This report records the first public release candidate for SkillRun. v0.1 was an internal MVP proof and was not published separately. v0.2.0 is the first candidate intended for public release review.
++
++The release story is deliberately narrow:
++
++> Turn one SOP and one action into a manifest-driven Agent skill capsule with real MCP stdio serving.
+ 
+ ## Governance Summary
+ 
+-- Constitution: `.ai-platform/memory/constitution.md` status Confirmed
+-- Product/spec approval: `docs/mvp.md` approved by user on 2026-05-11
+-- Plan/work graph approval: approved on 2026-05-11 after document review
+-- Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+-- Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+-- Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T011 acceptance and ready for final handoff
+-
+-## Accepted Tasks
+-
+-- T001: Scaffold Rust Crate And CLI Entrypoint. Accepted on 2026-05-11 after rereview passed.
+-- T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
+-- T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
+-- T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
+-- T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
+-- T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
+-- T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
+-- T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
+-- T009: Implement Manifest-driven MCP Tool Exposure. Accepted on 2026-05-12 after rereview passed.
+-- T010: Implement `.skr` Package Generation. Accepted on 2026-05-12 after rereview passed.
+-- T011: Complete Refund Hero Example, Business Examples, And Full Test Strategy Validation. Accepted on 2026-05-12 after rereview passed.
++- v0.2 SOP: `.ai-platform/specs/v0.2/sop.md`
++- v0.2 spec: `.ai-platform/specs/v0.2/spec.md`
++- v0.2 plan: `.ai-platform/specs/v0.2/plan.md`
++- v0.2 work graph: `.ai-platform/specs/v0.2/tasks.md`
++- v0.2 checklist: `.ai-platform/specs/v0.2/checklists/requirements.md`
++- v0.2 analysis: `.ai-platform/specs/v0.2/analysis.md`
++- Release report status: `Ready_For_User_Review`
++- No release tag or public package has been created.
++
++## Accepted v0.2 Tasks
++
++- T012: README release narrative accepted. Evidence: `.ai-platform/evidence/T012/`.
++- T013: MCP stdio protocol contract tests accepted. Evidence: `.ai-platform/evidence/T013/`.
++- T014: Long-running MCP stdio lifecycle accepted. Evidence: `.ai-platform/evidence/T014/`.
++- T015: MCP tools/list and tools/call runtime wiring accepted. Evidence: `.ai-platform/evidence/T015/`.
++- T016: MCP resources/list and resources/read accepted. Evidence: `.ai-platform/evidence/T016/`.
++- T017: MCP release-level E2E fixture and release matrix accepted. Evidence: `.ai-platform/evidence/T017/`.
++
++T018 prepares the release candidate for review and remains separate from the maintainer's publish/hold/revise decision.
++
++## Release Candidate Capabilities
++
++- Rust CLI/Core remains the SkillRun implementation boundary.
++- Python `action.py` remains the only blessed v0.2 action adapter target.
++- `skillrun manifest` generates the Manifest runtime IR from local author sources.
++- Consumer Mode validates static Manifest source hashes and fails closed when stale.
++- `skillrun inspect`, `skillrun test`, `skillrun run`, and `skillrun pack` remain covered by the MVP release matrix.
++- `skillrun serve --mcp --cwd <capsule>` now starts a real long-running MCP stdio server.
++- MCP `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, and `resources/read` are covered by scripted client tests.
++- MCP tool calls reuse the existing runtime and preserve run records.
++- MCP resources are Manifest-derived and limited to `SKILL.md` plus example input files.
++- `skillrun serve --mcp --dry-run` remains available for contract inspection.
++- `.skr` packages remain source + Manifest archives and exclude run history.
+ 
+ ## Validation Summary
+ 
+-- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`: passed after canonical governance artifacts were initialized.
+-- `cargo test`: passed for T001 Rust CLI skeleton.
+-- `cargo run -- --help`: passed.
+-- `cargo run -- --version`: passed with `skillrun 0.1.0`.
+-- T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
+-- T003 validation recorded in `.ai-platform/evidence/T003/`.
+-- T004 validation recorded in `.ai-platform/evidence/T004/`.
+-- T005 validation recorded in `.ai-platform/evidence/T005/`.
+-- T006 validation recorded in `.ai-platform/evidence/T006/`.
+-- T007 validation recorded in `.ai-platform/evidence/T007/`.
+-- T008 validation recorded in `.ai-platform/evidence/T008/`.
+-- T009 validation recorded in `.ai-platform/evidence/T009/`.
+-- T010 validation recorded in `.ai-platform/evidence/T010/`.
+-- T011 validation recorded in `.ai-platform/evidence/T011/`.
+-
+-## A001-A013 Acceptance Coverage
+-
+-- A001 init: `tests/e2e_matrix.rs` runs `skillrun init refund --python`, checks the standard files, and verifies duplicate init fails.
+-- A002 Manifest: `tests/e2e_matrix.rs` runs `skillrun manifest` and checks source hashes, schemas, permissions, adapter, and tool description fields.
+-- A003 inspect: `tests/e2e_matrix.rs` checks runnable inspect output for SOP hash, schemas, permissions, adapter, examples, preflight, and MCP summary.
+-- A004 test: `tests/e2e_matrix.rs` runs `skillrun test` and verifies success envelope, run record, stdout log, and stderr log.
+-- A005 run: `tests/e2e_matrix.rs` runs `skillrun run --input examples/default.input.json` and verifies display output and manifest hash traceability.
+-- A006 invalid input: `tests/e2e_matrix.rs` and `tests/errors.rs` verify `ValidationError` with `recoverable=true`.
+-- A007 policy rejection: `tests/e2e_matrix.rs`, `tests/errors.rs`, and `tests/business_examples.rs` verify `PolicyViolation` with `llm_hint`.
+-- A008 protocol violation: `tests/e2e_matrix.rs` and `tests/errors.rs` verify stdout fake success cannot replace a missing output envelope.
+-- A009 artifact boundary: `tests/e2e_matrix.rs` and `tests/artifacts.rs` verify invalid artifact paths fail.
+-- A010 stale Manifest: `tests/e2e_matrix.rs` and `tests/consumer_guards.rs` verify Consumer Mode fail closed.
+-- A011 MCP exposure: `tests/e2e_matrix.rs`, `tests/mcp_server.rs`, and `tests/business_examples.rs` verify Manifest-derived MCP dry-run output and `SKILL.md` resource exposure.
+-- A012 pack: `tests/e2e_matrix.rs`, `tests/pack.rs`, and `tests/business_examples.rs` verify `.skr` content, run-history exclusion, unpack, and inspect.
+-- A013 instruction-only guard: `tests/e2e_matrix.rs` and `tests/instruction_only.rs` verify inspect status and command refusal.
+-
+-## Negative/Security Coverage
+-
+-- N001 stdout fake success: automated in `tests/errors.rs` and `tests/e2e_matrix.rs`.
+-- N002 stale `SKILL.md`: automated in `tests/consumer_guards.rs`.
+-- N003 stale `action.py`: automated in `tests/consumer_guards.rs` and `tests/mcp_server.rs`.
+-- N004 stale config: automated in `tests/consumer_guards.rs`.
+-- N005 artifact traversal: automated in `tests/artifacts.rs` and `tests/e2e_matrix.rs`.
+-- N006 absolute artifact path: automated in `tests/artifacts.rs`.
+-- N007 Windows drive artifact path: automated by absolute path handling in `tests/artifacts.rs` on Windows.
+-- N008 undeclared env injection: automated in `tests/permissions.rs`.
+-- N009 metadata phase secret injection: automated by env isolation patterns in `tests/permissions.rs` and metadata no-import coverage in `tests/mcp_server.rs`; Author Mode still runs local Python and is documented as a trust boundary.
+-- N010 instruction-only implicit execution: automated in `tests/instruction_only.rs` and `tests/e2e_matrix.rs`.
+-- N011 Pydantic v1 or incompatible schema: automated in `tests/manifest.rs` through metadata failure behavior.
+-- N012 MCP stale exposure: automated in `tests/mcp_server.rs`.
+-- N013 pack stale source: automated in `tests/pack.rs`.
+-- N014 run record missing hash: automated in `tests/runtime.rs` and `tests/e2e_matrix.rs`.
+-- N015 stack trace leakage: automated in `tests/errors.rs`.
+-- N016 `.skr` runtime-image misunderstanding: automated/doc-checked in `tests/pack.rs`, `tests/business_examples.rs`, README, and `docs/business-examples.md`.
+-
+-## Business Example Coverage
+-
+-- B001 Refund Decision: implemented in `examples/refund` and covered by `tests/business_examples.rs`.
+-- B002 Support Triage: documented as a docs-level example in README and `docs/business-examples.md`.
+-- B003 Access Request Approval: documented as a docs-level example in README and `docs/business-examples.md`.
+-- B004 Vendor Risk Review: documented as a docs-level example in README and `docs/business-examples.md`.
++Validation completed on 2026-05-12:
+ 
+-## Known Limitations
++- `cargo test`: passed.
++- `cargo run -- --version`: passed.
++- `cargo test --test e2e_matrix a014_mcp_stdio_release_matrix_exercises_full_client_flow`: passed as the scripted MCP client release flow.
++- Delivery artifact validator: passed.
+ 
+-- T001-T011 have been accepted.
+-- Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- `serve --mcp --dry-run` is implemented for Manifest-derived contract inspection.
+-- `pack` is implemented for `.skr` tar.gz generation.
+-- Long-running MCP server mode is not implemented yet.
++Expected release version output:
+ 
+-## Unfinished Tasks
++```text
++skillrun 0.2.0
++```
++
++## Known Limitations
+ 
+-- None in the approved MVP work graph.
++- v0.2 supports MCP stdio transport only. HTTP, SSE, Streamable HTTP, auth, and hosted server modes are out of scope.
++- v0.2 exposes one primary Manifest-derived tool per capsule.
++- v0.2 does not implement MCP prompts, sampling, roots, elicitation, progress, cancellation, resource subscriptions, or pagination.
++- v0.2 does not provide a sandbox. Running a third-party action still means executing third-party code.
++- `.skr` is not signed, not a registry package, not a dependency bundle, and not a reproducible runtime image.
++- Dependency installation and runtime environment recreation are still the user's responsibility.
++- Node adapter, OpenAPI import, marketplace, registry, install flow, multi-action orchestration, and GUI are post-v0.2 scope.
++- Consumer Mode avoids dynamic metadata import, but it does not prevent the action process itself from using local machine capabilities once executed.
+ 
+-## Next Recommended Actions
++## Release Decision Checklist
+ 
+-- Decide final MVP release acceptance, tag/version handoff, or next-scope planning.
++- [ ] Maintainer reviews T018 diff and evidence.
++- [ ] Maintainer confirms whether to publish, hold, or revise.
++- [ ] If publishing, create the release tag only after explicit approval.
++- [ ] If holding, record blocking issues before opening follow-up implementation work.
+ 
+ ## User Review Gate
+ 
+ - Approval: Pending
+-- Reviewer notes: All governed implementation tasks are accepted. Final release acceptance/tagging is a separate explicit decision.
++- Reviewer notes: v0.2.0 is prepared for review, not published.
+diff --git a/.ai-platform/specs/v0.2/analysis.md b/.ai-platform/specs/v0.2/analysis.md
+index 89d987e..0f683af 100644
+--- a/.ai-platform/specs/v0.2/analysis.md
++++ b/.ai-platform/specs/v0.2/analysis.md
+@@ -116,21 +116,28 @@ Contradictions: None.
+ - T017 explicitly checks stdout discipline by injecting action stdout noise and proving it is captured in the SkillRun run log rather than emitted into MCP JSON-RPC stdout.
+ - Critical and High findings remain 0.
+ 
++## T018 Release Candidate Update
++
++- T018 updates package/version metadata to `0.2.0`.
++- README and Chinese README now describe v0.2.0 as ready for public release candidate review rather than as a future target.
++- Release report is `Ready_For_User_Review` and explicitly records known limitations, no-tag status and maintainer release-decision checklist.
++- Critical and High findings remain 0.
++
+ ## Execute Gate
+ 
+-Result: Clear for T017.
++Result: Clear for user review of T018.
+ 
+ Reason:
+ 
+ - SOP, spec, plan and work graph are Confirmed.
+ - Requirements checklist is Completed.
+ - Analysis has no Critical or High findings.
+-- T015 and T016 are Accepted.
+-- T017 has a complete packet and its dependencies are satisfied.
++- T012 through T017 are Accepted.
++- T018 has complete release-candidate evidence and is Accepted.
+ 
+ Dependency note:
+ 
+-- T018 remains dependency-gated until T017 is accepted.
++- No further implementation task is unblocked automatically. The next gate is maintainer release decision: publish, hold, or revise.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/specs/v0.2/tasks.md b/.ai-platform/specs/v0.2/tasks.md
+index 757837a..a055bab 100644
+--- a/.ai-platform/specs/v0.2/tasks.md
++++ b/.ai-platform/specs/v0.2/tasks.md
+@@ -444,7 +444,7 @@ Stories:
+ 
+ ### T018: Prepare v0.2 Release Candidate
+ 
+-Status: Ready
++Status: Accepted
+ Priority: P0
+ Depends on: T012, T017
+ Blocks: Release decision
+diff --git a/Cargo.lock b/Cargo.lock
+index ebc730c..ba74660 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -428,7 +428,7 @@ checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
+ 
+ [[package]]
+ name = "skillrun"
+-version = "0.1.0"
++version = "0.2.0"
+ dependencies = [
+  "chrono",
+  "flate2",
+diff --git a/Cargo.toml b/Cargo.toml
+index a240951..a16a364 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "skillrun"
+-version = "0.1.0"
++version = "0.2.0"
+ edition = "2021"
+ description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
+ license = "Apache-2.0"
+diff --git a/README.md b/README.md
+index f0c431c..603b6e9 100644
+--- a/README.md
++++ b/README.md
+@@ -13,11 +13,11 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
+ 
+ ## Status
+ 
+-SkillRun is not published yet. The repository is moving from the completed v0.1 internal MVP to the v0.2 public release candidate.
++SkillRun v0.2.0 is ready for user review as the first public release candidate. No tag or public package has been published yet.
+ 
+-- Current implementation: v0.1 internal MVP behavior through `.skr` packaging, with release-level validation complete.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP contract inspection, `.skr` package generation, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+-- v0.2 release target: replace dry-run-only MCP exposure with a real long-running MCP stdio server while keeping `serve --mcp --dry-run` for contract inspection.
++- Current implementation: v0.2 release-candidate behavior through a real MCP stdio server, `.skr` packaging, and release-level validation.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
++- v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -72,15 +72,16 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp --dry-run   # current contract inspection
++        +-- skillrun serve --mcp             # MCP stdio server
++        +-- skillrun serve --mcp --dry-run   # contract inspection
+         +-- skillrun pack
+ ```
+ 
+ The generated Manifest is the runtime contract. Author mode can regenerate it from local sources. Consumer mode reads it, validates source hashes, and refuses to guess when the Manifest is missing or stale.
+ 
+-The v0.2 release target is to make `skillrun serve --mcp` a real MCP stdio server whose tools and resources are still derived from the Manifest.
++In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and resources are still derived from the Manifest.
+ 
+-## Planned MVP Workflow
++## Release Candidate Workflow
+ 
+ ```bash
+ skillrun init refund --python
+@@ -91,7 +92,7 @@ skillrun manifest
+ skillrun inspect
+ skillrun test
+ skillrun run --input examples/default.input.json
+-skillrun serve --mcp --dry-run
++skillrun serve --mcp
+ skillrun pack
+ ```
+ 
+@@ -99,7 +100,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
++The repository currently contains the Rust CLI, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
+ 
+ ```bash
+ cargo test
+@@ -117,13 +118,24 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ Example output:
+ 
+ ```text
+-skillrun 0.1.0
++skillrun 0.2.0
+ ```
+ 
+-Long-running MCP server mode intentionally fails with `command not implemented yet` today; the v0.2 release target is real MCP stdio serving.
++The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
+ 
+ The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image.
+ 
++## Release Candidate Limits
++
++v0.2.0 is intentionally narrow:
++
++- MCP transport is stdio only.
++- Each capsule exposes one primary Manifest-derived tool.
++- Python `action.py` is the only blessed action adapter target.
++- `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
++- SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
++- No tag or public release should be created until the release report is accepted by the maintainer.
++
+ ## Security Model
+ 
+ SkillRun is honest about trust boundaries:
+@@ -152,7 +164,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
+ | `T009` | Manifest-driven MCP exposure |
+ | `T010` | `.skr` packaging |
+ | `T011` | End-to-end acceptance matrix and business examples |
+-| `v0.2` | Real MCP stdio server and public release candidate |
++| `v0.2` | Real MCP stdio server and public release candidate readiness |
+ 
+ ## Classic Business Examples
+ 
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index ae4437d..0fab73f 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -13,11 +13,11 @@ SkillRun 关注的是：当 Agent 调用一个动作时，业务上下文、恢
+ 
+ ## 当前状态
+ 
+-SkillRun 尚未公开发布。当前仓库正从已完成的 v0.1 内部 MVP 推进到 v0.2 public release candidate。
++SkillRun v0.2.0 已准备进入第一版 public release candidate 的用户审核。当前尚未打 tag，也尚未公开发布 package。
+ 
+-- 当前实现：v0.1 内部 MVP 行为已推进到 `.skr` packaging，release-level validation 已完成。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、`skillrun pack --cwd <capsule>`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP contract inspection、`.skr` package generation，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack 路径的 contract tests。
+-- v0.2 release target：把 dry-run-only MCP 暴露推进为真实 long-running MCP stdio server，同时保留 `serve --mcp --dry-run` 作为 contract inspection。
++- 当前实现：v0.2 release-candidate 行为已经包含真实 MCP stdio server、`.skr` packaging 和 release-level validation。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、`skillrun pack --cwd <capsule>`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP tools/resources、`.skr` package generation，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack 路径的 release tests。
++- v0.2 保留 `serve --mcp --dry-run` 作为 contract inspection，但普通 `serve --mcp` 路径已经是真实 long-running MCP stdio server。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -72,15 +72,16 @@ Manifest-driven contract
+         +-- skillrun inspect
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+-        +-- skillrun serve --mcp --dry-run   # 当前用于 contract inspection
++        +-- skillrun serve --mcp             # MCP stdio server
++        +-- skillrun serve --mcp --dry-run   # contract inspection
+         +-- skillrun pack
+ ```
+ 
+ 生成的 Manifest 是运行契约。Author Mode 可以从本地源文件重新生成它；Consumer Mode 只读取 Manifest，校验 source hashes，并在 Manifest 缺失或过期时 fail closed。
+ 
+-v0.2 的发布目标是让 `skillrun serve --mcp` 成为真实 MCP stdio server，同时 tool 和 resource 仍然从 Manifest 派生。
++v0.2 中，`skillrun serve --mcp` 已经是一个真实 MCP stdio server，同时 tool 和 resource 仍然从 Manifest 派生。
+ 
+-## MVP 计划工作流
++## Release Candidate 工作流
+ 
+ ```bash
+ skillrun init refund --python
+@@ -91,7 +92,7 @@ skillrun manifest
+ skillrun inspect
+ skillrun test
+ skillrun run --input examples/default.input.json
+-skillrun serve --mcp --dry-run
++skillrun serve --mcp
+ skillrun pack
+ ```
+ 
+@@ -99,7 +100,7 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器、inspect renderer、test/run 成功路径、MCP dry-run contract renderer、`.skr` package generation，以及 B001 `refund` hero example：
++仓库当前包含 Rust CLI、`init --python` capsule 生成器、Manifest 生成器、inspect renderer、test/run 成功路径、MCP stdio server、MCP dry-run contract renderer、`.skr` package generation，以及 B001 `refund` hero example：
+ 
+ ```bash
+ cargo test
+@@ -117,13 +118,24 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ 示例输出：
+ 
+ ```text
+-skillrun 0.1.0
++skillrun 0.2.0
+ ```
+ 
+-long-running MCP server mode 当前会明确返回 `command not implemented yet`；v0.2 的发布目标是真实 MCP stdio serving。
++真实 `serve --mcp` 命令是 long-running stdio server，并已经通过 scripted MCP client release matrix 验证。
+ 
+ `.skr` package 是 source/Manifest archive。它不是 signed package，不 vendor dependencies，也不提供 reproducible runtime image。
+ 
++## Release Candidate 限制
++
++v0.2.0 刻意保持收敛：
++
++- MCP transport 仅支持 stdio。
++- 每个 capsule 暴露一个 Manifest-derived primary tool。
++- Python `action.py` 是唯一 blessed action adapter 目标。
++- `.skr` 是 source + Manifest archive，不是 signed package、registry package、dependency bundle 或 runtime image。
++- SkillRun 不提供 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
++- 在 release report 获得维护者接受之前，不应打 tag 或公开发布。
++
+ ## 安全模型
+ 
+ SkillRun 对信任边界保持诚实：
+@@ -152,7 +164,7 @@ SkillRun 对信任边界保持诚实：
+ | `T009` | Manifest-driven MCP exposure |
+ | `T010` | `.skr` packaging |
+ | `T011` | E2E acceptance matrix 和 business examples |
+-| `v0.2` | Real MCP stdio server 和 public release candidate |
++| `v0.2` | Real MCP stdio server 和 public release candidate readiness |
+ 
+ ## 经典业务示例
+ 
+diff --git a/docs/mvp.md b/docs/mvp.md
+index df247ca..3625c36 100644
+--- a/docs/mvp.md
++++ b/docs/mvp.md
+@@ -1,7 +1,7 @@
+ # SkillRun MVP: Rust-first SkillRun Runtime
+ 
+ **文档状态**：Confirmed  
+-**版本**：v0.1.0 MVP contract  
++**版本**：v0.1.0 MVP contract；v0.1 未单独公开发布，v0.2.0 是第一版 public release candidate
+ **来源**：`docs/ssot.md`  
+ **最后更新**：2026-05-11  
+ **审批记录**：2026-05-11 用户批准进入 Plan / Work Graph 阶段；项目名称统一为 SkillRun / `skillrun`。
+diff --git a/docs/ssot.md b/docs/ssot.md
+index 9108fb2..a505b3d 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -1,6 +1,6 @@
+ # SkillRun SSOT: SOP-backed Skill Capsule Runtime
+ 
+-**文档状态**：v0.1.0 architecture baseline  
++**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate，v0.1 未单独公开发布。
+ **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。  
+ **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
+ 
+diff --git a/tests/business_examples.rs b/tests/business_examples.rs
+index 7c8651b..524e90e 100644
+--- a/tests/business_examples.rs
++++ b/tests/business_examples.rs
+@@ -133,7 +133,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
+ 
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.1.0.skr");
++    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
+     assert!(archive_path.is_file());
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 3141945..9b76a8e 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -8,7 +8,7 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
+ }
+ 
+ #[test]
+-fn help_lists_planned_mvp_commands() {
++fn help_lists_core_commands() {
+     let output = run_skillrun(&["--help"]);
+ 
+     assert!(output.status.success());
+@@ -34,12 +34,12 @@ fn version_uses_approved_project_name() {
+     assert!(output.status.success());
+     assert_eq!(
+         String::from_utf8(output.stdout).expect("version output should be utf-8"),
+-        "skillrun 0.1.0\n"
++        "skillrun 0.2.0\n"
+     );
+ }
+ 
+ #[test]
+-fn serve_requires_explicit_mcp_mode_until_implemented() {
++fn serve_requires_explicit_mcp_mode() {
+     let output = run_skillrun(&["serve"]);
+ 
+     assert!(!output.status.success());
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index 3dd73f0..3d8ced7 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -145,7 +145,7 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
+     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+     assert!(pack.status.success());
+     let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+-    assert!(pack_stdout.contains("refund-0.1.0.skr"));
++    assert!(pack_stdout.contains("refund-0.2.0.skr"));
+     assert!(pack_stdout.contains("does not vendor dependencies"));
+ 
+     fs::remove_dir_all(output_root).ok();
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index 7503a9d..d4b703b 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -249,7 +249,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
+ 
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.1.0.skr");
++    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
+     assert!(archive_path.is_file(), "A012 archive should exist");
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack target should exist");
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index 51b7eaa..1fc6b08 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -84,7 +84,7 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+ 
+     assert_contains(&manifest_text, "manifest_version: 0.1.0");
+-    assert_contains(&manifest_text, "generated_by: skillrun@0.1.0");
++    assert_contains(&manifest_text, "generated_by: skillrun@0.2.0");
+     assert_contains(&manifest_text, "name: refund");
+     assert_contains(&manifest_text, "adapter: python");
+     assert_contains(&manifest_text, "entrypoint: action.py");
+diff --git a/tests/pack.rs b/tests/pack.rs
+index 0c9dc1c..6649f1f 100644
+--- a/tests/pack.rs
++++ b/tests/pack.rs
+@@ -99,10 +99,10 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
+     );
+     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+     assert!(stdout.contains("created"));
+-    assert!(stdout.contains("refund-0.1.0.skr"));
++    assert!(stdout.contains("refund-0.2.0.skr"));
+     assert!(stdout.contains("does not vendor dependencies"));
+ 
+-    let archive_path = capsule.join("dist").join("refund-0.1.0.skr");
++    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
+     assert!(archive_path.is_file(), "archive should exist");
+ 
+     let entries = archive_entries(&archive_path);
+@@ -156,7 +156,7 @@ fn pack_uses_capsule_name_for_archive_filename() {
+         String::from_utf8_lossy(&pack.stderr)
+     );
+ 
+-    assert!(capsule.join("dist").join("triage-0.1.0.skr").is_file());
++    assert!(capsule.join("dist").join("triage-0.2.0.skr").is_file());
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
+@@ -180,7 +180,7 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
+     assert!(stderr.contains("action.py"));
+     assert!(!stderr.contains("command not implemented yet"));
+     assert!(
+-        !capsule.join("dist").join("refund-0.1.0.skr").exists(),
++        !capsule.join("dist").join("refund-0.2.0.skr").exists(),
+         "stale pack must not create an archive"
+     );
+ 
+@@ -204,11 +204,11 @@ fn pack_rejects_manifest_name_that_would_escape_dist() {
+     let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+     assert!(stderr.contains("invalid package name from Manifest"));
+     assert!(
+-        !capsule.join("escape-0.1.0.skr").exists(),
++        !capsule.join("escape-0.2.0.skr").exists(),
+         "invalid Manifest name must not escape dist"
+     );
+     assert!(
+-        !capsule.join("dist").join("escape-0.1.0.skr").exists(),
++        !capsule.join("dist").join("escape-0.2.0.skr").exists(),
+         "invalid Manifest name must not create a package"
+     );
+ 
