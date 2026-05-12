@@ -144,7 +144,9 @@ fn inspect_does_not_import_or_execute_action_source() {
         String::from_utf8_lossy(&inspect.stderr)
     );
     let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
-    assert_contains(&stdout, "status: runnable");
+    assert_contains(&stdout, "status: invalid-runnable");
+    assert_contains(&stdout, "stale Manifest");
+    assert_contains(&stdout, "action.py");
 
     fs::remove_dir_all(output_root).ok();
 }

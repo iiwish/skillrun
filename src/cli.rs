@@ -1,14 +1,13 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use crate::consumer;
 use crate::init::{self, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const UNIMPLEMENTED_COMMANDS: &[&str] = &["serve", "pack"];
-
 pub fn run<I>(args: I) -> ExitCode
 where
     I: IntoIterator<Item = String>,
@@ -117,16 +116,54 @@ where
                 ExitCode::from(2)
             }
         },
-        Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
-            eprintln!("error: command not implemented yet: {command}");
-            ExitCode::from(2)
-        }
+        Some("serve") => match parse_serve(args.collect()) {
+            Ok(options) => match consumer::validate(&options.cwd, "skillrun serve --mcp") {
+                Ok(_) => {
+                    eprintln!("error: command not implemented yet: serve --mcp");
+                    ExitCode::from(2)
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun serve --mcp [--cwd <dir>] [--dry-run]");
+                ExitCode::from(2)
+            }
+        },
+        Some("pack") => match parse_pack(args.collect()) {
+            Ok(options) => match consumer::validate(&options.cwd, "skillrun pack") {
+                Ok(_) => {
+                    eprintln!("error: command not implemented yet: pack");
+                    ExitCode::from(2)
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun pack [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
         Some(command) => {
             eprintln!("error: unknown command: {command}");
             eprintln!("run `skillrun --help` to see available commands");
             ExitCode::from(2)
         }
     }
+}
+
+struct ServeOptions {
+    cwd: PathBuf,
+}
+
+struct PackOptions {
+    cwd: PathBuf,
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -258,6 +295,58 @@ fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
     Ok(RunOptions { cwd, input })
 }
 
+fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut mcp = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--mcp" => {
+                mcp = true;
+                index += 1;
+            }
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            "--dry-run" => {
+                index += 1;
+            }
+            value => return Err(format!("unexpected serve argument: {value}")),
+        }
+    }
+
+    if !mcp {
+        return Err("serve currently requires --mcp".to_string());
+    }
+
+    Ok(ServeOptions { cwd })
+}
+
+fn parse_pack(args: Vec<String>) -> Result<PackOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected pack argument: {value}")),
+        }
+    }
+
+    Ok(PackOptions { cwd })
+}
+
 fn print_help() {
     println!(
         "\
@@ -286,6 +375,6 @@ Implemented:
   test
   run
 
-Later tasks implement stale Manifest guards, MCP, and packaging behavior."
+Later tasks implement MCP and packaging behavior."
     );
 }

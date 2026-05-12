@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
 - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
 - Business examples: `docs/business-examples.md` status Confirmed
-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T007 acceptance and ready for T008 packetization
+- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T008 acceptance and ready for T009 packetization
 
 ## Accepted Tasks
 
@@ -28,6 +28,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
 - T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
 - T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
+- T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
 
 ## Validation Summary
 
@@ -41,20 +42,21 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T005 validation recorded in `.ai-platform/evidence/T005/`.
 - T006 validation recorded in `.ai-platform/evidence/T006/`.
 - T007 validation recorded in `.ai-platform/evidence/T007/`.
+- T008 validation recorded in `.ai-platform/evidence/T008/`.
 
 ## Known Limitations
 
-- T001-T007 have been accepted.
+- T001-T008 have been accepted.
 - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
-- Stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
+- MCP exposure and `.skr` packaging are not implemented yet.
 
 ## Unfinished Tasks
 
-- Keep T008-T011 Draft until their packets are generated and dependencies are satisfied.
+- Keep T009-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- Packetize and execute T008.
+- Packetize and execute T009.
 
 ## User Review Gate
 

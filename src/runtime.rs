@@ -7,9 +7,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::adapters::python::{self, ActionRunRequest};
+use crate::consumer;
 use crate::errors;
-use crate::hashing;
-use crate::manifest;
 use crate::permissions;
 use crate::run_record::{self, RunRecordInput};
 
@@ -60,7 +59,7 @@ pub fn run_with_input(options: &RunOptions) -> Result<RunOutcome, String> {
 fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
     let capsule_dir = absolute_path(cwd)?;
     require_dir(&capsule_dir)?;
-    let manifest = load_manifest(&capsule_dir)?;
+    let manifest = load_manifest(&capsule_dir, mode)?;
     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
     if adapter != "python" {
         return Err(format!("unsupported runtime adapter: {adapter}"));
@@ -277,20 +276,17 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
     }
 }
 
-fn load_manifest(cwd: &Path) -> Result<RuntimeManifest, String> {
-    let path = manifest::generated_manifest_path(cwd);
-    if !path.is_file() {
-        return Err(format!("missing Manifest: {}", path.display()));
-    }
-    let text = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    let value = serde_yaml::from_str(&text)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
-    let sha256 = hashing::sha256_file(&path)?;
+fn load_manifest(cwd: &Path, mode: &str) -> Result<RuntimeManifest, String> {
+    let command = if mode == "test" {
+        "skillrun test"
+    } else {
+        "skillrun run"
+    };
+    let valid = consumer::validate(cwd, command)?;
     Ok(RuntimeManifest {
-        value,
-        path,
-        sha256,
+        value: valid.value,
+        path: valid.path,
+        sha256: valid.sha256,
     })
 }
 

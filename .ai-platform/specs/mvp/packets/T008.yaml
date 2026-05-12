@@ -1,0 +1,176 @@
+schema_version: 1
+packet_id: EP-MVP-T008
+task_id: T008
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t003: Accepted after rereview on 2026-05-12
+    dependency_t004: Accepted after rereview on 2026-05-12
+    dependency_t007: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Implement Stale Manifest And Instruction-only Command Guards
+  goal: Centralize Consumer Mode validation so stale Manifest and instruction-only directories fail closed across commands.
+  epic: E003 Inspect And Failure Discipline
+  story:
+    - US-002
+    - US-006
+  requirements:
+    - FR-002
+    - FR-007
+    - FR-008
+    - FR-009
+    - NFR-001
+    - TDR-002
+    - TDR-004
+  priority: P0
+  depends_on:
+    - T003
+    - T004
+  blocks:
+    - T009
+    - T010
+    - T011
+  parallel: false
+  conflicts_with:
+    - T003
+    - T004
+    - T009
+    - T010
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - .ai-platform/docs/test-strategy.md
+    - .ai-platform/docs/technology-decision-record.md
+    - src/cli.rs
+    - src/manifest.rs
+    - src/inspect.rs
+    - src/runtime.rs
+    - src/hashing.rs
+    - tests/inspect.rs
+    - tests/manifest.rs
+    - tests/runtime.rs
+  existing_patterns:
+    - T003 Manifest records source hashes under sources.skill, sources.action, and optional sources.config.
+    - T004 inspect renders instruction-only status when Manifest is absent.
+    - T005/T006/T007 run/test consume Manifest and must fail before action execution when Manifest is stale or missing.
+    - serve and pack are still unimplemented, but T008 must run Consumer Mode guard before returning unimplemented for valid runnable capsules.
+  interfaces_or_contracts:
+    - Consumer Mode reads generated Manifest and validates source hashes without importing action.py for metadata.
+    - Stale Manifest means any recorded source hash mismatches current source content, a recorded source file is missing, or config exists without a recorded config source hash.
+    - Instruction-only Skill directories can be inspected but cannot manifest, run, serve, or pack by guessing Markdown, scripts, assets, references, or examples.
+    - Guard errors must include the refused command, stale/missing source path, and next step to run skillrun manifest after restoring explicit action.py.
+  forbidden_changes:
+    - Do not implement real MCP serving; T009 owns MCP behavior.
+    - Do not implement .skr archive generation; T010 owns packaging.
+    - Do not re-import action.py in Consumer Mode for metadata.
+    - Do not mark T008 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/cli.rs
+    - src/consumer.rs
+    - src/manifest.rs
+    - src/inspect.rs
+    - src/runtime.rs
+    - tests/cli.rs
+    - tests/inspect.rs
+    - tests/consumer_guards.rs
+    - tests/instruction_only.rs
+    - tests/fixtures/stale_manifest/
+    - tests/fixtures/instruction_only/
+  test_targets:
+    - tests/consumer_guards.rs
+    - tests/instruction_only.rs
+  ownership_notes:
+    - README updates are allowed only to reflect T008 guard status accurately.
+    - Runtime behavior changes are limited to pre-action Consumer Mode validation.
+    - CLI serve/pack changes must stop at guard plus unimplemented message for valid capsules.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test consumer_guards --test instruction_only
+    expected_failure: Tests fail because central stale Manifest and instruction-only guards are not implemented yet.
+  green:
+    command: cargo test --test consumer_guards --test instruction_only
+    expected_signal: stale Manifest and instruction-only command paths fail closed with clear next steps.
+  refactor:
+    command: cargo test
+    expected_signal: Full suite passes after guard logic is centralized.
+
+validation_loop:
+  commands:
+    - cargo test --test consumer_guards --test instruction_only
+    - cargo test
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to source hash validation, command-specific guard messages, instruction-only refusal, or inspect status rendering.
+    second_failure: Determine whether T008 scope needs to defer a case or adjust packet boundaries.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T008/summary.md
+  diff: .ai-platform/evidence/T008/diff.patch
+  test_results: .ai-platform/evidence/T008/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T008 Accepted.
+  review_focus:
+    - Consumer Mode never imports action.py for metadata.
+    - stale SKILL.md, action.py, and skillrun.config.json fail closed before execution or unimplemented serve/pack fallback.
+    - instruction-only directories are inspectable but not executable, servable, packageable, or auto-manifested.
+    - T008 does not absorb T009/T010 implementation.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear command-specific guard semantics
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

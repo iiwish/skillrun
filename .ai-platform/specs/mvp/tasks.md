@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -96,7 +96,7 @@ Validation:
 - `cargo test --test consumer_guards --test instruction_only`
 
 Tasks:
-- [ ] T008 [US-006] Implement stale Manifest and instruction-only command guards
+- [x] T008 [US-006] Implement stale Manifest and instruction-only command guards
 
 ## Epic E004: MCP And Pack
 
@@ -579,7 +579,7 @@ Evidence required:
 
 ### T008: Implement Stale Manifest And Instruction-only Command Guards
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T003, T004
 Blocks: T009, T010, T011
@@ -596,6 +596,8 @@ Allowed files:
 - `src/consumer.rs`
 - `src/manifest.rs`
 - `src/inspect.rs`
+- `tests/cli.rs`
+- `tests/inspect.rs`
 - `tests/consumer_guards.rs`
 - `tests/instruction_only.rs`
 - `tests/fixtures/stale_manifest/`

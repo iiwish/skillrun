@@ -2,6 +2,7 @@ use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::consumer;
 use crate::manifest;
 
 #[derive(Debug)]
@@ -20,18 +21,16 @@ pub fn render(options: &InspectOptions) -> Result<String, String> {
 
     let manifest_path = manifest::generated_manifest_path(&cwd);
     if manifest_path.is_file() {
-        render_runnable(&cwd, &manifest_path)
+        match consumer::validate(&cwd, "skillrun inspect") {
+            Ok(valid) => render_runnable(&cwd, &valid.path, &valid.value),
+            Err(error) => Ok(render_invalid_runnable(&cwd, &manifest_path, &error)),
+        }
     } else {
         render_instruction_only(&cwd, &manifest_path)
     }
 }
 
-fn render_runnable(cwd: &Path, manifest_path: &Path) -> Result<String, String> {
-    let manifest_text = fs::read_to_string(manifest_path)
-        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
-    let manifest: Value = serde_yaml::from_str(&manifest_text)
-        .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
-
+fn render_runnable(cwd: &Path, manifest_path: &Path, manifest: &Value) -> Result<String, String> {
     let fallback_name = cwd
         .file_name()
         .and_then(|value| value.to_str())
@@ -89,6 +88,20 @@ MCP description: {tool_description}",
         network = list_or_none(&network),
         env_reads = list_or_none(&env_reads),
     ))
+}
+
+fn render_invalid_runnable(cwd: &Path, manifest_path: &Path, reason: &str) -> String {
+    format!(
+        "\
+SkillRun Inspect
+cwd: {cwd}
+status: invalid-runnable
+manifest: {manifest_path}
+reason: {reason}
+note: Consumer Mode fails closed until sources and Manifest hashes match.",
+        cwd = cwd.display(),
+        manifest_path = manifest_path.display()
+    )
 }
 
 fn render_instruction_only(cwd: &Path, manifest_path: &Path) -> Result<String, String> {

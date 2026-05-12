@@ -91,7 +91,12 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     let config_path = capsule_dir.join("skillrun.config.json");
 
     require_file(&skill_path, "missing SKILL.md")?;
-    require_file(&action_path, "missing action.py")?;
+    if !action_path.is_file() {
+        return Err(format!(
+            "missing action.py: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py before running `skillrun manifest`.",
+            action_path.display()
+        ));
+    }
 
     let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
     let config = config::load_config(&config_path)?;

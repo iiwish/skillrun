@@ -1,0 +1,1331 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 45fa6ff..e70869e 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T007 acceptance and ready for T008 packetization
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T008 acceptance and ready for T009 packetization
+ 
+ ## Accepted Tasks
+ 
+@@ -28,6 +28,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
+ - T006: Implement Structured Error Envelope Handling. Accepted on 2026-05-12 after rereview passed.
+ - T007: Enforce Artifact And Declared Permission Boundaries. Accepted on 2026-05-12 after rereview passed.
++- T008: Implement Stale Manifest And Instruction-only Command Guards. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -41,20 +42,21 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T005 validation recorded in `.ai-platform/evidence/T005/`.
+ - T006 validation recorded in `.ai-platform/evidence/T006/`.
+ - T007 validation recorded in `.ai-platform/evidence/T007/`.
++- T008 validation recorded in `.ai-platform/evidence/T008/`.
+ 
+ ## Known Limitations
+ 
+-- T001-T007 have been accepted.
++- T001-T008 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- Stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
++- MCP exposure and `.skr` packaging are not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- Keep T008-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T009-T011 Draft until their packets are generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T008.
++- Packetize and execute T009.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 1a5f7f5..c3297d3 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -96,7 +96,7 @@ Validation:
+ - `cargo test --test consumer_guards --test instruction_only`
+ 
+ Tasks:
+-- [ ] T008 [US-006] Implement stale Manifest and instruction-only command guards
++- [x] T008 [US-006] Implement stale Manifest and instruction-only command guards
+ 
+ ## Epic E004: MCP And Pack
+ 
+@@ -579,7 +579,7 @@ Evidence required:
+ 
+ ### T008: Implement Stale Manifest And Instruction-only Command Guards
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T003, T004
+ Blocks: T009, T010, T011
+@@ -596,6 +596,8 @@ Allowed files:
+ - `src/consumer.rs`
+ - `src/manifest.rs`
+ - `src/inspect.rs`
++- `tests/cli.rs`
++- `tests/inspect.rs`
+ - `tests/consumer_guards.rs`
+ - `tests/instruction_only.rs`
+ - `tests/fixtures/stale_manifest/`
+diff --git a/.ai-platform/evidence/T008/summary.md b/.ai-platform/evidence/T008/summary.md
+new file mode 100644
+index 0000000..bbca89b
+--- /dev/null
++++ b/.ai-platform/evidence/T008/summary.md
+@@ -0,0 +1,60 @@
++# T008 Evidence Summary
++
++Task: T008 Implement Stale Manifest And Instruction-only Command Guards
++Status: Accepted
++Executor: codex direct execute fallback
++Date: 2026-05-12
++
++## Direct Execute Fallback
++
++用户要求继续推进 T008，但没有显式要求 delegation。当前宿主指令要求只有用户明确要求 subagents 时才能创建 subagent，因此 T008 在当前 worktree 中由 Codex direct execute fallback 完成。
++
++## Changed Files
++
++- `README.md`
++- `README.zh-CN.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/docs/release-report.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T008.yaml`
++- `.ai-platform/evidence/T008/summary.md`
++- `.ai-platform/evidence/T008/test-results.md`
++- `.ai-platform/evidence/T008/diff.patch`
++- `src/main.rs`
++- `src/cli.rs`
++- `src/consumer.rs`
++- `src/manifest.rs`
++- `src/inspect.rs`
++- `src/runtime.rs`
++- `tests/cli.rs`
++- `tests/inspect.rs`
++- `tests/consumer_guards.rs`
++- `tests/instruction_only.rs`
++
++## Implementation Summary
++
++- 新增 `src/consumer.rs`，集中校验 Consumer Mode 的 generated Manifest、source paths 和 source hashes。
++- `skillrun run/test` 在创建 run directory 和启动 adapter 前先执行 Consumer Mode guard。
++- `skillrun serve --mcp` 和 `skillrun pack` 现在先执行 Consumer Mode guard；valid capsule 仍返回 unimplemented，stale 或 instruction-only 则 fail closed。
++- `skillrun inspect` 在 Manifest 存在但 source missing/stale 时展示 `invalid-runnable`，不会 import `action.py`。
++- `skillrun manifest` 缺少显式 `action.py` 时明确说明不会从 Markdown、scripts、references、assets 或 examples 推断 Action。
++- README 状态更新到 T008；T009/T010 的 MCP 和 packaging 仍未实现。
++
++## TDD Summary
++
++- RED: `cargo test --test consumer_guards --test instruction_only` 失败。stale `SKILL.md` 仍可 run 成功，serve/pack 直接落到 unimplemented，instruction-only run 只报 missing Manifest，manifest 缺少“不推断 action”说明。
++- GREEN: 实现 `consumer` guard、serve/pack guard 入口、inspect invalid-runnable 和 manifest refusal message 后，`cargo test --test consumer_guards --test instruction_only` 通过。
++- REFACTOR/validation: 更新旧 CLI/inspect 断言到 T008 语义后，`cargo fmt -- --check`、`git diff --check` 和 `cargo test` 均通过。
++
++## Review
++
++- Spec compliance: Pass。修改 `SKILL.md`、`action.py` 或 `skillrun.config.json` 后 run/serve/pack 均 fail closed。
++- Bug/code quality: Pass。Consumer Mode guard 集中在 `src/consumer.rs`，run/test、serve、pack 和 inspect 复用同一套 source hash 校验。
++- QA acceptance: Pass。instruction-only 目录可以 inspect，但 manifest/run/serve/pack 不会从 Markdown、scripts 或 examples 推断可执行入口。
++- Rereview: Pass。2026-05-12 复审无 blocking findings，用户要求复审通过后提交并继续 T009。
++
++## Residual Risk
++
++- T008 不实现真正 MCP server；T009 仍需接入 Consumer Mode guard 后暴露 Manifest-driven MCP。
++- T008 不生成 `.skr`；T010 仍需复用 Consumer Mode guard 后实现 pack。
+diff --git a/.ai-platform/evidence/T008/test-results.md b/.ai-platform/evidence/T008/test-results.md
+new file mode 100644
+index 0000000..650d5a0
+--- /dev/null
++++ b/.ai-platform/evidence/T008/test-results.md
+@@ -0,0 +1,72 @@
++# T008 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++Command: `cargo test --test consumer_guards --test instruction_only`
++Result: 按预期失败，exit code 1。
++Signal:
++- `run_refuses_stale_skill_hash_before_creating_run` 失败，因为修改 `SKILL.md` 后 run 仍成功执行。
++- `serve_refuses_stale_action_before_unimplemented_fallback` 失败，因为 serve 直接返回 unimplemented。
++- `pack_refuses_stale_config_before_unimplemented_fallback` 失败，因为 pack 直接返回 unimplemented。
++- `manifest_refuses_to_infer_actions_from_markdown_or_scripts` 失败，因为错误信息只说 missing action.py。
++- `run_serve_and_pack_refuse_instruction_only_skill` 失败，因为 run 只报告 missing Manifest，未说明 instruction-only 和 action.py next step。
++
++## GREEN
++
++Command: `cargo test --test consumer_guards --test instruction_only`
++Result: 通过，exit code 0。
++Summary:
++- Consumer guard tests: 4 passed.
++- Instruction-only tests: 4 passed.
++
++## Full Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test`
++Result: 通过，exit code 0。
++Summary:
++- Artifacts tests: 4 passed.
++- CLI tests: 3 passed.
++- Consumer guard tests: 4 passed.
++- Errors tests: 4 passed.
++- Init tests: 4 passed.
++- Inspect tests: 3 passed.
++- Instruction-only tests: 4 passed.
++- Manifest tests: 3 passed.
++- Permissions tests: 3 passed.
++- Runtime tests: 4 passed.
++
++## Governance Validation
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T008`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
++
++## Rereview Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test --test consumer_guards --test instruction_only`
++Result: 通过，exit code 0。Consumer guard tests 4 passed；instruction-only tests 4 passed。
++
++Command: `cargo test`
++Result: 通过，exit code 0。36 integration tests passed, 0 failed。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T008`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index ec4a383..7fefb52 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,7 +2,7 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T007 acceptance
++Scope: SkillRun MVP planning artifacts after T008 acceptance
+ Last updated: 2026-05-12
+ 
+ ## Inputs
+@@ -13,15 +13,15 @@ Last updated: 2026-05-12
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`, `.ai-platform/specs/mvp/packets/T006.yaml`, `.ai-platform/specs/mvp/packets/T007.yaml`, `.ai-platform/specs/mvp/packets/T008.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T007 is accepted with evidence in `.ai-platform/evidence/T007/`.
+-- Packets missing required fields: None for T007.
++- Ready tasks without packet: None. T008 is accepted with evidence in `.ai-platform/evidence/T008/`.
++- Packets missing required fields: None for T008.
+ 
+ ## Constitution Check
+ 
+@@ -38,7 +38,7 @@ Last updated: 2026-05-12
+ ## Non-Functional Requirements
+ 
+ - Validation coverage: NFR-001 through NFR-006 are covered by work graph tasks and test strategy cases.
+-- Gaps: No blocking gaps for T008 packetization. Later tasks must create their own packets before becoming Ready.
++- Gaps: No blocking gaps for T009 packetization. Later tasks must create their own packets before becoming Ready.
+ 
+ ## Findings
+ 
+@@ -49,10 +49,10 @@ Last updated: 2026-05-12
+ 
+ ## Execute Gate
+ 
+-- Result: Clear to packetize T008.
+-- Reason: T001 through T007 have passed review and are `Accepted`. T008 dependencies are satisfied, but T008 still needs a self-contained packet and analysis update before execution.
++- Result: Clear to packetize T009.
++- Reason: T001 through T008 have passed review and are `Accepted`. T009 dependencies are satisfied, but T009 still needs a self-contained packet and analysis update before execution.
+ 
+ ## Scope Guard
+ 
+-- T008 may be packetized next.
+-- T009-T011 remain Draft until each task has a packet, dependencies are satisfied, current review gate is cleared, and analysis remains clear for that task.
++- T009 may be packetized next.
++- T010-T011 remain Draft until each task has a packet, dependencies are satisfied, current review gate is cleared, and analysis remains clear for that task.
+diff --git a/.ai-platform/specs/mvp/packets/T008.yaml b/.ai-platform/specs/mvp/packets/T008.yaml
+new file mode 100644
+index 0000000..f2ee440
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T008.yaml
+@@ -0,0 +1,176 @@
++schema_version: 1
++packet_id: EP-MVP-T008
++task_id: T008
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t003: Accepted after rereview on 2026-05-12
++    dependency_t004: Accepted after rereview on 2026-05-12
++    dependency_t007: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Implement Stale Manifest And Instruction-only Command Guards
++  goal: Centralize Consumer Mode validation so stale Manifest and instruction-only directories fail closed across commands.
++  epic: E003 Inspect And Failure Discipline
++  story:
++    - US-002
++    - US-006
++  requirements:
++    - FR-002
++    - FR-007
++    - FR-008
++    - FR-009
++    - NFR-001
++    - TDR-002
++    - TDR-004
++  priority: P0
++  depends_on:
++    - T003
++    - T004
++  blocks:
++    - T009
++    - T010
++    - T011
++  parallel: false
++  conflicts_with:
++    - T003
++    - T004
++    - T009
++    - T010
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - .ai-platform/docs/test-strategy.md
++    - .ai-platform/docs/technology-decision-record.md
++    - src/cli.rs
++    - src/manifest.rs
++    - src/inspect.rs
++    - src/runtime.rs
++    - src/hashing.rs
++    - tests/inspect.rs
++    - tests/manifest.rs
++    - tests/runtime.rs
++  existing_patterns:
++    - T003 Manifest records source hashes under sources.skill, sources.action, and optional sources.config.
++    - T004 inspect renders instruction-only status when Manifest is absent.
++    - T005/T006/T007 run/test consume Manifest and must fail before action execution when Manifest is stale or missing.
++    - serve and pack are still unimplemented, but T008 must run Consumer Mode guard before returning unimplemented for valid runnable capsules.
++  interfaces_or_contracts:
++    - Consumer Mode reads generated Manifest and validates source hashes without importing action.py for metadata.
++    - Stale Manifest means any recorded source hash mismatches current source content, a recorded source file is missing, or config exists without a recorded config source hash.
++    - Instruction-only Skill directories can be inspected but cannot manifest, run, serve, or pack by guessing Markdown, scripts, assets, references, or examples.
++    - Guard errors must include the refused command, stale/missing source path, and next step to run skillrun manifest after restoring explicit action.py.
++  forbidden_changes:
++    - Do not implement real MCP serving; T009 owns MCP behavior.
++    - Do not implement .skr archive generation; T010 owns packaging.
++    - Do not re-import action.py in Consumer Mode for metadata.
++    - Do not mark T008 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/consumer.rs
++    - src/manifest.rs
++    - src/inspect.rs
++    - src/runtime.rs
++    - tests/cli.rs
++    - tests/inspect.rs
++    - tests/consumer_guards.rs
++    - tests/instruction_only.rs
++    - tests/fixtures/stale_manifest/
++    - tests/fixtures/instruction_only/
++  test_targets:
++    - tests/consumer_guards.rs
++    - tests/instruction_only.rs
++  ownership_notes:
++    - README updates are allowed only to reflect T008 guard status accurately.
++    - Runtime behavior changes are limited to pre-action Consumer Mode validation.
++    - CLI serve/pack changes must stop at guard plus unimplemented message for valid capsules.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test consumer_guards --test instruction_only
++    expected_failure: Tests fail because central stale Manifest and instruction-only guards are not implemented yet.
++  green:
++    command: cargo test --test consumer_guards --test instruction_only
++    expected_signal: stale Manifest and instruction-only command paths fail closed with clear next steps.
++  refactor:
++    command: cargo test
++    expected_signal: Full suite passes after guard logic is centralized.
++
++validation_loop:
++  commands:
++    - cargo test --test consumer_guards --test instruction_only
++    - cargo test
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to source hash validation, command-specific guard messages, instruction-only refusal, or inspect status rendering.
++    second_failure: Determine whether T008 scope needs to defer a case or adjust packet boundaries.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T008/summary.md
++  diff: .ai-platform/evidence/T008/diff.patch
++  test_results: .ai-platform/evidence/T008/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T008 Accepted.
++  review_focus:
++    - Consumer Mode never imports action.py for metadata.
++    - stale SKILL.md, action.py, and skillrun.config.json fail closed before execution or unimplemented serve/pack fallback.
++    - instruction-only directories are inspectable but not executable, servable, packageable, or auto-manifested.
++    - T008 does not absorb T009/T010 implementation.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep current worktree for review
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear command-specific guard semantics
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index 1a5f7f5..c3297d3 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003、T004、T005、T006 和 T007 均已通过复审并进入 `Accepted`。T008-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004、T005、T006、T007 和 T008 均已通过复审并进入 `Accepted`。T009-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -96,7 +96,7 @@ Validation:
+ - `cargo test --test consumer_guards --test instruction_only`
+ 
+ Tasks:
+-- [ ] T008 [US-006] Implement stale Manifest and instruction-only command guards
++- [x] T008 [US-006] Implement stale Manifest and instruction-only command guards
+ 
+ ## Epic E004: MCP And Pack
+ 
+@@ -579,7 +579,7 @@ Evidence required:
+ 
+ ### T008: Implement Stale Manifest And Instruction-only Command Guards
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T003, T004
+ Blocks: T009, T010, T011
+@@ -596,6 +596,8 @@ Allowed files:
+ - `src/consumer.rs`
+ - `src/manifest.rs`
+ - `src/inspect.rs`
++- `tests/cli.rs`
++- `tests/inspect.rs`
+ - `tests/consumer_guards.rs`
+ - `tests/instruction_only.rs`
+ - `tests/fixtures/stale_manifest/`
+diff --git a/README.md b/README.md
+index 381ef6b..d8b7a2b 100644
+--- a/README.md
++++ b/README.md
+@@ -12,8 +12,8 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T007` artifact containment and declared env handling.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, artifact validation, declared env injection, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission paths.
++- Current implementation: through `T008` Consumer Mode stale Manifest and instruction-only guards.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, and contract tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard paths.
+ - Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index a9a8687..600d42d 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,8 +12,8 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T007` artifact containment 和 declared env handling。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、structured error envelopes、artifact validation、declared env injection，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission 路径的 contract tests。
++- 当前实现：已推进到 `T008` Consumer Mode stale Manifest 和 instruction-only guards。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、structured error envelopes、artifact validation、declared env injection、stale Manifest guards、instruction-only guards，以及 CLI/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard 路径的 contract tests。
+ - CLI 已列出计划中的 MVP 命令，但 `serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+diff --git a/src/cli.rs b/src/cli.rs
+index 809d99d..45498b7 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -1,14 +1,13 @@
+ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
++use crate::consumer;
+ use crate::init::{self, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
+ use crate::runtime::{self, RunOptions, TestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+-const UNIMPLEMENTED_COMMANDS: &[&str] = &["serve", "pack"];
+-
+ pub fn run<I>(args: I) -> ExitCode
+ where
+     I: IntoIterator<Item = String>,
+@@ -117,10 +116,40 @@ where
+                 ExitCode::from(2)
+             }
+         },
+-        Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
+-            eprintln!("error: command not implemented yet: {command}");
+-            ExitCode::from(2)
+-        }
++        Some("serve") => match parse_serve(args.collect()) {
++            Ok(options) => match consumer::validate(&options.cwd, "skillrun serve --mcp") {
++                Ok(_) => {
++                    eprintln!("error: command not implemented yet: serve --mcp");
++                    ExitCode::from(2)
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun serve --mcp [--cwd <dir>] [--dry-run]");
++                ExitCode::from(2)
++            }
++        },
++        Some("pack") => match parse_pack(args.collect()) {
++            Ok(options) => match consumer::validate(&options.cwd, "skillrun pack") {
++                Ok(_) => {
++                    eprintln!("error: command not implemented yet: pack");
++                    ExitCode::from(2)
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun pack [--cwd <dir>]");
++                ExitCode::from(2)
++            }
++        },
+         Some(command) => {
+             eprintln!("error: unknown command: {command}");
+             eprintln!("run `skillrun --help` to see available commands");
+@@ -129,6 +158,14 @@ where
+     }
+ }
+ 
++struct ServeOptions {
++    cwd: PathBuf,
++}
++
++struct PackOptions {
++    cwd: PathBuf,
++}
++
+ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
+     let mut name = None;
+     let mut python = false;
+@@ -258,6 +295,58 @@ fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
+     Ok(RunOptions { cwd, input })
+ }
+ 
++fn parse_serve(args: Vec<String>) -> Result<ServeOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut mcp = false;
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--mcp" => {
++                mcp = true;
++                index += 1;
++            }
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            "--dry-run" => {
++                index += 1;
++            }
++            value => return Err(format!("unexpected serve argument: {value}")),
++        }
++    }
++
++    if !mcp {
++        return Err("serve currently requires --mcp".to_string());
++    }
++
++    Ok(ServeOptions { cwd })
++}
++
++fn parse_pack(args: Vec<String>) -> Result<PackOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            value => return Err(format!("unexpected pack argument: {value}")),
++        }
++    }
++
++    Ok(PackOptions { cwd })
++}
++
+ fn print_help() {
+     println!(
+         "\
+@@ -286,6 +375,6 @@ Implemented:
+   test
+   run
+ 
+-Later tasks implement stale Manifest guards, MCP, and packaging behavior."
++Later tasks implement MCP and packaging behavior."
+     );
+ }
+diff --git a/src/consumer.rs b/src/consumer.rs
+new file mode 100644
+index 0000000..2809ab3
+--- /dev/null
++++ b/src/consumer.rs
+@@ -0,0 +1,149 @@
++use serde_yaml::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++
++use crate::hashing;
++use crate::manifest;
++
++pub struct ValidManifest {
++    pub value: Value,
++    pub path: PathBuf,
++    pub sha256: String,
++}
++
++pub fn validate(cwd: &Path, command: &str) -> Result<ValidManifest, String> {
++    let capsule_dir = absolute_path(cwd)?;
++    require_dir(&capsule_dir)?;
++
++    let manifest_path = manifest::generated_manifest_path(&capsule_dir);
++    if !manifest_path.is_file() {
++        return Err(missing_manifest_error(
++            &capsule_dir,
++            &manifest_path,
++            command,
++        ));
++    }
++
++    let text = fs::read_to_string(&manifest_path)
++        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
++    let value: Value = serde_yaml::from_str(&text)
++        .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
++
++    validate_source(&capsule_dir, &value, command, "skill")?;
++    validate_source(&capsule_dir, &value, command, "action")?;
++    match value_at(&value, &["sources", "config"]) {
++        Some(Value::Mapping(_)) => validate_source(&capsule_dir, &value, command, "config")?,
++        _ if capsule_dir.join("skillrun.config.json").is_file() => {
++            return Err(format!(
++                "{command} refused stale Manifest: skillrun.config.json exists but Manifest does not record its source hash. Run `skillrun manifest --cwd {}` before using Consumer Mode.",
++                capsule_dir.display()
++            ));
++        }
++        _ => {}
++    }
++
++    let sha256 = hashing::sha256_file(&manifest_path)?;
++    Ok(ValidManifest {
++        value,
++        path: manifest_path,
++        sha256,
++    })
++}
++
++fn validate_source(
++    capsule_dir: &Path,
++    manifest: &Value,
++    command: &str,
++    source_key: &str,
++) -> Result<(), String> {
++    let source_path_key = ["sources", source_key, "path"];
++    let hash_key = ["sources", source_key, "sha256"];
++    let source_path = string_at(manifest, &source_path_key).ok_or_else(|| {
++        format!(
++            "{command} refused stale Manifest: missing source path for {source_key}. Run `skillrun manifest --cwd {}` before using Consumer Mode.",
++            capsule_dir.display()
++        )
++    })?;
++    let expected = string_at(manifest, &hash_key).ok_or_else(|| {
++        format!(
++            "{command} refused stale Manifest: missing source hash for {source_path}. Run `skillrun manifest --cwd {}` before using Consumer Mode.",
++            capsule_dir.display()
++        )
++    })?;
++    let source_file = capsule_dir.join(source_path);
++    let actual = hashing::sha256_file(&source_file).map_err(|error| {
++        format!(
++            "{command} refused stale Manifest: source listed by Manifest is missing or unreadable: {source_path}: {error}. Restore the explicit source file, then run `skillrun manifest --cwd {}`.",
++            capsule_dir.display()
++        )
++    })?;
++    if actual != expected {
++        return Err(format!(
++            "{command} refused stale Manifest: source hash mismatch for {source_path}. Run `skillrun manifest --cwd {}` before using Consumer Mode.",
++            capsule_dir.display()
++        ));
++    }
++
++    Ok(())
++}
++
++fn missing_manifest_error(capsule_dir: &Path, manifest_path: &Path, command: &str) -> String {
++    let skill_path = capsule_dir.join("SKILL.md");
++    let action_path = capsule_dir.join("action.py");
++    if skill_path.is_file() && !action_path.is_file() {
++        return format!(
++            "{command} refused instruction-only Skill at {}: missing action.py and {}. Add an explicit action.py, then run `skillrun manifest --cwd {}`. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
++            capsule_dir.display(),
++            manifest_path.display(),
++            capsule_dir.display()
++        );
++    }
++
++    if !action_path.is_file() {
++        return format!(
++            "{command} refused non-runnable SkillRun directory at {}: missing action.py. Add an explicit action.py, then run `skillrun manifest --cwd {}`.",
++            capsule_dir.display(),
++            capsule_dir.display()
++        );
++    }
++
++    format!(
++        "{command} refused Consumer Mode for {}: missing Manifest at {}. Run `skillrun manifest --cwd {}` before using Consumer Mode.",
++        capsule_dir.display(),
++        manifest_path.display(),
++        capsule_dir.display()
++    )
++}
++
++fn require_dir(path: &Path) -> Result<(), String> {
++    if !path.exists() {
++        return Err(format!("cwd does not exist: {}", path.display()));
++    }
++    if !path.is_dir() {
++        return Err(format!("cwd is not a directory: {}", path.display()));
++    }
++    Ok(())
++}
++
++fn absolute_path(path: &Path) -> Result<PathBuf, String> {
++    if path.is_absolute() {
++        Ok(path.to_path_buf())
++    } else {
++        std::env::current_dir()
++            .map(|cwd| cwd.join(path))
++            .map_err(|error| format!("failed to resolve current directory: {error}"))
++    }
++}
++
++fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
++    let mut current = value;
++    for segment in path {
++        let key = Value::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
+diff --git a/src/inspect.rs b/src/inspect.rs
+index af1cab5..df904bf 100644
+--- a/src/inspect.rs
++++ b/src/inspect.rs
+@@ -2,6 +2,7 @@ use serde_yaml::Value;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+ 
++use crate::consumer;
+ use crate::manifest;
+ 
+ #[derive(Debug)]
+@@ -20,18 +21,16 @@ pub fn render(options: &InspectOptions) -> Result<String, String> {
+ 
+     let manifest_path = manifest::generated_manifest_path(&cwd);
+     if manifest_path.is_file() {
+-        render_runnable(&cwd, &manifest_path)
++        match consumer::validate(&cwd, "skillrun inspect") {
++            Ok(valid) => render_runnable(&cwd, &valid.path, &valid.value),
++            Err(error) => Ok(render_invalid_runnable(&cwd, &manifest_path, &error)),
++        }
+     } else {
+         render_instruction_only(&cwd, &manifest_path)
+     }
+ }
+ 
+-fn render_runnable(cwd: &Path, manifest_path: &Path) -> Result<String, String> {
+-    let manifest_text = fs::read_to_string(manifest_path)
+-        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
+-    let manifest: Value = serde_yaml::from_str(&manifest_text)
+-        .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
+-
++fn render_runnable(cwd: &Path, manifest_path: &Path, manifest: &Value) -> Result<String, String> {
+     let fallback_name = cwd
+         .file_name()
+         .and_then(|value| value.to_str())
+@@ -91,6 +90,20 @@ MCP description: {tool_description}",
+     ))
+ }
+ 
++fn render_invalid_runnable(cwd: &Path, manifest_path: &Path, reason: &str) -> String {
++    format!(
++        "\
++SkillRun Inspect
++cwd: {cwd}
++status: invalid-runnable
++manifest: {manifest_path}
++reason: {reason}
++note: Consumer Mode fails closed until sources and Manifest hashes match.",
++        cwd = cwd.display(),
++        manifest_path = manifest_path.display()
++    )
++}
++
+ fn render_instruction_only(cwd: &Path, manifest_path: &Path) -> Result<String, String> {
+     let skill_path = cwd.join("SKILL.md");
+     if !skill_path.is_file() {
+diff --git a/src/main.rs b/src/main.rs
+index 44107d7..873dd63 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -2,6 +2,7 @@ use std::process::ExitCode;
+ 
+ mod cli;
+ mod config;
++mod consumer;
+ mod errors;
+ mod hashing;
+ mod init;
+diff --git a/src/manifest.rs b/src/manifest.rs
+index 2a026b6..a78a773 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -91,7 +91,12 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+     let config_path = capsule_dir.join("skillrun.config.json");
+ 
+     require_file(&skill_path, "missing SKILL.md")?;
+-    require_file(&action_path, "missing action.py")?;
++    if !action_path.is_file() {
++        return Err(format!(
++            "missing action.py: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py before running `skillrun manifest`.",
++            action_path.display()
++        ));
++    }
+ 
+     let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
+     let config = config::load_config(&config_path)?;
+diff --git a/src/runtime.rs b/src/runtime.rs
+index b4ce2ce..7d6725b 100644
+--- a/src/runtime.rs
++++ b/src/runtime.rs
+@@ -7,9 +7,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
+ use std::time::{Duration, Instant};
+ 
+ use crate::adapters::python::{self, ActionRunRequest};
++use crate::consumer;
+ use crate::errors;
+-use crate::hashing;
+-use crate::manifest;
+ use crate::permissions;
+ use crate::run_record::{self, RunRecordInput};
+ 
+@@ -60,7 +59,7 @@ pub fn run_with_input(options: &RunOptions) -> Result<RunOutcome, String> {
+ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+     let capsule_dir = absolute_path(cwd)?;
+     require_dir(&capsule_dir)?;
+-    let manifest = load_manifest(&capsule_dir)?;
++    let manifest = load_manifest(&capsule_dir, mode)?;
+     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
+     if adapter != "python" {
+         return Err(format!("unsupported runtime adapter: {adapter}"));
+@@ -277,20 +276,17 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
+     }
+ }
+ 
+-fn load_manifest(cwd: &Path) -> Result<RuntimeManifest, String> {
+-    let path = manifest::generated_manifest_path(cwd);
+-    if !path.is_file() {
+-        return Err(format!("missing Manifest: {}", path.display()));
+-    }
+-    let text = fs::read_to_string(&path)
+-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+-    let value = serde_yaml::from_str(&text)
+-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+-    let sha256 = hashing::sha256_file(&path)?;
++fn load_manifest(cwd: &Path, mode: &str) -> Result<RuntimeManifest, String> {
++    let command = if mode == "test" {
++        "skillrun test"
++    } else {
++        "skillrun run"
++    };
++    let valid = consumer::validate(cwd, command)?;
+     Ok(RuntimeManifest {
+-        value,
+-        path,
+-        sha256,
++        value: valid.value,
++        path: valid.path,
++        sha256: valid.sha256,
+     })
+ }
+ 
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 0945dc3..3141945 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -39,11 +39,11 @@ fn version_uses_approved_project_name() {
+ }
+ 
+ #[test]
+-fn unimplemented_runtime_commands_fail_until_implemented() {
++fn serve_requires_explicit_mcp_mode_until_implemented() {
+     let output = run_skillrun(&["serve"]);
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
+ 
+-    assert!(stderr.contains("command not implemented yet: serve"));
++    assert!(stderr.contains("serve currently requires --mcp"));
+ }
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+new file mode 100644
+index 0000000..076cfbb
+--- /dev/null
++++ b/tests/consumer_guards.rs
+@@ -0,0 +1,139 @@
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
++fn append_to(path: &Path, text: &str) {
++    let mut current = fs::read_to_string(path).expect("file should be readable");
++    current.push_str(text);
++    fs::write(path, current).expect("file should be writable");
++}
++
++fn assert_guard_failure(output: &std::process::Output, expected_path: &str) -> String {
++    assert!(
++        !output.status.success(),
++        "guarded command should fail\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stderr = String::from_utf8(output.stderr.clone()).expect("stderr should be utf-8");
++    assert!(
++        stderr.contains("stale Manifest"),
++        "stderr should explain stale Manifest\n{stderr}"
++    );
++    assert!(
++        stderr.contains(expected_path),
++        "stderr should name stale source {expected_path:?}\n{stderr}"
++    );
++    assert!(
++        stderr.contains("skillrun manifest"),
++        "stderr should include the regeneration command\n{stderr}"
++    );
++    assert!(
++        !stderr.contains("command not implemented yet"),
++        "guard should run before unimplemented fallback\n{stderr}"
++    );
++    stderr
++}
++
++#[test]
++fn run_refuses_stale_skill_hash_before_creating_run() {
++    let (output_root, capsule) = generated_capsule("guard-stale-skill");
++    append_to(&capsule.join("SKILL.md"), "\n\nAdditional policy text.\n");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let run = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd_arg,
++        "--input",
++        "examples/default.input.json",
++    ]);
++    assert_guard_failure(&run, "SKILL.md");
++    assert!(
++        !capsule.join(".skillrun").join("runs").exists(),
++        "stale guard should fail before creating run records"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn serve_refuses_stale_action_before_unimplemented_fallback() {
++    let (output_root, capsule) = generated_capsule("guard-stale-action");
++    append_to(&capsule.join("action.py"), "\n# changed after manifest\n");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert_guard_failure(&serve, "action.py");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn pack_refuses_stale_config_before_unimplemented_fallback() {
++    let (output_root, capsule) = generated_capsule("guard-stale-config");
++    append_to(&capsule.join("skillrun.config.json"), "\n");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert_guard_failure(&pack, "skillrun.config.json");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn valid_capsule_reaches_serve_and_pack_unimplemented_fallbacks() {
++    let (output_root, capsule) = generated_capsule("guard-valid-unimplemented");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert!(!serve.status.success());
++    let serve_stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
++    assert!(serve_stderr.contains("command not implemented yet: serve --mcp"));
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(!pack.status.success());
++    let pack_stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
++    assert!(pack_stderr.contains("command not implemented yet: pack"));
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/inspect.rs b/tests/inspect.rs
+index 88cc0aa..b0d73cc 100644
+--- a/tests/inspect.rs
++++ b/tests/inspect.rs
+@@ -144,7 +144,9 @@ fn inspect_does_not_import_or_execute_action_source() {
+         String::from_utf8_lossy(&inspect.stderr)
+     );
+     let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
+-    assert_contains(&stdout, "status: runnable");
++    assert_contains(&stdout, "status: invalid-runnable");
++    assert_contains(&stdout, "stale Manifest");
++    assert_contains(&stdout, "action.py");
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
+diff --git a/tests/instruction_only.rs b/tests/instruction_only.rs
+new file mode 100644
+index 0000000..013ffaf
+--- /dev/null
++++ b/tests/instruction_only.rs
+@@ -0,0 +1,164 @@
++use std::fs;
++use std::path::PathBuf;
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn instruction_only_skill(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let skill = output_root.join("plain-skill");
++    fs::create_dir_all(skill.join("scripts")).expect("scripts dir should be created");
++    fs::create_dir_all(skill.join("examples")).expect("examples dir should be created");
++    fs::create_dir_all(skill.join("references")).expect("references dir should be created");
++    fs::write(
++        skill.join("SKILL.md"),
++        "# Plain Skill\n\n```python\nprint('do not infer me')\n```\n",
++    )
++    .expect("SKILL.md should be written");
++    fs::write(
++        skill.join("scripts").join("run.py"),
++        "print('not an action')\n",
++    )
++    .expect("script should be written");
++    fs::write(skill.join("examples").join("default.input.json"), "{}\n")
++        .expect("example should be written");
++    fs::write(skill.join("references").join("policy.md"), "policy text\n")
++        .expect("reference should be written");
++    (output_root, skill)
++}
++
++fn assert_instruction_refusal(output: &std::process::Output, command: &str) -> String {
++    assert!(
++        !output.status.success(),
++        "{command} should refuse instruction-only Skill\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stderr = String::from_utf8(output.stderr.clone()).expect("stderr should be utf-8");
++    assert!(
++        stderr.contains("instruction-only"),
++        "{command} stderr should name instruction-only status\n{stderr}"
++    );
++    assert!(
++        stderr.contains("action.py"),
++        "{command} stderr should explain explicit action.py is required\n{stderr}"
++    );
++    assert!(
++        stderr.contains("skillrun manifest"),
++        "{command} stderr should include the Manifest generation next step\n{stderr}"
++    );
++    assert!(
++        !stderr.contains("command not implemented yet"),
++        "{command} guard should run before unimplemented fallback\n{stderr}"
++    );
++    stderr
++}
++
++#[test]
++fn inspect_reports_instruction_only_status_with_scripts_and_examples_present() {
++    let (output_root, skill) = instruction_only_skill("instruction-inspect");
++    let cwd_arg = skill.to_string_lossy().to_string();
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++    assert!(
++        inspect.status.success(),
++        "inspect should succeed\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("stdout should be utf-8");
++    assert!(stdout.contains("status: instruction-only"));
++    assert!(stdout.contains("missing action.py"));
++    assert!(stdout.contains("missing .skillrun/manifest.generated.yaml"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_refuses_to_infer_actions_from_markdown_or_scripts() {
++    let (output_root, skill) = instruction_only_skill("instruction-manifest");
++    let cwd_arg = skill.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("missing action.py"));
++    assert!(stderr.contains("does not infer actions"));
++    assert!(stderr.contains("Markdown"));
++    assert!(!skill
++        .join(".skillrun")
++        .join("manifest.generated.yaml")
++        .exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn run_serve_and_pack_refuse_instruction_only_skill() {
++    let (output_root, skill) = instruction_only_skill("instruction-consumer");
++    let cwd_arg = skill.to_string_lossy().to_string();
++
++    let run = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd_arg,
++        "--input",
++        "examples/default.input.json",
++    ]);
++    assert_instruction_refusal(&run, "run");
++
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert_instruction_refusal(&serve, "serve");
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert_instruction_refusal(&pack, "pack");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn missing_action_with_manifest_is_not_treated_as_runnable() {
++    let output_root = temp_dir("instruction-missing-action");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(manifest.status.success());
++    fs::remove_file(capsule.join("action.py")).expect("action should be removed");
++
++    let run = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd_arg,
++        "--input",
++        "examples/default.input.json",
++    ]);
++    assert!(!run.status.success());
++    let stderr = String::from_utf8(run.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("stale Manifest"));
++    assert!(stderr.contains("action.py"));
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++    assert!(inspect.status.success());
++    let stdout = String::from_utf8(inspect.stdout).expect("stdout should be utf-8");
++    assert!(stdout.contains("status: invalid-runnable"));
++    assert!(stdout.contains("action.py"));
++
++    fs::remove_dir_all(output_root).ok();
++}
