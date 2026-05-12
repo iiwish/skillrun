@@ -1,0 +1,174 @@
+schema_version: 1
+packet_id: EP-MVP-T005
+task_id: T005
+feature_id: mvp
+mode: execute_one_task
+adapter: codex
+
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  product_contract: .ai-platform/docs/product-design.md
+  feature_spec: .ai-platform/specs/mvp/spec.md
+  requirements_checklist: .ai-platform/docs/requirements-checklist.md
+  test_strategy: .ai-platform/docs/test-strategy.md
+  technical_decisions: .ai-platform/docs/technology-decision-record.md
+  feature_plan: .ai-platform/specs/mvp/plan.md
+  work_graph: .ai-platform/docs/tasks.md
+  feature_task_index: .ai-platform/specs/mvp/tasks.md
+  analysis: .ai-platform/specs/mvp/analysis.md
+  approval_gates:
+    constitution: Confirmed by user on 2026-05-11
+    product_or_spec: Confirmed by user on 2026-05-11
+    requirements_checklist: Completed
+    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
+    test_strategy: Confirmed after document review on 2026-05-11
+    dependency_t001: Accepted after rereview on 2026-05-11
+    dependency_t002: Accepted after rereview on 2026-05-11
+    dependency_t003: Accepted after rereview on 2026-05-12
+    dependency_t004: Accepted after rereview on 2026-05-12
+
+work_unit:
+  title: Implement Run Records And Python Action Adapter IPC Success Path
+  goal: Implement skillrun test and skillrun run success path using Rust Core file-based IPC, Python Action adapter execution, and run records.
+  epic: E002 IPC And Run
+  story: US-003
+  requirements:
+    - FR-004
+    - FR-005
+    - NFR-002
+    - NFR-005
+    - TDR-003
+  priority: P0
+  depends_on:
+    - T001
+    - T002
+    - T003
+  blocks:
+    - T006
+    - T007
+    - T011
+  parallel: false
+  conflicts_with:
+    - T006
+    - T007
+
+codebase_context:
+  local_instructions:
+    - AGENTS.md
+  relevant_files:
+    - docs/mvp.md
+    - docs/ssot.md
+    - .ai-platform/docs/test-strategy.md
+    - src/cli.rs
+    - src/manifest.rs
+    - src/adapters/python.rs
+    - templates/python/action.py
+  existing_patterns:
+    - CLI dispatch lives in src/cli.rs.
+    - Manifest generation writes .skillrun/manifest.generated.yaml and source hashes.
+    - Python metadata adapter already uses bounded subprocess execution.
+    - Rust integration tests use CARGO_BIN_EXE_skillrun and temp directories.
+  interfaces_or_contracts:
+    - skillrun test --cwd tmp/e2e-runtime/refund uses examples/default.input.json.
+    - skillrun run --cwd tmp/e2e-runtime/refund --input examples/default.input.json uses the explicit input file.
+    - Each run creates a unique directory under .skillrun/runs/ containing input.json, context.json, output.json, stdout.log, stderr.log, artifacts/, and record.json.
+    - Adapter IPC uses SKILLRUN_CONTEXT_JSON, SKILLRUN_INPUT_JSON, SKILLRUN_OUTPUT_JSON, and SKILLRUN_ARTIFACT_DIR.
+    - stdout and stderr are logs only; the business result comes from output.json.
+    - Successful CLI output is a machine-readable ok true envelope.
+  forbidden_changes:
+    - Do not implement structured failure taxonomy beyond minimal success-path errors; T006 owns error categories.
+    - Do not implement artifact permission enforcement beyond run-local artifact directory creation; T007 owns enforcement.
+    - Do not implement stale Manifest fail-closed guard; T008 owns Consumer Mode guard.
+    - Do not implement MCP serving or packaging.
+    - Do not mark T005 Accepted.
+
+execution_constraints:
+  branch_or_worktree: current
+  allowed_files:
+    - README.md
+    - README.zh-CN.md
+    - src/main.rs
+    - src/cli.rs
+    - src/errors.rs
+    - src/runtime.rs
+    - src/run_record.rs
+    - src/manifest.rs
+    - src/adapters/python.rs
+    - tests/cli.rs
+    - tests/runtime.rs
+    - tests/fixtures/runtime_success/
+  test_targets:
+    - tests/runtime.rs
+  ownership_notes:
+    - README updates are allowed only to reflect test/run status accurately.
+    - Keep Manifest generation output stable unless runtime needs a read helper.
+    - Keep structured error and permission enforcement scope minimal so T006/T007 remain focused.
+
+tdd_plan:
+  required: true
+  exception: null
+  red:
+    command: cargo test --test runtime
+    expected_failure: Tests fail because test/run runtime orchestration does not exist yet.
+  green:
+    command: cargo test --test runtime
+    expected_signal: test/run success path creates run directories, output envelope, logs, and record.
+  refactor:
+    command: cargo test
+    expected_signal: Full test suite passes with test/run promoted from unimplemented to implemented.
+
+validation_loop:
+  commands:
+    - cargo test --test runtime
+    - cargo test
+    - cargo run -- init refund --python --output tmp/e2e-runtime
+    - cargo run -- manifest --cwd tmp/e2e-runtime/refund
+    - cargo run -- test --cwd tmp/e2e-runtime/refund
+    - cargo run -- run --cwd tmp/e2e-runtime/refund --input examples/default.input.json
+  retry_budget: 2
+  failure_policy:
+    first_failure: Fix issues directly related to CLI parsing, run directory shape, Python adapter IPC, or success envelope validation.
+    second_failure: Determine whether schema validation, Python environment, or run record persistence is blocking.
+    beyond_budget: Stop and record blocked evidence with command output.
+
+evidence_contract:
+  summary: .ai-platform/evidence/T005/summary.md
+  diff: .ai-platform/evidence/T005/diff.patch
+  test_results: .ai-platform/evidence/T005/test-results.md
+  required:
+    - changed files
+    - RED/GREEN/REFACTOR results
+    - validation results
+    - diff summary
+    - residual risks
+
+review_contract:
+  required_passes:
+    - spec_compliance
+    - bug_code_quality
+    - qa_acceptance
+  acceptance_rule: User explicit acceptance is required before marking T005 Accepted.
+  review_focus:
+    - run output comes from output.json, not stdout.
+    - run record includes hashes, status, timestamps, declared permissions, and paths.
+    - test uses examples/default.input.json.
+    - run creates unique run ids.
+    - T005 does not absorb T006/T007/T008 behavior.
+
+handoff:
+  external_issue: null
+  pull_request: null
+  finish_options:
+    - keep current worktree for review
+    - create commit only after user asks
+    - discard work only with explicit confirmation
+
+stop_conditions:
+  - missing Rust toolchain or unavailable Cargo test environment
+  - Python subprocess cannot import Pydantic in the local environment
+  - dirty worktree touching allowed files with unrelated changes
+  - unclear allowed files
+  - missing approval gate
+  - stale packet compared with work graph
+  - unresolved Critical or High analysis finding
+  - validation command unavailable

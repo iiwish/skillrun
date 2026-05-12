@@ -2,7 +2,7 @@
 
 Version: v0.1
 Status: Clear
-Scope: SkillRun MVP planning artifacts after T004 acceptance
+Scope: SkillRun MVP planning artifacts after T005 acceptance
 Last updated: 2026-05-12
 
 ## Inputs
@@ -13,15 +13,15 @@ Last updated: 2026-05-12
 - Test strategy: `.ai-platform/docs/test-strategy.md`
 - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
 - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`
+- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`
 
 ## Coverage
 
 - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
 - Requirements without task coverage: None.
 - Tasks without requirement/plan mapping: None.
-- Ready tasks without packet: None. T004 is accepted and has evidence in `.ai-platform/evidence/T004/`.
-- Packets missing required fields: None for T004.
+- Ready tasks without packet: None. T005 is accepted and has evidence in `.ai-platform/evidence/T005/`.
+- Packets missing required fields: None for T005.
 
 ## Constitution Check
 
@@ -49,10 +49,10 @@ Last updated: 2026-05-12
 
 ## Execute Gate
 
-- Result: T004 accepted; clear to packetize T005.
-- Reason: T001, T002, T003 and T004 have passed review. T005 dependencies are satisfied, but T005 still needs a self-contained packet and analysis update before execution.
+- Result: T005 accepted; clear to packetize T006.
+- Reason: T001 through T005 have passed review. T006 dependencies are satisfied, but T006 still needs a self-contained packet and analysis update before execution.
 
 ## Scope Guard
 
-- T005 may be packetized next.
-- T006-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
+- T006 may be packetized next.
+- T007-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.

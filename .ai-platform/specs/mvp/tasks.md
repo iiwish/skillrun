@@ -17,7 +17,7 @@ Last updated: 2026-05-12
 
 ## Current Gate
 
-T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+T001、T002、T003、T004 和 T005 均已通过复审并进入 `Accepted`。T006-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
 
 ## Epic E001: Capsule And Manifest
 
@@ -74,7 +74,7 @@ Validation:
 - `cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json`
 
 Tasks:
-- [ ] T005 [US-003] Implement run records and Python Action adapter IPC success path
+- [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
 - [ ] T006 [US-003] Implement structured error envelope handling
 - [ ] T007 [US-003] Enforce artifact and declared permission boundaries
 
@@ -395,7 +395,7 @@ Evidence required:
 
 ### T005: Implement Run Records And Python Action Adapter IPC Success Path
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T001, T002, T003
 Blocks: T006, T007, T011
@@ -414,8 +414,11 @@ Allowed files:
 - `src/run_record.rs`
 - `src/manifest.rs`
 - `src/adapters/python.rs`
+- `tests/cli.rs`
 - `tests/runtime.rs`
 - `tests/fixtures/runtime_success/`
+- `README.md`
+- `README.zh-CN.md`
 
 Test targets:
 - `tests/runtime.rs`

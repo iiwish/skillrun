@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
 - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
 - Business examples: `docs/business-examples.md` status Confirmed
-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T004 acceptance and ready for T005 packetization
+- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T005 acceptance and ready for T006 packetization
 
 ## Accepted Tasks
 
@@ -25,6 +25,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
 - T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
 - T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
+- T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
 
 ## Validation Summary
 
@@ -35,20 +36,21 @@ The MVP release is not ready yet. This report records accepted task slices and v
 - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
 - T003 validation recorded in `.ai-platform/evidence/T003/`.
 - T004 validation recorded in `.ai-platform/evidence/T004/`.
+- T005 validation recorded in `.ai-platform/evidence/T005/`.
 
 ## Known Limitations
 
-- T001-T004 have been accepted.
+- T001-T005 have been accepted.
 - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
-- Runtime, structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
+- Structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
 
 ## Unfinished Tasks
 
-- Keep T005-T011 Draft until their packets are generated and dependencies are satisfied.
+- Keep T006-T011 Draft until their packets are generated and dependencies are satisfied.
 
 ## Next Recommended Actions
 
-- Packetize and execute T005.
+- Packetize and execute T006.
 
 ## User Review Gate
 

@@ -1,0 +1,1462 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 1e05a4b..22424ec 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -17,7 +17,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - Checklist: `.ai-platform/docs/requirements-checklist.md` status Completed
+ - Test strategy: `.ai-platform/docs/test-strategy.md` status Confirmed
+ - Business examples: `docs/business-examples.md` status Confirmed
+-- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T004 acceptance and ready for T005 packetization
++- Analysis: `.ai-platform/specs/mvp/analysis.md` status Clear after T005 acceptance and ready for T006 packetization
+ 
+ ## Accepted Tasks
+ 
+@@ -25,6 +25,7 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T002: Implement Python Action Capsule Init Templates. Accepted on 2026-05-11 after rereview passed.
+ - T003: Generate Manifest From Python Action Metadata. Accepted on 2026-05-12 after rereview passed.
+ - T004: Render Inspect Output And Instruction-only Status. Accepted on 2026-05-12 after rereview passed.
++- T005: Implement Run Records And Python Action Adapter IPC Success Path. Accepted on 2026-05-12 after rereview passed.
+ 
+ ## Validation Summary
+ 
+@@ -35,20 +36,21 @@ The MVP release is not ready yet. This report records accepted task slices and v
+ - T001 Rust correction evidence recorded in `.ai-platform/evidence/T001/`.
+ - T003 validation recorded in `.ai-platform/evidence/T003/`.
+ - T004 validation recorded in `.ai-platform/evidence/T004/`.
++- T005 validation recorded in `.ai-platform/evidence/T005/`.
+ 
+ ## Known Limitations
+ 
+-- T001-T004 have been accepted.
++- T001-T005 have been accepted.
+ - Business examples have been confirmed in documentation, but only `refund` is intended for v0.1 implementation.
+-- Runtime, structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
++- Structured errors, artifact permission enforcement, stale Manifest fail-closed guards, MCP exposure and `.skr` packaging are not implemented yet.
+ 
+ ## Unfinished Tasks
+ 
+-- Keep T005-T011 Draft until their packets are generated and dependencies are satisfied.
++- Keep T006-T011 Draft until their packets are generated and dependencies are satisfied.
+ 
+ ## Next Recommended Actions
+ 
+-- Packetize and execute T005.
++- Packetize and execute T006.
+ 
+ ## User Review Gate
+ 
+diff --git a/.ai-platform/docs/tasks.md b/.ai-platform/docs/tasks.md
+index 1a4bc78..a2ccb7e 100644
+--- a/.ai-platform/docs/tasks.md
++++ b/.ai-platform/docs/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004 和 T005 均已通过复审并进入 `Accepted`。T006-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -74,7 +74,7 @@ Validation:
+ - `cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json`
+ 
+ Tasks:
+-- [ ] T005 [US-003] Implement run records and Python Action adapter IPC success path
++- [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
+ - [ ] T006 [US-003] Implement structured error envelope handling
+ - [ ] T007 [US-003] Enforce artifact and declared permission boundaries
+ 
+@@ -395,7 +395,7 @@ Evidence required:
+ 
+ ### T005: Implement Run Records And Python Action Adapter IPC Success Path
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001, T002, T003
+ Blocks: T006, T007, T011
+@@ -414,8 +414,11 @@ Allowed files:
+ - `src/run_record.rs`
+ - `src/manifest.rs`
+ - `src/adapters/python.rs`
++- `tests/cli.rs`
+ - `tests/runtime.rs`
+ - `tests/fixtures/runtime_success/`
++- `README.md`
++- `README.zh-CN.md`
+ 
+ Test targets:
+ - `tests/runtime.rs`
+diff --git a/.ai-platform/evidence/T005/diff.patch b/.ai-platform/evidence/T005/diff.patch
+new file mode 100644
+index 0000000..e69de29
+diff --git a/.ai-platform/evidence/T005/summary.md b/.ai-platform/evidence/T005/summary.md
+new file mode 100644
+index 0000000..a0a46dd
+--- /dev/null
++++ b/.ai-platform/evidence/T005/summary.md
+@@ -0,0 +1,58 @@
++# T005 Evidence Summary
++
++Task: T005 Implement Run Records And Python Action Adapter IPC Success Path
++Status: Accepted
++Executor: codex direct execute fallback
++Date: 2026-05-12
++
++## Direct Execute Fallback
++
++用户要求继续推进 T005，但没有显式要求 delegation。当前宿主指令要求只有用户明确要求 subagents 时才能创建 subagent，因此 T005 在当前 worktree 中由 Codex direct execute fallback 完成。
++
++## Changed Files
++
++- `README.md`
++- `README.zh-CN.md`
++- `.ai-platform/docs/tasks.md`
++- `.ai-platform/specs/mvp/analysis.md`
++- `.ai-platform/specs/mvp/tasks.md`
++- `.ai-platform/specs/mvp/packets/T005.yaml`
++- `.ai-platform/evidence/T005/summary.md`
++- `.ai-platform/evidence/T005/test-results.md`
++- `.ai-platform/evidence/T005/diff.patch`
++- `src/main.rs`
++- `src/cli.rs`
++- `src/runtime.rs`
++- `src/run_record.rs`
++- `src/adapters/python.rs`
++- `tests/cli.rs`
++- `tests/runtime.rs`
++
++## Implementation Summary
++
++- 实现 `skillrun test [--cwd <dir>]`，默认使用 `examples/default.input.json`。
++- 实现 `skillrun run [--cwd <dir>] --input <file>`，每次创建唯一 run id。
++- 每次 run 在 `.skillrun/runs/` 下创建唯一 run 目录，包含 `input.json`、`context.json`、`output.json`、`stdout.log`、`stderr.log`、`artifacts/` 和 `record.json`。
++- Python Action adapter 通过 `SKILLRUN_CONTEXT_JSON`、`SKILLRUN_INPUT_JSON`、`SKILLRUN_OUTPUT_JSON` 和 `SKILLRUN_ARTIFACT_DIR` 进行 file-based IPC。
++- CLI stdout 输出 machine-readable `ok: true` envelope；adapter stdout/stderr 只写入 log 文件，不作为业务结果。
++- `record.json` 记录 run id、mode、status、timestamps、duration、Manifest hash、skill hash、action hash、declared permissions 和 run-local 文件路径。
++- 保持 T006/T007/T008 范围独立：未实现完整 structured failure taxonomy、artifact permission enforcement 或 stale Manifest guard。
++
++## TDD Summary
++
++- RED: `cargo test --test runtime` 失败，3 个 runtime tests 因 `test` / `run` 仍返回 `command not implemented yet` 而失败。
++- GREEN: 实现 runtime orchestration 后，`cargo test --test runtime` 通过。
++- REFACTOR/validation: relative `--cwd` 在 E2E 中暴露 IPC path 问题，已改为 runtime 内部绝对路径并新增回归测试；随后 `cargo test` 和 init/manifest/test/run e2e commands 均通过。
++
++## Review
++
++- Spec compliance: Pass。T005 acceptance points 已由 runtime tests 和 E2E commands 覆盖。
++- Bug/code quality: Pass。Core 与 Python adapter 通过文件 IPC 解耦；stdout/stderr 捕获为 logs；run record 持久化独立在 `src/run_record.rs`。
++- QA acceptance: Pass。默认 test、显式 run、唯一 run id、run 目录结构、run record 和 stdout log 边界均已验证。
++- Rereview: Pass。2026-05-12 复审无 blocking findings，用户要求复审通过后提交并继续 T006。
++
++## Residual Risk
++
++- T005 只实现成功路径和最小错误返回；完整 `ValidationError`、`PolicyViolation`、`ProtocolViolation` 和 `RuntimeError` 分类留到 T006。
++- Artifact path 越界检查和 declared permission enforcement 留到 T007。
++- Stale Manifest fail-closed guard 留到 T008。
+diff --git a/.ai-platform/evidence/T005/test-results.md b/.ai-platform/evidence/T005/test-results.md
+new file mode 100644
+index 0000000..6294d29
+--- /dev/null
++++ b/.ai-platform/evidence/T005/test-results.md
+@@ -0,0 +1,75 @@
++# T005 Test Results
++
++Date: 2026-05-12
++
++## RED
++
++Command: `cargo test --test runtime`
++Result: 按预期失败，exit code 1。
++
++Signal:
++- `test_command_uses_default_example_and_writes_run_record` 失败，因为 `test` 返回 `command not implemented yet`。
++- `run_command_uses_explicit_input_and_unique_run_ids` 失败，因为 `run` 返回 `command not implemented yet`。
++- `adapter_stdout_is_captured_as_log_not_result` 失败，因为 `test` 返回 `command not implemented yet`。
++
++## GREEN
++
++Command: `cargo test --test runtime`
++Result: 通过，exit code 0。
++
++Summary:
++- 4 passed.
++- 0 failed.
++
++## Full Validation
++
++Command: `cargo fmt -- --check`
++Result: 通过，exit code 0。
++
++Command: `cargo test`
++Result: 通过，exit code 0。
++
++Summary:
++- CLI tests: 3 passed.
++- Init tests: 4 passed.
++- Inspect tests: 3 passed.
++- Manifest tests: 3 passed.
++- Runtime tests: 4 passed.
++
++Command: `git diff --check`
++Result: 通过，exit code 0。
++
++## E2E Validation
++
++Command: `cargo run -- init refund --python --output tmp/e2e-runtime`
++Result: 通过，exit code 0。
++
++Command: `cargo run -- manifest --cwd tmp/e2e-runtime/refund`
++Result: 通过，exit code 0。
++
++Command: `cargo run -- test --cwd tmp/e2e-runtime/refund`
++Result: 通过，exit code 0。
++
++Command: `cargo run -- run --cwd tmp/e2e-runtime/refund --input examples/default.input.json`
++Result: 通过，exit code 0。
++
++关键输出：
++
++```json
++{
++  "ok": true,
++  "output": {
++    "decision": "approved",
++    "amount": 120
++  },
++  "run_id": "run-..."
++}
++```
++
++## Governance Validation
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T005`
++Result: 通过，exit code 0。
++
++Command: `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`
++Result: 通过，exit code 0。
+diff --git a/.ai-platform/specs/mvp/analysis.md b/.ai-platform/specs/mvp/analysis.md
+index 8eabd29..e11a69a 100644
+--- a/.ai-platform/specs/mvp/analysis.md
++++ b/.ai-platform/specs/mvp/analysis.md
+@@ -2,7 +2,7 @@
+ 
+ Version: v0.1
+ Status: Clear
+-Scope: SkillRun MVP planning artifacts after T004 acceptance
++Scope: SkillRun MVP planning artifacts after T005 acceptance
+ Last updated: 2026-05-12
+ 
+ ## Inputs
+@@ -13,15 +13,15 @@ Last updated: 2026-05-12
+ - Test strategy: `.ai-platform/docs/test-strategy.md`
+ - Plan/TDR: `.ai-platform/docs/technology-decision-record.md`, `.ai-platform/specs/mvp/plan.md`
+ - Work graph: `.ai-platform/docs/tasks.md`, `.ai-platform/specs/mvp/tasks.md`
+-- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`
++- Packets: `.ai-platform/specs/mvp/packets/T001.yaml`, `.ai-platform/specs/mvp/packets/T002.yaml`, `.ai-platform/specs/mvp/packets/T003.yaml`, `.ai-platform/specs/mvp/packets/T004.yaml`, `.ai-platform/specs/mvp/packets/T005.yaml`
+ 
+ ## Coverage
+ 
+ - Requirements covered by tasks: FR-001 through FR-009 and NFR-001 through NFR-006 are mapped in `.ai-platform/docs/tasks.md`.
+ - Requirements without task coverage: None.
+ - Tasks without requirement/plan mapping: None.
+-- Ready tasks without packet: None. T004 is accepted and has evidence in `.ai-platform/evidence/T004/`.
+-- Packets missing required fields: None for T004.
++- Ready tasks without packet: None. T005 is accepted and has evidence in `.ai-platform/evidence/T005/`.
++- Packets missing required fields: None for T005.
+ 
+ ## Constitution Check
+ 
+@@ -49,10 +49,10 @@ Last updated: 2026-05-12
+ 
+ ## Execute Gate
+ 
+-- Result: T004 accepted; clear to packetize T005.
+-- Reason: T001, T002, T003 and T004 have passed review. T005 dependencies are satisfied, but T005 still needs a self-contained packet and analysis update before execution.
++- Result: T005 accepted; clear to packetize T006.
++- Reason: T001 through T005 have passed review. T006 dependencies are satisfied, but T006 still needs a self-contained packet and analysis update before execution.
+ 
+ ## Scope Guard
+ 
+-- T005 may be packetized next.
+-- T006-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
++- T006 may be packetized next.
++- T007-T011 remain Draft until each task has a packet, dependencies are satisfied, and analysis remains clear for that task.
+diff --git a/.ai-platform/specs/mvp/packets/T005.yaml b/.ai-platform/specs/mvp/packets/T005.yaml
+new file mode 100644
+index 0000000..823e2f2
+--- /dev/null
++++ b/.ai-platform/specs/mvp/packets/T005.yaml
+@@ -0,0 +1,174 @@
++schema_version: 1
++packet_id: EP-MVP-T005
++task_id: T005
++feature_id: mvp
++mode: execute_one_task
++adapter: codex
++
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  product_contract: .ai-platform/docs/product-design.md
++  feature_spec: .ai-platform/specs/mvp/spec.md
++  requirements_checklist: .ai-platform/docs/requirements-checklist.md
++  test_strategy: .ai-platform/docs/test-strategy.md
++  technical_decisions: .ai-platform/docs/technology-decision-record.md
++  feature_plan: .ai-platform/specs/mvp/plan.md
++  work_graph: .ai-platform/docs/tasks.md
++  feature_task_index: .ai-platform/specs/mvp/tasks.md
++  analysis: .ai-platform/specs/mvp/analysis.md
++  approval_gates:
++    constitution: Confirmed by user on 2026-05-11
++    product_or_spec: Confirmed by user on 2026-05-11
++    requirements_checklist: Completed
++    technical_plan_and_work_graph: Confirmed after document review on 2026-05-11
++    test_strategy: Confirmed after document review on 2026-05-11
++    dependency_t001: Accepted after rereview on 2026-05-11
++    dependency_t002: Accepted after rereview on 2026-05-11
++    dependency_t003: Accepted after rereview on 2026-05-12
++    dependency_t004: Accepted after rereview on 2026-05-12
++
++work_unit:
++  title: Implement Run Records And Python Action Adapter IPC Success Path
++  goal: Implement skillrun test and skillrun run success path using Rust Core file-based IPC, Python Action adapter execution, and run records.
++  epic: E002 IPC And Run
++  story: US-003
++  requirements:
++    - FR-004
++    - FR-005
++    - NFR-002
++    - NFR-005
++    - TDR-003
++  priority: P0
++  depends_on:
++    - T001
++    - T002
++    - T003
++  blocks:
++    - T006
++    - T007
++    - T011
++  parallel: false
++  conflicts_with:
++    - T006
++    - T007
++
++codebase_context:
++  local_instructions:
++    - AGENTS.md
++  relevant_files:
++    - docs/mvp.md
++    - docs/ssot.md
++    - .ai-platform/docs/test-strategy.md
++    - src/cli.rs
++    - src/manifest.rs
++    - src/adapters/python.rs
++    - templates/python/action.py
++  existing_patterns:
++    - CLI dispatch lives in src/cli.rs.
++    - Manifest generation writes .skillrun/manifest.generated.yaml and source hashes.
++    - Python metadata adapter already uses bounded subprocess execution.
++    - Rust integration tests use CARGO_BIN_EXE_skillrun and temp directories.
++  interfaces_or_contracts:
++    - skillrun test --cwd tmp/e2e-runtime/refund uses examples/default.input.json.
++    - skillrun run --cwd tmp/e2e-runtime/refund --input examples/default.input.json uses the explicit input file.
++    - Each run creates a unique directory under .skillrun/runs/ containing input.json, context.json, output.json, stdout.log, stderr.log, artifacts/, and record.json.
++    - Adapter IPC uses SKILLRUN_CONTEXT_JSON, SKILLRUN_INPUT_JSON, SKILLRUN_OUTPUT_JSON, and SKILLRUN_ARTIFACT_DIR.
++    - stdout and stderr are logs only; the business result comes from output.json.
++    - Successful CLI output is a machine-readable ok true envelope.
++  forbidden_changes:
++    - Do not implement structured failure taxonomy beyond minimal success-path errors; T006 owns error categories.
++    - Do not implement artifact permission enforcement beyond run-local artifact directory creation; T007 owns enforcement.
++    - Do not implement stale Manifest fail-closed guard; T008 owns Consumer Mode guard.
++    - Do not implement MCP serving or packaging.
++    - Do not mark T005 Accepted.
++
++execution_constraints:
++  branch_or_worktree: current
++  allowed_files:
++    - README.md
++    - README.zh-CN.md
++    - src/main.rs
++    - src/cli.rs
++    - src/errors.rs
++    - src/runtime.rs
++    - src/run_record.rs
++    - src/manifest.rs
++    - src/adapters/python.rs
++    - tests/cli.rs
++    - tests/runtime.rs
++    - tests/fixtures/runtime_success/
++  test_targets:
++    - tests/runtime.rs
++  ownership_notes:
++    - README updates are allowed only to reflect test/run status accurately.
++    - Keep Manifest generation output stable unless runtime needs a read helper.
++    - Keep structured error and permission enforcement scope minimal so T006/T007 remain focused.
++
++tdd_plan:
++  required: true
++  exception: null
++  red:
++    command: cargo test --test runtime
++    expected_failure: Tests fail because test/run runtime orchestration does not exist yet.
++  green:
++    command: cargo test --test runtime
++    expected_signal: test/run success path creates run directories, output envelope, logs, and record.
++  refactor:
++    command: cargo test
++    expected_signal: Full test suite passes with test/run promoted from unimplemented to implemented.
++
++validation_loop:
++  commands:
++    - cargo test --test runtime
++    - cargo test
++    - cargo run -- init refund --python --output tmp/e2e-runtime
++    - cargo run -- manifest --cwd tmp/e2e-runtime/refund
++    - cargo run -- test --cwd tmp/e2e-runtime/refund
++    - cargo run -- run --cwd tmp/e2e-runtime/refund --input examples/default.input.json
++  retry_budget: 2
++  failure_policy:
++    first_failure: Fix issues directly related to CLI parsing, run directory shape, Python adapter IPC, or success envelope validation.
++    second_failure: Determine whether schema validation, Python environment, or run record persistence is blocking.
++    beyond_budget: Stop and record blocked evidence with command output.
++
++evidence_contract:
++  summary: .ai-platform/evidence/T005/summary.md
++  diff: .ai-platform/evidence/T005/diff.patch
++  test_results: .ai-platform/evidence/T005/test-results.md
++  required:
++    - changed files
++    - RED/GREEN/REFACTOR results
++    - validation results
++    - diff summary
++    - residual risks
++
++review_contract:
++  required_passes:
++    - spec_compliance
++    - bug_code_quality
++    - qa_acceptance
++  acceptance_rule: User explicit acceptance is required before marking T005 Accepted.
++  review_focus:
++    - run output comes from output.json, not stdout.
++    - run record includes hashes, status, timestamps, declared permissions, and paths.
++    - test uses examples/default.input.json.
++    - run creates unique run ids.
++    - T005 does not absorb T006/T007/T008 behavior.
++
++handoff:
++  external_issue: null
++  pull_request: null
++  finish_options:
++    - keep current worktree for review
++    - create commit only after user asks
++    - discard work only with explicit confirmation
++
++stop_conditions:
++  - missing Rust toolchain or unavailable Cargo test environment
++  - Python subprocess cannot import Pydantic in the local environment
++  - dirty worktree touching allowed files with unrelated changes
++  - unclear allowed files
++  - missing approval gate
++  - stale packet compared with work graph
++  - unresolved Critical or High analysis finding
++  - validation command unavailable
+diff --git a/.ai-platform/specs/mvp/tasks.md b/.ai-platform/specs/mvp/tasks.md
+index 1a4bc78..a2ccb7e 100644
+--- a/.ai-platform/specs/mvp/tasks.md
++++ b/.ai-platform/specs/mvp/tasks.md
+@@ -17,7 +17,7 @@ Last updated: 2026-05-12
+ 
+ ## Current Gate
+ 
+-T001、T002、T003 和 T004 均已通过复审并进入 `Accepted`。T005-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
++T001、T002、T003、T004 和 T005 均已通过复审并进入 `Accepted`。T006-T011 仍为 `Draft`，需要在依赖满足后再逐一 packetize 和执行。
+ 
+ ## Epic E001: Capsule And Manifest
+ 
+@@ -74,7 +74,7 @@ Validation:
+ - `cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json`
+ 
+ Tasks:
+-- [ ] T005 [US-003] Implement run records and Python Action adapter IPC success path
++- [x] T005 [US-003] Implement run records and Python Action adapter IPC success path
+ - [ ] T006 [US-003] Implement structured error envelope handling
+ - [ ] T007 [US-003] Enforce artifact and declared permission boundaries
+ 
+@@ -395,7 +395,7 @@ Evidence required:
+ 
+ ### T005: Implement Run Records And Python Action Adapter IPC Success Path
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T001, T002, T003
+ Blocks: T006, T007, T011
+@@ -414,8 +414,11 @@ Allowed files:
+ - `src/run_record.rs`
+ - `src/manifest.rs`
+ - `src/adapters/python.rs`
++- `tests/cli.rs`
+ - `tests/runtime.rs`
+ - `tests/fixtures/runtime_success/`
++- `README.md`
++- `README.zh-CN.md`
+ 
+ Test targets:
+ - `tests/runtime.rs`
+diff --git a/README.md b/README.md
+index 29b0671..3d090c1 100644
+--- a/README.md
++++ b/README.md
+@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that
+ 
+ SkillRun is in the v0.1.0 MVP buildout.
+ 
+-- Current implementation: through `T004` Rust inspect output and instruction-only status.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, and contract tests for the skeleton/init/manifest/inspect path.
+-- Planned MVP commands are listed by the CLI, but `test`, `run`, `serve`, and `pack` are not implemented yet.
++- Current implementation: through `T005` Rust test/run success path and run records.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, and contract tests for the skeleton/init/manifest/inspect/runtime path.
++- Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
+ 
+@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, and inspect renderer:
++The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, and test/run success path:
+ 
+ ```bash
+ cargo test
+@@ -103,6 +103,8 @@ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
++cargo run -- test --cwd tmp/e2e-init/refund
++cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+ ```
+ 
+ Example output:
+@@ -111,7 +113,7 @@ Example output:
+ skillrun 0.1.0
+ ```
+ 
+-Downstream runtime, MCP, and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
++Downstream MCP and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+ 
+ ## Security Model
+ 
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 988bdb7..bfefc6d 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -12,9 +12,9 @@ SkillRun 不是又一个“把函数包装成工具”的层。它关注的是
+ 
+ SkillRun 正处在 v0.1.0 MVP 建设阶段。
+ 
+-- 当前实现：已推进到 `T004` Rust inspect 输出和 instruction-only 状态。
+-- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`，以及 CLI/init/manifest/inspect 路径的 contract tests。
+-- CLI 已列出计划中的 MVP 命令，但 `test`、`run`、`serve` 和 `pack` 尚未实现。
++- 当前实现：已推进到 `T005` Rust test/run 成功路径和 run records。
++- 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`，以及 CLI/init/manifest/inspect/runtime 路径的 contract tests。
++- CLI 已列出计划中的 MVP 命令，但 `serve` 和 `pack` 尚未实现。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是首个计划中的 Action adapter 目标。它是用户 action 的语言，不是 SkillRun 本体的实现语言。
+ 
+@@ -94,7 +94,7 @@ skillrun pack
+ 
+ ## 现在能运行什么
+ 
+-仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器和 inspect renderer：
++仓库当前包含 Rust CLI skeleton、`init --python` capsule 生成器、Manifest 生成器、inspect renderer 和 test/run 成功路径：
+ 
+ ```bash
+ cargo test
+@@ -103,6 +103,8 @@ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
++cargo run -- test --cwd tmp/e2e-init/refund
++cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+ ```
+ 
+ 示例输出：
+@@ -111,7 +113,7 @@ cargo run -- inspect --cwd tmp/e2e-init/refund
+ skillrun 0.1.0
+ ```
+ 
+-后续 runtime、MCP 和 packaging 命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为这些行为已经落地。
++后续 MCP 和 packaging 命令在实现前会明确返回 `command not implemented yet`，避免让用户误以为这些行为已经落地。
+ 
+ ## 安全模型
+ 
+diff --git a/src/adapters/python.rs b/src/adapters/python.rs
+index f5ac88c..09c545c 100644
+--- a/src/adapters/python.rs
++++ b/src/adapters/python.rs
+@@ -5,6 +5,21 @@ use std::time::{Duration, Instant};
+ 
+ use crate::schemas::Schemas;
+ 
++pub struct ActionRunRequest<'a> {
++    pub capsule_dir: &'a Path,
++    pub entrypoint: &'a str,
++    pub context_json: &'a Path,
++    pub input_json: &'a Path,
++    pub output_json: &'a Path,
++    pub artifact_dir: &'a Path,
++    pub timeout: Duration,
++}
++
++pub struct ActionRunOutput {
++    pub stdout: Vec<u8>,
++    pub stderr: Vec<u8>,
++}
++
+ pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
+     let action_path = action_path
+         .canonicalize()
+@@ -68,6 +83,109 @@ print(json.dumps({
+         .map_err(|error| format!("python metadata output was not valid JSON: {error}"))
+ }
+ 
++pub fn run_action(request: &ActionRunRequest<'_>) -> Result<ActionRunOutput, String> {
++    let action_path = request.capsule_dir.join(request.entrypoint);
++    let action_path = action_path
++        .canonicalize()
++        .map_err(|error| format!("failed to resolve {}: {error}", action_path.display()))?;
++    let script = r#"
++import importlib.util
++import json
++import os
++import sys
++import traceback
++from pathlib import Path
++
++context_path = Path(os.environ["SKILLRUN_CONTEXT_JSON"])
++input_path = Path(os.environ["SKILLRUN_INPUT_JSON"])
++output_path = Path(os.environ["SKILLRUN_OUTPUT_JSON"])
++
++def write_error(code, message):
++    output_path.write_text(json.dumps({
++        "ok": False,
++        "error": {
++            "code": code,
++            "message": message,
++            "recoverable": False
++        },
++        "display": {
++            "markdown": message
++        }
++    }, ensure_ascii=False, indent=2), encoding="utf-8")
++
++try:
++    action = Path(sys.argv[1])
++    spec = importlib.util.spec_from_file_location("skillrun_action", action)
++    if spec is None or spec.loader is None:
++        raise RuntimeError(f"cannot load action module: {action}")
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++
++    Input = getattr(module, "Input")
++    Output = getattr(module, "Output")
++    input_model = Input.model_validate_json(input_path.read_text(encoding="utf-8"))
++    context = json.loads(context_path.read_text(encoding="utf-8"))
++
++    preflight = getattr(module, "preflight", None)
++    if preflight is not None:
++        preflight(input_model, context)
++
++    result = module.run(input_model, context)
++    if isinstance(result, Output):
++        output_model = result
++    else:
++        output_model = Output.model_validate(result)
++
++    payload = output_model.model_dump(mode="json")
++    output_path.write_text(json.dumps({
++        "ok": True,
++        "output": payload,
++        "display": {
++            "markdown": payload.get("reasoning_summary", "Run completed.")
++        }
++    }, ensure_ascii=False, indent=2), encoding="utf-8")
++except Exception as exc:
++    traceback.print_exc(file=sys.stderr)
++    write_error("RuntimeError", str(exc))
++    sys.exit(1)
++"#;
++
++    let mut command = Command::new("python");
++    command
++        .arg("-c")
++        .arg(script)
++        .arg(&action_path)
++        .current_dir(request.capsule_dir)
++        .env_clear()
++        .env("SKILLRUN_CONTEXT_JSON", request.context_json)
++        .env("SKILLRUN_INPUT_JSON", request.input_json)
++        .env("SKILLRUN_OUTPUT_JSON", request.output_json)
++        .env("SKILLRUN_ARTIFACT_DIR", request.artifact_dir)
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped());
++
++    let output = run_with_timeout(command, request.timeout).map_err(|error| {
++        format!(
++            "failed to run Python action adapter for {}: {error}",
++            action_path.display()
++        )
++    })?;
++
++    if !output.status.success() {
++        let stderr = String::from_utf8_lossy(&output.stderr);
++        return Err(format!(
++            "python action adapter failed for {}: {}",
++            action_path.display(),
++            stderr.trim()
++        ));
++    }
++
++    Ok(ActionRunOutput {
++        stdout: output.stdout,
++        stderr: output.stderr,
++    })
++}
++
+ fn metadata_timeout() -> Duration {
+     std::env::var("SKILLRUN_METADATA_TIMEOUT_MS")
+         .ok()
+diff --git a/src/cli.rs b/src/cli.rs
+index 5a670bf..b06b273 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -4,9 +4,10 @@ use std::process::ExitCode;
+ use crate::init::{self, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
++use crate::runtime::{self, RunOptions, TestOptions};
+ 
+ const VERSION: &str = env!("CARGO_PKG_VERSION");
+-const UNIMPLEMENTED_COMMANDS: &[&str] = &["test", "run", "serve", "pack"];
++const UNIMPLEMENTED_COMMANDS: &[&str] = &["serve", "pack"];
+ 
+ pub fn run<I>(args: I) -> ExitCode
+ where
+@@ -74,6 +75,40 @@ where
+                 ExitCode::from(2)
+             }
+         },
++        Some("test") => match parse_test(args.collect()) {
++            Ok(options) => match runtime::run_test(&options) {
++                Ok(envelope) => {
++                    println!("{envelope}");
++                    ExitCode::SUCCESS
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun test [--cwd <dir>]");
++                ExitCode::from(2)
++            }
++        },
++        Some("run") => match parse_run(args.collect()) {
++            Ok(options) => match runtime::run_with_input(&options) {
++                Ok(envelope) => {
++                    println!("{envelope}");
++                    ExitCode::SUCCESS
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun run [--cwd <dir>] --input <file>");
++                ExitCode::from(2)
++            }
++        },
+         Some(command) if UNIMPLEMENTED_COMMANDS.contains(&command) => {
+             eprintln!("error: command not implemented yet: {command}");
+             ExitCode::from(2)
+@@ -166,6 +201,55 @@ fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
+     Ok(InspectOptions { cwd })
+ }
+ 
++fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            value => return Err(format!("unexpected test argument: {value}")),
++        }
++    }
++
++    Ok(TestOptions { cwd })
++}
++
++fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut input = None;
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            "--input" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--input requires a file".to_string());
++                };
++                input = Some(PathBuf::from(value));
++                index += 2;
++            }
++            value => return Err(format!("unexpected run argument: {value}")),
++        }
++    }
++
++    let input = input.ok_or_else(|| "run requires --input <file>".to_string())?;
++    Ok(RunOptions { cwd, input })
++}
++
+ fn print_help() {
+     println!(
+         "\
+@@ -191,7 +275,9 @@ Implemented:
+   init --python
+   manifest
+   inspect
++  test
++  run
+ 
+-Later tasks implement runtime, MCP, and packaging behavior."
++Later tasks implement structured errors, permissions, MCP, and packaging behavior."
+     );
+ }
+diff --git a/src/main.rs b/src/main.rs
+index fe44bfd..3ce23f3 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -6,6 +6,8 @@ mod hashing;
+ mod init;
+ mod inspect;
+ mod manifest;
++mod run_record;
++mod runtime;
+ mod schemas;
+ mod adapters {
+     pub mod python;
+diff --git a/src/run_record.rs b/src/run_record.rs
+new file mode 100644
+index 0000000..2634e46
+--- /dev/null
++++ b/src/run_record.rs
+@@ -0,0 +1,68 @@
++use chrono::Utc;
++use serde::Serialize;
++use std::fs;
++use std::path::Path;
++use std::time::Duration;
++
++#[derive(Debug, Serialize)]
++pub struct RunRecord<'a> {
++    pub run_id: &'a str,
++    pub mode: &'a str,
++    pub status: &'a str,
++    pub started_at: String,
++    pub finished_at: String,
++    pub duration_ms: u128,
++    pub capsule_dir: String,
++    pub manifest_path: String,
++    pub manifest_sha256: &'a str,
++    pub skill_sha256: &'a str,
++    pub action_sha256: &'a str,
++    pub permissions: serde_json::Value,
++    pub input: &'a str,
++    pub context: &'a str,
++    pub output: &'a str,
++    pub stdout: &'a str,
++    pub stderr: &'a str,
++    pub artifacts: &'a str,
++}
++
++pub struct RunRecordInput<'a> {
++    pub run_id: &'a str,
++    pub mode: &'a str,
++    pub status: &'a str,
++    pub started_at: chrono::DateTime<Utc>,
++    pub finished_at: chrono::DateTime<Utc>,
++    pub duration: Duration,
++    pub capsule_dir: &'a Path,
++    pub manifest_path: &'a Path,
++    pub manifest_sha256: &'a str,
++    pub skill_sha256: &'a str,
++    pub action_sha256: &'a str,
++    pub permissions: serde_json::Value,
++}
++
++pub fn write(path: &Path, input: RunRecordInput<'_>) -> Result<(), String> {
++    let record = RunRecord {
++        run_id: input.run_id,
++        mode: input.mode,
++        status: input.status,
++        started_at: input.started_at.to_rfc3339(),
++        finished_at: input.finished_at.to_rfc3339(),
++        duration_ms: input.duration.as_millis(),
++        capsule_dir: input.capsule_dir.display().to_string(),
++        manifest_path: input.manifest_path.display().to_string(),
++        manifest_sha256: input.manifest_sha256,
++        skill_sha256: input.skill_sha256,
++        action_sha256: input.action_sha256,
++        permissions: input.permissions,
++        input: "input.json",
++        context: "context.json",
++        output: "output.json",
++        stdout: "stdout.log",
++        stderr: "stderr.log",
++        artifacts: "artifacts",
++    };
++    let json = serde_json::to_string_pretty(&record)
++        .map_err(|error| format!("failed to serialize run record: {error}"))?;
++    fs::write(path, json).map_err(|error| format!("failed to write {}: {error}", path.display()))
++}
+diff --git a/src/runtime.rs b/src/runtime.rs
+new file mode 100644
+index 0000000..1842f57
+--- /dev/null
++++ b/src/runtime.rs
+@@ -0,0 +1,272 @@
++use chrono::Utc;
++use serde_json::{json, Value};
++use serde_yaml::Value as YamlValue;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::sync::atomic::{AtomicU64, Ordering};
++use std::time::{Duration, Instant};
++
++use crate::adapters::python::{self, ActionRunRequest};
++use crate::hashing;
++use crate::manifest;
++use crate::run_record::{self, RunRecordInput};
++
++static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
++
++#[derive(Debug)]
++pub struct TestOptions {
++    pub cwd: PathBuf,
++}
++
++#[derive(Debug)]
++pub struct RunOptions {
++    pub cwd: PathBuf,
++    pub input: PathBuf,
++}
++
++struct RuntimeManifest {
++    value: YamlValue,
++    path: PathBuf,
++    sha256: String,
++}
++
++struct RunPaths {
++    run_dir: PathBuf,
++    input_json: PathBuf,
++    context_json: PathBuf,
++    output_json: PathBuf,
++    stdout_log: PathBuf,
++    stderr_log: PathBuf,
++    artifact_dir: PathBuf,
++    record_json: PathBuf,
++}
++
++pub fn run_test(options: &TestOptions) -> Result<String, String> {
++    let input = PathBuf::from("examples").join("default.input.json");
++    execute(&options.cwd, &input, "test")
++}
++
++pub fn run_with_input(options: &RunOptions) -> Result<String, String> {
++    execute(&options.cwd, &options.input, "run")
++}
++
++fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<String, String> {
++    let capsule_dir = absolute_path(cwd)?;
++    require_dir(&capsule_dir)?;
++    let manifest = load_manifest(&capsule_dir)?;
++    let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
++    if adapter != "python" {
++        return Err(format!("unsupported runtime adapter: {adapter}"));
++    }
++
++    let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
++    let timeout = string_at(&manifest.value, &["runtime", "timeout"])
++        .and_then(parse_timeout)
++        .unwrap_or_else(|| Duration::from_secs(30));
++    let run_id = new_run_id();
++    let paths = create_run_paths(&capsule_dir, &run_id)?;
++    let input_source = resolve_input_path(&capsule_dir, input);
++    let input_value = read_input_json(&input_source)?;
++    let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
++    let started_at = Utc::now();
++    let started = Instant::now();
++
++    write_json(&paths.input_json, &input_value)?;
++    let context = json!({
++        "run_id": run_id,
++        "mode": mode,
++        "capsule_dir": capsule_dir.display().to_string(),
++        "manifest_path": manifest.path.display().to_string(),
++        "artifact_dir": paths.artifact_dir.display().to_string(),
++        "permissions": permissions,
++    });
++    write_json(&paths.context_json, &context)?;
++
++    let adapter_output = python::run_action(&ActionRunRequest {
++        capsule_dir: &capsule_dir,
++        entrypoint,
++        context_json: &paths.context_json,
++        input_json: &paths.input_json,
++        output_json: &paths.output_json,
++        artifact_dir: &paths.artifact_dir,
++        timeout,
++    })?;
++    fs::write(&paths.stdout_log, adapter_output.stdout)
++        .map_err(|error| format!("failed to write {}: {error}", paths.stdout_log.display()))?;
++    fs::write(&paths.stderr_log, adapter_output.stderr)
++        .map_err(|error| format!("failed to write {}: {error}", paths.stderr_log.display()))?;
++
++    if !paths.output_json.is_file() {
++        return Err(format!(
++            "adapter did not write output envelope: {}",
++            paths.output_json.display()
++        ));
++    }
++
++    let mut envelope = read_json_file(&paths.output_json)?;
++    if envelope.get("ok").and_then(Value::as_bool) != Some(true) {
++        return Err("adapter did not return an ok: true envelope".to_string());
++    }
++    let Some(object) = envelope.as_object_mut() else {
++        return Err("adapter output envelope must be a JSON object".to_string());
++    };
++    object.insert("run_id".to_string(), Value::String(run_id.clone()));
++    object.insert(
++        "run_dir".to_string(),
++        Value::String(paths.run_dir.display().to_string()),
++    );
++    object.insert(
++        "record".to_string(),
++        Value::String(paths.record_json.display().to_string()),
++    );
++    write_json(&paths.output_json, &envelope)?;
++
++    let finished_at = Utc::now();
++    let skill_sha256 = string_at(&manifest.value, &["sources", "skill", "sha256"])
++        .or_else(|| string_at(&manifest.value, &["skill", "skill_hash"]))
++        .unwrap_or("missing");
++    let action_sha256 =
++        string_at(&manifest.value, &["sources", "action", "sha256"]).unwrap_or("missing");
++    run_record::write(
++        &paths.record_json,
++        RunRecordInput {
++            run_id: &run_id,
++            mode,
++            status: "succeeded",
++            started_at,
++            finished_at,
++            duration: started.elapsed(),
++            capsule_dir: &capsule_dir,
++            manifest_path: &manifest.path,
++            manifest_sha256: &manifest.sha256,
++            skill_sha256,
++            action_sha256,
++            permissions: json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null),
++        },
++    )?;
++
++    serde_json::to_string_pretty(&envelope)
++        .map_err(|error| format!("failed to serialize output envelope: {error}"))
++}
++
++fn require_dir(path: &Path) -> Result<(), String> {
++    if !path.exists() {
++        return Err(format!("cwd does not exist: {}", path.display()));
++    }
++    if !path.is_dir() {
++        return Err(format!("cwd is not a directory: {}", path.display()));
++    }
++    Ok(())
++}
++
++fn absolute_path(path: &Path) -> Result<PathBuf, String> {
++    if path.is_absolute() {
++        Ok(path.to_path_buf())
++    } else {
++        std::env::current_dir()
++            .map(|cwd| cwd.join(path))
++            .map_err(|error| format!("failed to resolve current directory: {error}"))
++    }
++}
++
++fn load_manifest(cwd: &Path) -> Result<RuntimeManifest, String> {
++    let path = manifest::generated_manifest_path(cwd);
++    if !path.is_file() {
++        return Err(format!("missing Manifest: {}", path.display()));
++    }
++    let text = fs::read_to_string(&path)
++        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
++    let value = serde_yaml::from_str(&text)
++        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
++    let sha256 = hashing::sha256_file(&path)?;
++    Ok(RuntimeManifest {
++        value,
++        path,
++        sha256,
++    })
++}
++
++fn create_run_paths(cwd: &Path, run_id: &str) -> Result<RunPaths, String> {
++    let run_dir = cwd.join(".skillrun").join("runs").join(run_id);
++    let artifact_dir = run_dir.join("artifacts");
++    fs::create_dir_all(&artifact_dir).map_err(|error| {
++        format!(
++            "failed to create run directories at {}: {error}",
++            run_dir.display()
++        )
++    })?;
++    Ok(RunPaths {
++        input_json: run_dir.join("input.json"),
++        context_json: run_dir.join("context.json"),
++        output_json: run_dir.join("output.json"),
++        stdout_log: run_dir.join("stdout.log"),
++        stderr_log: run_dir.join("stderr.log"),
++        record_json: run_dir.join("record.json"),
++        artifact_dir,
++        run_dir,
++    })
++}
++
++fn resolve_input_path(cwd: &Path, input: &Path) -> PathBuf {
++    if input.is_absolute() {
++        input.to_path_buf()
++    } else {
++        cwd.join(input)
++    }
++}
++
++fn read_input_json(path: &Path) -> Result<Value, String> {
++    let text = fs::read_to_string(path)
++        .map_err(|error| format!("failed to read input {}: {error}", path.display()))?;
++    serde_json::from_str(&text).map_err(|error| format!("input was not valid JSON: {error}"))
++}
++
++fn read_json_file(path: &Path) -> Result<Value, String> {
++    let text = fs::read_to_string(path)
++        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
++    serde_json::from_str(&text)
++        .map_err(|error| format!("{} was not valid JSON: {error}", path.display()))
++}
++
++fn write_json(path: &Path, value: &Value) -> Result<(), String> {
++    let text = serde_json::to_string_pretty(value)
++        .map_err(|error| format!("failed to serialize JSON for {}: {error}", path.display()))?;
++    fs::write(path, text).map_err(|error| format!("failed to write {}: {error}", path.display()))
++}
++
++fn new_run_id() -> String {
++    let counter = RUN_COUNTER.fetch_add(1, Ordering::Relaxed);
++    format!(
++        "run-{}-{}-{counter}",
++        Utc::now().format("%Y%m%dT%H%M%S%.fZ"),
++        std::process::id()
++    )
++}
++
++fn parse_timeout(value: &str) -> Option<Duration> {
++    if let Some(ms) = value.strip_suffix("ms") {
++        return ms.parse::<u64>().ok().map(Duration::from_millis);
++    }
++    if let Some(seconds) = value.strip_suffix('s') {
++        return seconds.parse::<u64>().ok().map(Duration::from_secs);
++    }
++    value.parse::<u64>().ok().map(Duration::from_secs)
++}
++
++fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
++    let mut current = value;
++    for segment in path {
++        let key = YamlValue::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
++
++fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<Value> {
++    let value = value_at(value, path)?;
++    serde_json::to_value(value).ok()
++}
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 815233f..0945dc3 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -40,10 +40,10 @@ fn version_uses_approved_project_name() {
+ 
+ #[test]
+ fn unimplemented_runtime_commands_fail_until_implemented() {
+-    let output = run_skillrun(&["test"]);
++    let output = run_skillrun(&["serve"]);
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("error output should be utf-8");
+ 
+-    assert!(stderr.contains("command not implemented yet: test"));
++    assert!(stderr.contains("command not implemented yet: serve"));
+ }
+diff --git a/tests/runtime.rs b/tests/runtime.rs
+new file mode 100644
+index 0000000..0c65929
+--- /dev/null
++++ b/tests/runtime.rs
+@@ -0,0 +1,218 @@
++use serde_json::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn assert_contains(text: &str, expected: &str) {
++    assert!(
++        text.contains(expected),
++        "text should contain {expected:?}\n{text}"
++    );
++}
++
++fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
++fn generated_capsule_under(output_root: &Path) -> PathBuf {
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    capsule
++}
++
++fn read_json(path: &Path) -> Value {
++    let text = fs::read_to_string(path).expect("json file should be readable");
++    serde_json::from_str(&text).expect("json file should parse")
++}
++
++fn run_dir(capsule: &Path, run_id: &str) -> PathBuf {
++    capsule.join(".skillrun").join("runs").join(run_id)
++}
++
++fn run_id_from(output: &std::process::Output) -> String {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstderr: {}",
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be a JSON envelope");
++    assert_eq!(envelope["ok"], true);
++    envelope["run_id"]
++        .as_str()
++        .expect("run_id should be present")
++        .to_string()
++}
++
++fn is_64_hex(value: &str) -> bool {
++    value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
++}
++
++#[test]
++fn test_command_uses_default_example_and_writes_run_record() {
++    let (output_root, capsule) = generated_capsule("runtime-test-command");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let run_id = run_id_from(&output);
++    let dir = run_dir(&capsule, &run_id);
++
++    assert!(dir.join("input.json").is_file());
++    assert!(dir.join("context.json").is_file());
++    assert!(dir.join("output.json").is_file());
++    assert!(dir.join("stdout.log").is_file());
++    assert!(dir.join("stderr.log").is_file());
++    assert!(dir.join("artifacts").is_dir());
++    assert!(dir.join("record.json").is_file());
++
++    let output_json = read_json(&dir.join("output.json"));
++    assert_eq!(output_json["ok"], true);
++    assert_eq!(output_json["output"]["decision"], "approved");
++    assert_eq!(output_json["output"]["amount"], 120);
++
++    let record = read_json(&dir.join("record.json"));
++    assert_eq!(record["run_id"], run_id);
++    assert_eq!(record["mode"], "test");
++    assert_eq!(record["status"], "succeeded");
++    assert!(is_64_hex(record["manifest_sha256"].as_str().unwrap()));
++    assert!(is_64_hex(record["skill_sha256"].as_str().unwrap()));
++    assert!(is_64_hex(record["action_sha256"].as_str().unwrap()));
++    assert!(record["started_at"].as_str().unwrap().contains('T'));
++    assert!(record["finished_at"].as_str().unwrap().contains('T'));
++    assert_contains(&record.to_string(), ".skillrun/runs/**");
++
++    let context = read_json(&dir.join("context.json"));
++    assert_eq!(context["run_id"], run_id);
++    assert_eq!(context["mode"], "test");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn run_command_uses_explicit_input_and_unique_run_ids() {
++    let (output_root, capsule) = generated_capsule("runtime-run-command");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let first = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd_arg,
++        "--input",
++        "examples/default.input.json",
++    ]);
++    let second = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd_arg,
++        "--input",
++        "examples/default.input.json",
++    ]);
++
++    let first_id = run_id_from(&first);
++    let second_id = run_id_from(&second);
++
++    assert_ne!(first_id, second_id);
++    assert!(run_dir(&capsule, &first_id).is_dir());
++    assert!(run_dir(&capsule, &second_id).is_dir());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn adapter_stdout_is_captured_as_log_not_result() {
++    let output_root = temp_dir("runtime-stdout-log");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let action_path = capsule.join("action.py");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let action = action.replace(
++        "def run(input: Input, ctx) -> Output:\n",
++        "def run(input: Input, ctx) -> Output:\n    print(\"adapter stdout noise\")\n",
++    );
++    fs::write(&action_path, action).expect("action should be updated");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(manifest.status.success());
++
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
++    assert!(!stdout.contains("adapter stdout noise"));
++    let run_id = run_id_from(&run);
++    let stdout_log = fs::read_to_string(run_dir(&capsule, &run_id).join("stdout.log"))
++        .expect("stdout log should be readable");
++    assert_contains(&stdout_log, "adapter stdout noise");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn runtime_accepts_relative_cwd_paths() {
++    let output_root = PathBuf::from("target")
++        .join("skillrun-runtime-tests")
++        .join(format!("relative-{}", std::process::id()));
++    fs::remove_dir_all(&output_root).ok();
++    fs::create_dir_all(&output_root).expect("relative output root should be created");
++    let capsule = generated_capsule_under(&output_root);
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let run_id = run_id_from(&output);
++
++    assert!(run_dir(&capsule, &run_id).join("input.json").is_file());
++
++    fs::remove_dir_all(output_root).ok();
++}

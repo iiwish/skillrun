@@ -12,9 +12,9 @@ SkillRun is not another "wrap a function as a tool" layer. It is for teams that 
 
 SkillRun is in the v0.1.0 MVP buildout.
 
-- Current implementation: through `T004` Rust inspect output and instruction-only status.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, and contract tests for the skeleton/init/manifest/inspect path.
-- Planned MVP commands are listed by the CLI, but `test`, `run`, `serve`, and `pack` are not implemented yet.
+- Current implementation: through `T005` Rust test/run success path and run records.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, and contract tests for the skeleton/init/manifest/inspect/runtime path.
+- Planned MVP commands are listed by the CLI, but `serve` and `pack` are not implemented yet.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the first planned action adapter target. It is the user action language, not the SkillRun implementation language.
 
@@ -94,7 +94,7 @@ The first hero example is `refund`: a refund decision capsule with policy limits
 
 ## What Works Today
 
-The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, and inspect renderer:
+The repository currently contains the Rust CLI skeleton, `init --python` capsule generator, Manifest generator, inspect renderer, and test/run success path:
 
 ```bash
 cargo test
@@ -103,6 +103,8 @@ cargo run -- --version
 cargo run -- init refund --python --output tmp/e2e-init
 cargo run -- manifest --cwd tmp/e2e-init/refund
 cargo run -- inspect --cwd tmp/e2e-init/refund
+cargo run -- test --cwd tmp/e2e-init/refund
+cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
 ```
 
 Example output:
@@ -111,7 +113,7 @@ Example output:
 skillrun 0.1.0
 ```
 
-Downstream runtime, MCP, and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
+Downstream MCP and packaging commands intentionally fail with `command not implemented yet` until their implementation tasks land.
 
 ## Security Model
 

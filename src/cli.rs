@@ -4,9 +4,10 @@ use std::process::ExitCode;
 use crate::init::{self, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
+use crate::runtime::{self, RunOptions, TestOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const UNIMPLEMENTED_COMMANDS: &[&str] = &["test", "run", "serve", "pack"];
+const UNIMPLEMENTED_COMMANDS: &[&str] = &["serve", "pack"];
 
 pub fn run<I>(args: I) -> ExitCode
 where
@@ -71,6 +72,40 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun inspect [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("test") => match parse_test(args.collect()) {
+            Ok(options) => match runtime::run_test(&options) {
+                Ok(envelope) => {
+                    println!("{envelope}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun test [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("run") => match parse_run(args.collect()) {
+            Ok(options) => match runtime::run_with_input(&options) {
+                Ok(envelope) => {
+                    println!("{envelope}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun run [--cwd <dir>] --input <file>");
                 ExitCode::from(2)
             }
         },
@@ -166,6 +201,55 @@ fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
     Ok(InspectOptions { cwd })
 }
 
+fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected test argument: {value}")),
+        }
+    }
+
+    Ok(TestOptions { cwd })
+}
+
+fn parse_run(args: Vec<String>) -> Result<RunOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut input = None;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            "--input" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--input requires a file".to_string());
+                };
+                input = Some(PathBuf::from(value));
+                index += 2;
+            }
+            value => return Err(format!("unexpected run argument: {value}")),
+        }
+    }
+
+    let input = input.ok_or_else(|| "run requires --input <file>".to_string())?;
+    Ok(RunOptions { cwd, input })
+}
+
 fn print_help() {
     println!(
         "\
@@ -191,7 +275,9 @@ Implemented:
   init --python
   manifest
   inspect
+  test
+  run
 
-Later tasks implement runtime, MCP, and packaging behavior."
+Later tasks implement structured errors, permissions, MCP, and packaging behavior."
     );
 }

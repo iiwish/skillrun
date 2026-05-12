@@ -6,6 +6,8 @@ mod hashing;
 mod init;
 mod inspect;
 mod manifest;
+mod run_record;
+mod runtime;
 mod schemas;
 mod adapters {
     pub mod python;
