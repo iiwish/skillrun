@@ -373,6 +373,53 @@ fn mcp_stdio_lists_and_calls_js_manifest_tool() {
 }
 
 #[test]
+fn mcp_stdio_dependency_error_keeps_server_alive() {
+    let (output_root, capsule) =
+        generated_capsule_with_flag("mcp-js-dependency-error-survival", "--js");
+    let empty_path = output_root.join("empty-path");
+    fs::create_dir_all(&empty_path).expect("empty PATH dir should be created");
+    let mut client = ScriptedMcpClient::spawn_with_path(&capsule, &empty_path);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_js_missing_node",
+                "amount": 120,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let call = client.read_response("DependencyError tools/call response");
+    assert_eq!(call["id"], 10);
+    assert_eq!(call["result"]["isError"], true);
+    let error_text = call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(error_text.contains("DependencyError"));
+    assert!(error_text.contains("node"));
+    assert!(error_text.contains("missing"));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "tools/list",
+        "params": {}
+    }));
+    let tools = client.read_response("tools/list after DependencyError response");
+    assert_eq!(tools["id"], 11);
+    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn mcp_stdio_lists_and_reads_manifest_resources() {
     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
     let mut client = ScriptedMcpClient::spawn(&capsule);

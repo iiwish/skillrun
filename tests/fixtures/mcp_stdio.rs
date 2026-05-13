@@ -13,14 +13,26 @@ pub struct ScriptedMcpClient {
 
 impl ScriptedMcpClient {
     pub fn spawn(capsule: &Path) -> Self {
+        Self::spawn_with_env(capsule, &[])
+    }
+
+    #[allow(dead_code)]
+    pub fn spawn_with_path(capsule: &Path, path: &Path) -> Self {
+        Self::spawn_with_env(capsule, &[("PATH", path.to_string_lossy().as_ref())])
+    }
+
+    fn spawn_with_env(capsule: &Path, envs: &[(&str, &str)]) -> Self {
         let cwd = capsule.to_string_lossy().to_string();
-        let mut child = Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        let mut command = Command::new(env!("CARGO_BIN_EXE_skillrun"));
+        command
             .args(["serve", "--mcp", "--cwd", &cwd])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("MCP server process should spawn");
+            .stderr(Stdio::piped());
+        for (key, value) in envs {
+            command.env(key, value);
+        }
+        let mut child = command.spawn().expect("MCP server process should spawn");
 
         let stdin = child.stdin.take().expect("MCP stdin should be piped");
         let stdout = child.stdout.take().expect("MCP stdout should be piped");

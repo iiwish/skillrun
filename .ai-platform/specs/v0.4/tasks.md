@@ -322,7 +322,7 @@ Evidence required:
 
 ### T034: Preserve MCP Server On DependencyError
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T033
 Blocks: T036
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029, T030, T031, T032 and T033 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029, T030, T031, T032, T033 and T034 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.

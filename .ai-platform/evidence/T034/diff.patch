@@ -1,0 +1,112 @@
+﻿diff --git a/.ai-platform/specs/v0.4/tasks.md b/.ai-platform/specs/v0.4/tasks.md
+index 2a0b60b..d3c17be 100644
+--- a/.ai-platform/specs/v0.4/tasks.md
++++ b/.ai-platform/specs/v0.4/tasks.md
+@@ -322,7 +322,7 @@ Evidence required:
+
+ ### T034: Preserve MCP Server On DependencyError
+
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T033
+ Blocks: T036
+@@ -491,4 +491,4 @@ Evidence required:
+ ## User Review Gate
+
+ - Approval: Pending.
+-- Reviewer notes: T029, T030, T031, T032 and T033 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
++- Reviewer notes: T029, T030, T031, T032, T033 and T034 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+diff --git a/tests/fixtures/mcp_stdio.rs b/tests/fixtures/mcp_stdio.rs
+index 4dd1426..cc55a80 100644
+--- a/tests/fixtures/mcp_stdio.rs
++++ b/tests/fixtures/mcp_stdio.rs
+@@ -13,14 +13,26 @@ pub struct ScriptedMcpClient {
+
+ impl ScriptedMcpClient {
+     pub fn spawn(capsule: &Path) -> Self {
++        Self::spawn_with_env(capsule, &[])
++    }
++
++    #[allow(dead_code)]
++    pub fn spawn_with_path(capsule: &Path, path: &Path) -> Self {
++        Self::spawn_with_env(capsule, &[("PATH", path.to_string_lossy().as_ref())])
++    }
++
++    fn spawn_with_env(capsule: &Path, envs: &[(&str, &str)]) -> Self {
+         let cwd = capsule.to_string_lossy().to_string();
+-        let mut child = Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        let mut command = Command::new(env!("CARGO_BIN_EXE_skillrun"));
++        command
+             .args(["serve", "--mcp", "--cwd", &cwd])
+             .stdin(Stdio::piped())
+             .stdout(Stdio::piped())
+-            .stderr(Stdio::piped())
+-            .spawn()
+-            .expect("MCP server process should spawn");
++            .stderr(Stdio::piped());
++        for (key, value) in envs {
++            command.env(key, value);
++        }
++        let mut child = command.spawn().expect("MCP server process should spawn");
+
+         let stdin = child.stdin.take().expect("MCP stdin should be piped");
+         let stdout = child.stdout.take().expect("MCP stdout should be piped");
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+index d14ddce..23cca9d 100644
+--- a/tests/mcp_server.rs
++++ b/tests/mcp_server.rs
+@@ -372,6 +372,53 @@ fn mcp_stdio_lists_and_calls_js_manifest_tool() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn mcp_stdio_dependency_error_keeps_server_alive() {
++    let (output_root, capsule) =
++        generated_capsule_with_flag("mcp-js-dependency-error-survival", "--js");
++    let empty_path = output_root.join("empty-path");
++    fs::create_dir_all(&empty_path).expect("empty PATH dir should be created");
++    let mut client = ScriptedMcpClient::spawn_with_path(&capsule, &empty_path);
++    client.initialize();
++    client.initialized();
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 10,
++        "method": "tools/call",
++        "params": {
++            "name": "refund",
++            "arguments": {
++                "order_id": "order_js_missing_node",
++                "amount": 120,
++                "reason": "damaged",
++                "customer_tier": "standard"
++            }
++        }
++    }));
++    let call = client.read_response("DependencyError tools/call response");
++    assert_eq!(call["id"], 10);
++    assert_eq!(call["result"]["isError"], true);
++    let error_text = call["result"]["content"][0]["text"]
++        .as_str()
++        .unwrap_or_default();
++    assert!(error_text.contains("DependencyError"));
++    assert!(error_text.contains("node"));
++    assert!(error_text.contains("missing"));
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 11,
++        "method": "tools/list",
++        "params": {}
++    }));
++    let tools = client.read_response("tools/list after DependencyError response");
++    assert_eq!(tools["id"], 11);
++    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn mcp_stdio_lists_and_reads_manifest_resources() {
+     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
