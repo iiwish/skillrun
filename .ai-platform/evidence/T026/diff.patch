@@ -1,0 +1,663 @@
+diff --git a/src/cli.rs b/src/cli.rs
+index ac1503b..c9298a5 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -2,6 +2,7 @@ use std::path::PathBuf;
+ use std::process::ExitCode;
+
+ use crate::consumer;
++use crate::doctor::{self, DoctorOptions};
+ use crate::init::{self, InitLanguage, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
+@@ -76,6 +77,27 @@ where
+                 ExitCode::from(2)
+             }
+         },
++        Some("doctor") => match parse_doctor(args.collect()) {
++            Ok(options) => match doctor::check(&options) {
++                Ok(report) => {
++                    println!("{}", report.output);
++                    if report.ok {
++                        ExitCode::SUCCESS
++                    } else {
++                        ExitCode::from(2)
++                    }
++                }
++                Err(error) => {
++                    eprintln!("error: {error}");
++                    ExitCode::from(2)
++                }
++            },
++            Err(error) => {
++                eprintln!("error: {error}");
++                eprintln!("usage: skillrun doctor [--cwd <dir>]");
++                ExitCode::from(2)
++            }
++        },
+         Some("test") => match parse_test(args.collect()) {
+             Ok(options) => match runtime::run_test(&options) {
+                 Ok(outcome) => {
+@@ -278,6 +300,26 @@ fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
+     Ok(InspectOptions { cwd })
+ }
+
++fn parse_doctor(args: Vec<String>) -> Result<DoctorOptions, String> {
++    let mut cwd = PathBuf::from(".");
++    let mut index = 0;
++
++    while index < args.len() {
++        match args[index].as_str() {
++            "--cwd" => {
++                let Some(value) = args.get(index + 1) else {
++                    return Err("--cwd requires a directory".to_string());
++                };
++                cwd = PathBuf::from(value);
++                index += 2;
++            }
++            value => return Err(format!("unexpected doctor argument: {value}")),
++        }
++    }
++
++    Ok(DoctorOptions { cwd })
++}
++
+ fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
+     let mut cwd = PathBuf::from(".");
+     let mut index = 0;
+@@ -397,6 +439,7 @@ MVP commands:
+   init       create a Python stable or JS alpha action capsule skeleton
+   manifest   generate the Manifest from SOP, action metadata, config and examples
+   inspect    show capsule contract, permissions and instruction-only status
++  doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+   test       run the default example through the runtime contract
+   run        run a capsule with an explicit input file
+   serve      expose Manifest-driven MCP tools
+@@ -408,12 +451,11 @@ Implemented:
+   init --js (alpha)
+   manifest
+   inspect
++  doctor
+   test
+   run
+   serve --mcp
+   serve --mcp --dry-run
+-  pack
+-
+-Later tasks wire tools/call and resources/read into the MCP server."
++  pack"
+     );
+ }
+diff --git a/src/doctor.rs b/src/doctor.rs
+new file mode 100644
+index 0000000..ede3ead
+--- /dev/null
++++ b/src/doctor.rs
+@@ -0,0 +1,320 @@
++use serde_yaml::Value;
++use std::fs;
++use std::path::{Path, PathBuf};
++
++use crate::hashing;
++use crate::manifest;
++
++#[derive(Debug)]
++pub struct DoctorOptions {
++    pub cwd: PathBuf,
++}
++
++pub struct DoctorReport {
++    pub output: String,
++    pub ok: bool,
++}
++
++pub fn check(options: &DoctorOptions) -> Result<DoctorReport, String> {
++    let cwd = absolute_path(&options.cwd)?;
++    if !cwd.exists() {
++        return Err(format!("cwd does not exist: {}", cwd.display()));
++    }
++    if !cwd.is_dir() {
++        return Err(format!("cwd is not a directory: {}", cwd.display()));
++    }
++
++    let manifest_path = manifest::generated_manifest_path(&cwd);
++    let files = FileStatus::read(&cwd);
++
++    if !files.skill {
++        return Ok(report_without_manifest(
++            &cwd,
++            &manifest_path,
++            &files,
++            "invalid",
++            "missing SKILL.md",
++            "Add SKILL.md before running `skillrun manifest`.",
++        ));
++    }
++
++    if !manifest_path.is_file() {
++        if files.typescript && !files.python_action && !files.node_action {
++            return Ok(report_without_manifest(
++                &cwd,
++                &manifest_path,
++                &files,
++                "unsupported-typescript",
++                "action.ts is not supported in v0.3 JS alpha.",
++                &format!(
++                    "compile to action.mjs, then run `skillrun manifest --cwd {}`.",
++                    cwd.display()
++                ),
++            ));
++        }
++
++        if !files.python_action && !files.node_action {
++            return Ok(report_without_manifest(
++                &cwd,
++                &manifest_path,
++                &files,
++                "instruction-only",
++                "SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
++                &format!(
++                    "Add action.py or action.mjs, then run `skillrun manifest --cwd {}`.",
++                    cwd.display()
++                ),
++            ));
++        }
++
++        return Ok(report_without_manifest(
++            &cwd,
++            &manifest_path,
++            &files,
++            "missing-manifest",
++            "missing Manifest for Consumer Mode.",
++            &format!("Run `skillrun manifest --cwd {}`.", cwd.display()),
++        ));
++    }
++
++    report_with_manifest(&cwd, &manifest_path, &files)
++}
++
++struct FileStatus {
++    skill: bool,
++    python_action: bool,
++    node_action: bool,
++    typescript: bool,
++    config: bool,
++}
++
++impl FileStatus {
++    fn read(cwd: &Path) -> Self {
++        Self {
++            skill: cwd.join("SKILL.md").is_file(),
++            python_action: cwd.join("action.py").is_file(),
++            node_action: cwd.join("action.mjs").is_file(),
++            typescript: cwd.join("action.ts").is_file(),
++            config: cwd.join("skillrun.config.json").is_file(),
++        }
++    }
++}
++
++fn report_without_manifest(
++    cwd: &Path,
++    manifest_path: &Path,
++    files: &FileStatus,
++    status: &str,
++    reason: &str,
++    next_step: &str,
++) -> DoctorReport {
++    DoctorReport {
++        output: format!(
++            "\
++SkillRun Doctor
++cwd: {cwd}
++status: {status}
++files:
++{files}
++manifest:
++  path: {manifest_path}
++  present: no
++  manifest freshness: missing
++examples:
++  examples/default.input.json: {example_status}
++reason: {reason}
++next step: {next_step}
++note: doctor reads files and hashes only; it does not run or import action source.",
++            cwd = cwd.display(),
++            manifest_path = manifest_path.display(),
++            files = render_files(files),
++            example_status = presence(cwd.join("examples").join("default.input.json").is_file()),
++        ),
++        ok: false,
++    }
++}
++
++fn report_with_manifest(
++    cwd: &Path,
++    manifest_path: &Path,
++    files: &FileStatus,
++) -> Result<DoctorReport, String> {
++    let text = fs::read_to_string(manifest_path)
++        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
++    let manifest: Value = serde_yaml::from_str(&text)
++        .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
++
++    let adapter = string_at(&manifest, &["runtime", "adapter"]).unwrap_or("unknown");
++    let entrypoint = string_at(&manifest, &["runtime", "entrypoint"]).unwrap_or("unknown");
++    let source_checks = source_checks(cwd, &manifest);
++    let examples = example_checks(cwd, &manifest);
++    let all_fresh = source_checks.iter().all(|check| check.status == "fresh");
++    let status = if all_fresh { "ok" } else { "stale-manifest" };
++    let freshness = if all_fresh { "fresh" } else { "stale" };
++    let next_step = if all_fresh {
++        "none".to_string()
++    } else {
++        format!("Run `skillrun manifest --cwd {}`.", cwd.display())
++    };
++
++    Ok(DoctorReport {
++        output: format!(
++            "\
++SkillRun Doctor
++cwd: {cwd}
++status: {status}
++files:
++{files}
++manifest:
++  path: {manifest_path}
++  present: yes
++  manifest freshness: {freshness}
++runtime:
++  adapter: {adapter}
++  entrypoint: {entrypoint}
++sources:
++{sources}
++examples:
++{examples}
++next step: {next_step}
++note: doctor reads files and hashes only; it does not run or import action source.",
++            cwd = cwd.display(),
++            files = render_files(files),
++            manifest_path = manifest_path.display(),
++            sources = render_source_checks(&source_checks),
++            examples = render_example_checks(&examples),
++        ),
++        ok: all_fresh,
++    })
++}
++
++struct SourceCheck {
++    path: String,
++    status: &'static str,
++}
++
++fn source_checks(cwd: &Path, manifest: &Value) -> Vec<SourceCheck> {
++    let mut checks = Vec::new();
++    for key in ["skill", "action", "config"] {
++        let Some(path) = string_at(manifest, &["sources", key, "path"]) else {
++            continue;
++        };
++        let expected = string_at(manifest, &["sources", key, "sha256"]);
++        let status = match expected {
++            Some(expected) => match hashing::sha256_file(&cwd.join(path)) {
++                Ok(actual) if actual == expected => "fresh",
++                Ok(_) => "stale",
++                Err(_) => "missing",
++            },
++            None => "missing-hash",
++        };
++        checks.push(SourceCheck {
++            path: path.to_string(),
++            status,
++        });
++    }
++    checks
++}
++
++struct ExampleCheck {
++    path: String,
++    present: bool,
++}
++
++fn example_checks(cwd: &Path, manifest: &Value) -> Vec<ExampleCheck> {
++    let Some(Value::Sequence(items)) = value_at(manifest, &["examples"]) else {
++        return vec![ExampleCheck {
++            path: "examples/default.input.json".to_string(),
++            present: cwd.join("examples").join("default.input.json").is_file(),
++        }];
++    };
++
++    let checks = items
++        .iter()
++        .filter_map(|item| string_at(item, &["input"]))
++        .map(|path| ExampleCheck {
++            path: path.to_string(),
++            present: cwd.join(path).is_file(),
++        })
++        .collect::<Vec<_>>();
++
++    if checks.is_empty() {
++        vec![ExampleCheck {
++            path: "examples/default.input.json".to_string(),
++            present: cwd.join("examples").join("default.input.json").is_file(),
++        }]
++    } else {
++        checks
++    }
++}
++
++fn render_files(files: &FileStatus) -> String {
++    format!(
++        "\
++  SKILL.md: {skill}
++  action.py: {python}
++  action.mjs: {node}
++  action.ts: {typescript}
++  skillrun.config.json: {config}",
++        skill = presence(files.skill),
++        python = presence(files.python_action),
++        node = presence(files.node_action),
++        typescript = presence(files.typescript),
++        config = presence(files.config),
++    )
++}
++
++fn render_source_checks(checks: &[SourceCheck]) -> String {
++    if checks.is_empty() {
++        return "  none".to_string();
++    }
++
++    checks
++        .iter()
++        .map(|check| format!("  {}: {}", check.path, check.status))
++        .collect::<Vec<_>>()
++        .join("\n")
++}
++
++fn render_example_checks(checks: &[ExampleCheck]) -> String {
++    if checks.is_empty() {
++        return "  none".to_string();
++    }
++
++    checks
++        .iter()
++        .map(|check| format!("  {}: {}", check.path, presence(check.present)))
++        .collect::<Vec<_>>()
++        .join("\n")
++}
++
++fn presence(value: bool) -> &'static str {
++    if value {
++        "present"
++    } else {
++        "absent"
++    }
++}
++
++fn absolute_path(path: &Path) -> Result<PathBuf, String> {
++    if path.is_absolute() {
++        Ok(path.to_path_buf())
++    } else {
++        std::env::current_dir()
++            .map(|cwd| cwd.join(path))
++            .map_err(|error| format!("failed to resolve current directory: {error}"))
++    }
++}
++
++fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
++    let mut current = value;
++    for segment in path {
++        let key = Value::String((*segment).to_string());
++        current = current.as_mapping()?.get(&key)?;
++    }
++    Some(current)
++}
++
++fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
++    value_at(value, path)?.as_str()
++}
+diff --git a/src/main.rs b/src/main.rs
+index a2ebbf5..0a4057f 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -4,6 +4,7 @@ mod adapters;
+ mod cli;
+ mod config;
+ mod consumer;
++mod doctor;
+ mod errors;
+ mod hashing;
+ mod init;
+diff --git a/tests/cli.rs b/tests/cli.rs
+index ae531cb..e491616 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -18,7 +18,7 @@ fn help_lists_core_commands() {
+     assert!(stdout.contains("skillrun"));
+
+     for command in [
+-        "init", "manifest", "inspect", "test", "run", "serve", "pack",
++        "init", "manifest", "inspect", "doctor", "test", "run", "serve", "pack",
+     ] {
+         assert!(
+             stdout.contains(command),
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index c388355..b96f73d 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -109,6 +109,26 @@ fn assert_success_json(output: &std::process::Output) -> Value {
+     serde_json::from_str(&stdout).expect("stdout should be JSON")
+ }
+
++fn assert_success_stdout(output: &std::process::Output, label: &str) -> String {
++    assert!(
++        output.status.success(),
++        "{label} should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
++}
++
++fn assert_failure_stdout(output: &std::process::Output, label: &str) -> String {
++    assert!(
++        !output.status.success(),
++        "{label} should fail\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
++}
++
+ #[test]
+ fn run_refuses_stale_skill_hash_before_creating_run() {
+     let (output_root, capsule) = generated_capsule("guard-stale-skill");
+@@ -205,3 +225,110 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
+
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn doctor_reports_valid_python_and_js_capsules_without_language_flags() {
++    let (python_root, python_capsule) = generated_capsule("doctor-valid-python");
++    let python_cwd = python_capsule.to_string_lossy().to_string();
++    let python = run_skillrun(&["doctor", "--cwd", &python_cwd]);
++    let python_stdout = assert_success_stdout(&python, "python doctor");
++
++    for expected in [
++        "SkillRun Doctor",
++        "status: ok",
++        "adapter: python",
++        "entrypoint: action.py",
++        "manifest freshness: fresh",
++        "examples/default.input.json: present",
++    ] {
++        assert!(
++            python_stdout.contains(expected),
++            "python doctor missing {expected:?}\n{python_stdout}"
++        );
++    }
++    assert!(!python_stdout.contains("--python"));
++    assert!(!python_stdout.contains("--js"));
++
++    let (js_root, js_capsule) = generated_js_capsule("doctor-valid-js");
++    let js_cwd = js_capsule.to_string_lossy().to_string();
++    let js = run_skillrun(&["doctor", "--cwd", &js_cwd]);
++    let js_stdout = assert_success_stdout(&js, "JS doctor");
++
++    for expected in [
++        "status: ok",
++        "adapter: node",
++        "entrypoint: action.mjs",
++        "manifest freshness: fresh",
++        "examples/default.input.json: present",
++    ] {
++        assert!(
++            js_stdout.contains(expected),
++            "JS doctor missing {expected:?}\n{js_stdout}"
++        );
++    }
++    assert!(!js_stdout.contains("--python"));
++    assert!(!js_stdout.contains("--js"));
++
++    fs::remove_dir_all(python_root).ok();
++    fs::remove_dir_all(js_root).ok();
++}
++
++#[test]
++fn doctor_reports_stale_manifest_without_creating_run_records() {
++    let (output_root, capsule) = generated_js_capsule("doctor-stale-js");
++    append_to(&capsule.join("action.mjs"), "\n// changed before doctor\n");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
++    let stdout = assert_failure_stdout(&doctor, "stale JS doctor");
++
++    for expected in [
++        "status: stale-manifest",
++        "manifest freshness: stale",
++        "action.mjs: stale",
++        "skillrun manifest",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "stale doctor missing {expected:?}\n{stdout}"
++        );
++    }
++    assert!(
++        !capsule.join(".skillrun").join("runs").exists(),
++        "doctor must not create run records"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn doctor_does_not_import_js_action_for_metadata() {
++    let (output_root, capsule) = generated_js_capsule("doctor-js-no-import");
++    let marker = output_root.join("doctor-import-marker.txt");
++    let marker_literal = serde_json::to_string(&marker.to_string_lossy().to_string())
++        .expect("marker should serialize");
++    let action_path = capsule.join("action.mjs");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let action = format!(
++        "import fs from \"node:fs\";\nfs.writeFileSync({marker_literal}, \"imported\", \"utf8\");\n{action}"
++    );
++    fs::write(&action_path, action).expect("action should be updated");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(manifest.status.success());
++    assert!(
++        marker.is_file(),
++        "manifest metadata extraction imports action.mjs in Author Mode"
++    );
++    fs::remove_file(&marker).expect("marker should be removed before doctor");
++
++    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
++    assert_success_stdout(&doctor, "JS doctor no import");
++    assert!(
++        !marker.exists(),
++        "doctor must not import action.mjs for metadata"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/instruction_only.rs b/tests/instruction_only.rs
+index 013ffaf..1e09f9e 100644
+--- a/tests/instruction_only.rs
++++ b/tests/instruction_only.rs
+@@ -68,6 +68,16 @@ fn assert_instruction_refusal(output: &std::process::Output, command: &str) -> S
+     stderr
+ }
+
++fn assert_failure_stdout(output: &std::process::Output, command: &str) -> String {
++    assert!(
++        !output.status.success(),
++        "{command} should fail\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
++}
++
+ #[test]
+ fn inspect_reports_instruction_only_status_with_scripts_and_examples_present() {
+     let (output_root, skill) = instruction_only_skill("instruction-inspect");
+@@ -162,3 +172,58 @@ fn missing_action_with_manifest_is_not_treated_as_runnable() {
+
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn doctor_reports_instruction_only_skill_without_inference() {
++    let (output_root, skill) = instruction_only_skill("instruction-doctor");
++    let cwd_arg = skill.to_string_lossy().to_string();
++
++    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
++    let stdout = assert_failure_stdout(&doctor, "instruction-only doctor");
++
++    for expected in [
++        "SkillRun Doctor",
++        "status: instruction-only",
++        "SKILL.md: present",
++        "action.py: absent",
++        "action.mjs: absent",
++        "does not infer actions",
++        "skillrun manifest",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "instruction-only doctor missing {expected:?}\n{stdout}"
++        );
++    }
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn doctor_reports_unsupported_typescript_action() {
++    let output_root = temp_dir("instruction-doctor-typescript");
++    let skill = output_root.join("ts-skill");
++    fs::create_dir_all(&skill).expect("skill dir should be created");
++    fs::write(skill.join("SKILL.md"), "# TS Skill\n").expect("SKILL.md should be written");
++    fs::write(skill.join("action.ts"), "export async function run() {}\n")
++        .expect("action.ts should be written");
++
++    let cwd_arg = skill.to_string_lossy().to_string();
++    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
++    let stdout = assert_failure_stdout(&doctor, "typescript doctor");
++
++    for expected in [
++        "status: unsupported-typescript",
++        "action.ts: present",
++        "action.ts is not supported",
++        "compile to action.mjs",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "TypeScript doctor missing {expected:?}\n{stdout}"
++        );
++    }
++    assert!(!stdout.contains("--js"));
++
++    fs::remove_dir_all(output_root).ok();
++}

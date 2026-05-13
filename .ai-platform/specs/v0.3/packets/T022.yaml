@@ -1,0 +1,99 @@
+task_id: T022
+schema_version: "1.0"
+packet_id: "v0.3-T022"
+feature_id: "v0.3"
+title: Implement Node Metadata Extraction From Explicit JSON Schema
+status: Accepted
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T022
+  title: Implement Node Metadata Extraction From Explicit JSON Schema
+  status: Accepted
+  feature_id: v0.3
+goal: Allow skillrun manifest to resolve adapter by config-first deterministic convention and generate Manifest schemas from action.mjs JSON Schema exports.
+requirement_mapping:
+  - FR-001
+  - FR-004
+  - FR-006
+  - NFR-002
+  - NFR-003
+  - NFR-004
+dependencies:
+  - T020
+  - T021
+blocks:
+  - T023
+  - T024
+allowed_files:
+  - src/adapters/mod.rs
+  - src/adapters/node.rs
+  - src/manifest.rs
+  - src/consumer.rs
+  - tests/manifest.rs
+  - tests/consumer_guards.rs
+conflicts_with:
+  - T020
+  - T023
+  - T024
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - src/pack.rs
+  - README.md
+codebase_context:
+  - "JS schema must come from explicit inputSchema and outputSchema exports."
+  - "TypeScript, Zod, TypeBox, JSDoc and examples must not be used for schema inference."
+  - "Consumer Mode validates static Manifest hashes and must not import source for metadata."
+execution_constraints:
+  - "Do not implement JS runtime execution."
+  - "Do not add package manager or TypeScript runtime behavior."
+  - "Fail closed for ambiguous action files."
+tdd_plan:
+  red: "Add failing JS Manifest generation tests, config-first convention tests, ambiguous-action tests, and unsupported TS tests."
+  green: "Implement Node metadata extraction and adapter resolution."
+  refactor: "Share timeout/error helpers only if duplication becomes meaningful."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test manifest --test consumer_guards"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T022/summary.md"
+  test_results: ".ai-platform/evidence/T022/test-results.md"
+  diff: ".ai-platform/evidence/T022/diff.patch"
+acceptance_criteria:
+  - "JS Manifest records sources.action.path: action.mjs."
+  - "JS Manifest records runtime.adapter: node."
+  - "Config runtime settings override action-file convention."
+  - "Multiple known action files fail as ambiguous."
+  - "No TypeScript type inference is introduced."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T022"
+  next_status_after_execution: Accepted
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "JS metadata and Python metadata tests pass."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

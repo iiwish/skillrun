@@ -133,7 +133,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.3.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");

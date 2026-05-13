@@ -2,7 +2,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::consumer;
-use crate::init::{self, InitOptions};
+use crate::doctor::{self, DoctorOptions};
+use crate::init::{self, InitLanguage, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
@@ -26,7 +27,7 @@ where
             ExitCode::SUCCESS
         }
         Some("init") => match parse_init(args.collect()) {
-            Ok(options) => match init::create_python_capsule(&options) {
+            Ok(options) => match init::create_capsule(&options) {
                 Ok(path) => {
                     println!("created {}", path.display());
                     ExitCode::SUCCESS
@@ -38,7 +39,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun init <name> --python [--output <dir>]");
+                eprintln!("usage: skillrun init <name> (--python|--py|--js) [--output <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -73,6 +74,27 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun inspect [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("doctor") => match parse_doctor(args.collect()) {
+            Ok(options) => match doctor::check(&options) {
+                Ok(report) => {
+                    println!("{}", report.output);
+                    if report.ok {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun doctor [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -182,14 +204,18 @@ struct ServeOptions {
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
     let mut name = None;
-    let mut python = false;
+    let mut language = None;
     let mut output_dir = PathBuf::from(".");
     let mut index = 0;
 
     while index < args.len() {
         match args[index].as_str() {
-            "--python" => {
-                python = true;
+            "--python" | "--py" => {
+                set_language(&mut language, InitLanguage::Python)?;
+                index += 1;
+            }
+            "--js" => {
+                set_language(&mut language, InitLanguage::Js)?;
                 index += 1;
             }
             "--output" => {
@@ -212,12 +238,26 @@ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
         }
     }
 
-    if !python {
-        return Err("init currently requires --python".to_string());
-    }
-
     let name = name.ok_or_else(|| "init requires a capsule name".to_string())?;
-    Ok(InitOptions { name, output_dir })
+    let language = language.ok_or_else(|| "init requires --python, --py, or --js".to_string())?;
+    Ok(InitOptions {
+        name,
+        output_dir,
+        language,
+    })
+}
+
+fn set_language(language: &mut Option<InitLanguage>, value: InitLanguage) -> Result<(), String> {
+    match language {
+        Some(existing) if *existing != value => {
+            Err("choose only one language: --python/--py or --js".to_string())
+        }
+        Some(_) => Ok(()),
+        None => {
+            *language = Some(value);
+            Ok(())
+        }
+    }
 }
 
 fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
@@ -258,6 +298,26 @@ fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
     }
 
     Ok(InspectOptions { cwd })
+}
+
+fn parse_doctor(args: Vec<String>) -> Result<DoctorOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected doctor argument: {value}")),
+        }
+    }
+
+    Ok(DoctorOptions { cwd })
 }
 
 fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
@@ -376,9 +436,10 @@ Usage:
   skillrun <command> [options]
 
 MVP commands:
-  init       create a Python action capsule skeleton
+  init       create a Python stable or JS alpha action capsule skeleton
   manifest   generate the Manifest from SOP, action metadata, config and examples
   inspect    show capsule contract, permissions and instruction-only status
+  doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
   test       run the default example through the runtime contract
   run        run a capsule with an explicit input file
   serve      expose Manifest-driven MCP tools
@@ -386,14 +447,15 @@ MVP commands:
 
 Implemented:
   init --python
+  init --py
+  init --js (alpha)
   manifest
   inspect
+  doctor
   test
   run
   serve --mcp
   serve --mcp --dry-run
-  pack
-
-Later tasks wire tools/call and resources/read into the MCP server."
+  pack"
     );
 }

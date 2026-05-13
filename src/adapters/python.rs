@@ -3,24 +3,8 @@ use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::adapters::{ActionRunOutput, ActionRunRequest};
 use crate::schemas::Schemas;
-
-pub struct ActionRunRequest<'a> {
-    pub capsule_dir: &'a Path,
-    pub entrypoint: &'a str,
-    pub context_json: &'a Path,
-    pub input_json: &'a Path,
-    pub output_json: &'a Path,
-    pub artifact_dir: &'a Path,
-    pub env: &'a [(String, String)],
-    pub timeout: Duration,
-}
-
-pub struct ActionRunOutput {
-    pub success: bool,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
-}
 
 pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
     let action_path = action_path

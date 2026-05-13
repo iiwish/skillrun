@@ -1,0 +1,103 @@
+task_id: T020
+schema_version: "1.0"
+packet_id: "v0.3-T020"
+feature_id: "v0.3"
+title: Introduce Adapter Dispatch Boundary
+status: Accepted
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T020
+  title: Introduce Adapter Dispatch Boundary
+  status: Accepted
+  feature_id: v0.3
+goal: Move metadata extraction and runtime execution behind an adapter dispatch boundary while preserving Python behavior.
+requirement_mapping:
+  - FR-001
+  - FR-002
+  - FR-006
+  - NFR-003
+  - NFR-004
+dependencies:
+  - T019
+blocks:
+  - T022
+  - T023
+  - T026
+allowed_files:
+  - src/main.rs
+  - src/adapters/python.rs
+  - src/adapters/mod.rs
+  - src/manifest.rs
+  - src/runtime.rs
+  - src/config.rs
+  - tests/manifest.rs
+  - tests/runtime.rs
+  - tests/e2e_matrix.rs
+conflicts_with:
+  - T021
+  - T022
+  - T023
+  - T024
+  - T026
+must_not_change:
+  - templates/js/SKILL.md
+  - templates/js/action.mjs
+  - templates/js/examples/default.input.json
+  - templates/js/skillrun.config.json
+  - README.md
+codebase_context:
+  - "main.rs currently declares adapters::python directly."
+  - "manifest.rs currently calls python::extract_schemas."
+  - "runtime.rs currently calls python::run_action after checking adapter == python."
+  - "Consumer, MCP and pack are already mostly Manifest-driven and should remain language-neutral."
+execution_constraints:
+  - "Preserve existing Python behavior."
+  - "Do not implement Node metadata or runtime in this task."
+  - "Keep Manifest and run record shape compatible with v0.2 unless explicitly versioned."
+tdd_plan:
+  red: "Use T019 characterization tests as regression guard."
+  green: "Introduce adapter dispatch with Python wired through it."
+  refactor: "Clean duplicated request structs only after tests pass."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test manifest --test runtime --test e2e_matrix"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T020/summary.md"
+  test_results: ".ai-platform/evidence/T020/test-results.md"
+  diff: ".ai-platform/evidence/T020/diff.patch"
+acceptance_criteria:
+  - "Existing Python release matrix passes."
+  - "Unsupported adapter errors remain clear and deterministic."
+  - "Core no longer directly assumes Python in both manifest generation and runtime execution."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T020"
+  next_status_after_execution: Accepted
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Full cargo test passes."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

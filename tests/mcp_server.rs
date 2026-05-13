@@ -24,11 +24,11 @@ fn temp_dir(label: &str) -> PathBuf {
     std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
 }
 
-fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
+fn init_capsule_with_flag(label: &str, flag: &str) -> (PathBuf, PathBuf) {
     let output_root = temp_dir(label);
     let output_arg = output_root.to_string_lossy().to_string();
 
-    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
+    let init = run_skillrun(&["init", "refund", flag, "--output", &output_arg]);
     assert!(
         init.status.success(),
         "init should succeed\nstderr: {}",
@@ -37,6 +37,10 @@ fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
 
     let capsule = output_root.join("refund");
     (output_root, capsule)
+}
+
+fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
+    init_capsule_with_flag(label, "--python")
 }
 
 fn write_manifest(capsule: &Path) {
@@ -55,6 +59,12 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn generated_capsule_with_flag(label: &str, flag: &str) -> (PathBuf, PathBuf) {
+    let (output_root, capsule) = init_capsule_with_flag(label, flag);
+    write_manifest(&capsule);
+    (output_root, capsule)
+}
+
 fn assert_success_json(output: &std::process::Output) -> Value {
     assert!(
         output.status.success(),
@@ -64,6 +74,10 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     );
     let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
     serde_json::from_str(&stdout).expect("stdout should be JSON")
+}
+
+fn is_64_hex(value: &str) -> bool {
+    value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
 }
 
 #[test]
@@ -88,6 +102,47 @@ fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
     assert_eq!(
         contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
         "integer"
+    );
+    assert_eq!(
+        contract["tools"][0]["result_contract"],
+        "SkillRun output/error envelope"
+    );
+    assert_eq!(contract["resources"][0]["path"], "SKILL.md");
+    assert_eq!(contract["resources"][0]["mime_type"], "text/markdown");
+    let resource_text = contract["resources"][0]["text"]
+        .as_str()
+        .expect("resource text should be a string");
+    assert!(resource_text.to_ascii_lowercase().contains("refund"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn mcp_dry_run_maps_js_manifest_tool_schema_and_skill_resource() {
+    let (output_root, capsule) = generated_capsule_with_flag("mcp-js-dry-run", "--js");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+    let contract = assert_success_json(&serve);
+
+    assert_eq!(contract["mcp"]["dry_run"], true);
+    assert_eq!(contract["mcp"]["transport"], "stdio");
+    assert_eq!(contract["tools"][0]["name"], "refund");
+    assert_eq!(
+        contract["tools"][0]["input_schema"]["properties"]["order_id"]["type"],
+        "string"
+    );
+    assert_eq!(
+        contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        contract["tools"][0]["input_schema"]["properties"]["reason"]["enum"][2],
+        "wrong_item"
+    );
+    assert_eq!(
+        contract["tools"][0]["output_schema"]["properties"]["decision"]["enum"][1],
+        "needs_approval"
     );
     assert_eq!(
         contract["tools"][0]["result_contract"],
@@ -230,6 +285,94 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
 }
 
 #[test]
+fn mcp_stdio_lists_and_calls_js_manifest_tool() {
+    let (output_root, capsule) = generated_capsule_with_flag("mcp-js-stdio-tools", "--js");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    }));
+    let tools = client.read_response("JS tools/list response");
+    assert_eq!(tools["id"], 2);
+    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+    assert_eq!(
+        tools["result"]["tools"][0]["inputSchema"]["properties"]["amount"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        tools["result"]["tools"][0]["outputSchema"]["properties"]["decision"]["enum"][1],
+        "needs_approval"
+    );
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_js_1001",
+                "amount": 120,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let call = client.read_response("JS tools/call response");
+    assert_eq!(call["id"], 3);
+    assert_eq!(call["result"]["isError"], false);
+    assert_eq!(call["result"]["content"][0]["type"], "text");
+    assert!(call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("approved"));
+    let run_record = fs::read_dir(capsule.join(".skillrun").join("runs"))
+        .expect("runs directory should be readable")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("record.json"))
+        .find(|path| path.is_file())
+        .expect("tools/call should create a SkillRun run record");
+    let record: Value = serde_json::from_str(
+        &fs::read_to_string(run_record).expect("run record should be readable"),
+    )
+    .expect("run record should parse");
+    assert_eq!(record["mode"], "mcp");
+    assert_eq!(record["status"], "succeeded");
+    assert!(is_64_hex(record["action_sha256"].as_str().unwrap()));
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_js_1002",
+                "amount": 1200,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let error_call = client.read_response("JS tools/call error response");
+    assert_eq!(error_call["id"], 4);
+    assert_eq!(error_call["result"]["isError"], true);
+    let error_text = error_call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(error_text.contains("PolicyViolation"));
+    assert!(error_text.contains("manager approval"));
+
+    drop(client);
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn mcp_stdio_lists_and_reads_manifest_resources() {
     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
     let mut client = ScriptedMcpClient::spawn(&capsule);
@@ -352,6 +495,37 @@ fn mcp_dry_run_does_not_import_action_for_metadata() {
     assert!(
         !marker.exists(),
         "serve --mcp --dry-run must not import action.py for metadata"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn mcp_dry_run_does_not_import_js_action_for_metadata() {
+    let (output_root, capsule) = init_capsule_with_flag("mcp-js-no-import", "--js");
+    let marker = output_root.join("js-import-marker.txt");
+    let marker_literal = serde_json::to_string(&marker.to_string_lossy().to_string())
+        .expect("marker should serialize");
+    let action_path = capsule.join("action.mjs");
+    let action = fs::read_to_string(&action_path).expect("action should be readable");
+    let action = format!(
+        "import fs from \"node:fs\";\nfs.writeFileSync({marker_literal}, \"imported\", \"utf8\");\n{action}"
+    );
+    fs::write(&action_path, action).expect("action should be updated");
+
+    write_manifest(&capsule);
+    assert!(
+        marker.is_file(),
+        "manifest metadata extraction imports action.mjs in Author Mode"
+    );
+    fs::remove_file(&marker).expect("marker should be removed before serve");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+    assert_success_json(&serve);
+    assert!(
+        !marker.exists(),
+        "serve --mcp --dry-run must not import action.mjs for metadata"
     );
 
     fs::remove_dir_all(output_root).ok();

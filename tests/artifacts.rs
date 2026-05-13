@@ -34,6 +34,21 @@ fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn init_js_capsule(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let output_arg = output_root.to_string_lossy().to_string();
+
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(
+        init.status.success(),
+        "init should succeed\nstderr: {}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let capsule = output_root.join("refund");
+    (output_root, capsule)
+}
+
 fn write_manifest(capsule: &Path) {
     let cwd_arg = capsule.to_string_lossy().to_string();
     let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
@@ -53,6 +68,16 @@ fn patch_action_run(capsule: &Path, run_body: &str) {
             "from typing import Literal\nimport os\nfrom pathlib import Path\n",
         )
         .replace("def run(input: Input, ctx) -> Output:\n", run_body);
+    fs::write(&action_path, action).expect("action should be updated");
+}
+
+fn patch_js_action_run(capsule: &Path, run_function: &str) {
+    let action_path = capsule.join("action.mjs");
+    let action = fs::read_to_string(&action_path).expect("action should be readable");
+    let start = action
+        .find("export async function run(input, ctx) {")
+        .expect("run function should exist");
+    let action = format!("{}{}", &action[..start], run_function);
     fs::write(&action_path, action).expect("action should be updated");
 }
 
@@ -103,6 +128,26 @@ fn artifact_parent_traversal_returns_permission_denied() {
     patch_action_run(
         &capsule,
         "def run(input: Input, ctx) -> Output:\n    return {\n        \"output\": Output(\n            decision=\"approved\",\n            amount=input.amount,\n            reasoning_summary=\"Declared artifact escapes the run artifact directory.\",\n            audit_note=\"artifact traversal should fail\",\n        ).model_dump(mode=\"json\"),\n        \"artifacts\": [{\"name\": \"receipt\", \"kind\": \"text\", \"path\": \"../outside.txt\"}],\n    }\n",
+    );
+    write_manifest(&capsule);
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let envelope = assert_error_envelope(&run, "PermissionDenied");
+
+    let run_id = envelope["run_id"].as_str().unwrap();
+    let record = read_json(&run_dir(&capsule, run_id).join("record.json"));
+    assert_eq!(record["status"], "failed");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_artifact_parent_traversal_returns_permission_denied() {
+    let (output_root, capsule) = init_js_capsule("artifact-js-traversal");
+    patch_js_action_run(
+        &capsule,
+        "export async function run(input, ctx) {\n  return {\n    output: {\n      decision: \"approved\",\n      amount: input.amount,\n      reasoning_summary: \"Declared artifact escapes the run artifact directory.\",\n      audit_note: \"artifact traversal should fail\"\n    },\n    artifacts: [{ name: \"receipt\", kind: \"text\", path: \"../outside.txt\" }]\n  };\n}\n",
     );
     write_manifest(&capsule);
 

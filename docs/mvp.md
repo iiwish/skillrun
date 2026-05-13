@@ -1,7 +1,7 @@
 # SkillRun MVP: Rust-first SkillRun Runtime
 
 **文档状态**：Confirmed  
-**版本**：v0.1.0 MVP contract；v0.1 未单独公开发布，v0.2.0 是第一版 public release candidate
+**版本**：v0.1.0 MVP contract；v0.1 未单独公开发布，v0.2.0 是第一版 public release candidate，v0.3.0 是 JS Action Alpha 的本地 release handoff
 **来源**：`docs/ssot.md`  
 **最后更新**：2026-05-11  
 **审批记录**：2026-05-11 用户批准进入 Plan / Work Graph 阶段；项目名称统一为 SkillRun / `skillrun`。
@@ -147,6 +147,24 @@ skillrun pack
 | `run` | 用真实输入跑一次 | 产生结构化 output、日志、run record 和 artifacts |
 | `serve --mcp` | Agent 能否调用 | 基于 Manifest 暴露 MCP tool，不重新 import 源码提取 schema |
 | `pack` | 能否分发 | 生成 `.skr` 包，包含 Manifest 和 source hashes |
+
+### 5.3 Agent 调用前学习路径
+
+SkillRun Capsule 必须能被 AI assistant 在调用前快速学习，而不是只被人类阅读。公开文档和示例应提供一段可直接交给 Agent 的学习说明。链接或 repo path 必须指向具体 Capsule 文件夹，不能只指向项目首页。
+
+```text
+请先学习这个 SkillRun Capsule，再使用它：
+<capsule-folder-url-or-repo-path>
+
+1. 阅读 SKILL.md，理解 purpose、SOP、prohibited behavior、required context 和 recovery guidance。
+2. 阅读 skillrun.config.json 和已生成的 Manifest，确认 adapter 与 entrypoint。
+3. 只把 action.py 或 action.mjs 当成该 capsule 的 action contract；不要推断未声明语言或 package-manager 行为。
+4. 阅读 examples/default.input.json，理解调用时需要的输入形态。
+5. 如果你能访问工作区，运行 `skillrun inspect --cwd <capsule>`、`skillrun doctor --cwd <capsule>` 和 `skillrun test --cwd <capsule>`。
+6. 调用 MCP tool 时，不要从 stdout 推断成功。只看 output/error envelope、artifacts 和 run record。
+```
+
+该模块的产品承诺是：用户可以把一个 Capsule 文件夹链接直接交给 Agent。这个链接可以是官网学习页，也可以是包含 `SKILL.md`、`skillrun.config.json`、`action.py` 或 `action.mjs`、`examples/` 的 GitHub 文件夹。Agent 先学习 `SKILL.md` 的认知契约、Manifest/配置中的 adapter 边界、action entrypoint 的输入输出和 preflight、`examples/` 的调用形态；有本地环境时再运行 `inspect`、`doctor` 和 `test`。它不能绕过 schema、preflight、output/error envelope、artifact 和 run record。
 
 ---
 

@@ -1,0 +1,102 @@
+task_id: T023
+schema_version: "1.0"
+packet_id: "v0.3-T023"
+feature_id: "v0.3"
+title: Implement Node Runtime Adapter
+status: Accepted
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T023
+  title: Implement Node Runtime Adapter
+  status: Accepted
+  feature_id: v0.3
+goal: Run action.mjs through the existing runtime envelope, artifact and run record path.
+requirement_mapping:
+  - FR-001
+  - FR-005
+  - FR-006
+  - NFR-001
+  - NFR-003
+  - NFR-004
+dependencies:
+  - T020
+  - T022
+blocks:
+  - T024
+  - T025
+allowed_files:
+  - src/adapters/mod.rs
+  - src/adapters/node.rs
+  - src/runtime.rs
+  - src/errors.rs
+  - tests/runtime.rs
+  - tests/errors.rs
+  - tests/artifacts.rs
+conflicts_with:
+  - T020
+  - T022
+  - T024
+  - T025
+must_not_change:
+  - src/manifest.rs
+  - src/mcp.rs
+  - src/pack.rs
+  - README.md
+codebase_context:
+  - "Runtime writes input, context, output, logs and run record under .skillrun/runs."
+  - "Adapters must write structured envelopes to SKILLRUN_OUTPUT_JSON."
+  - "stdout and stderr are logs only."
+execution_constraints:
+  - "Do not bypass Rust-side artifact validation."
+  - "Do not infer success from stdout."
+  - "Do not add package manager installation."
+tdd_plan:
+  red: "Add failing runtime tests for JS success and failure envelopes."
+  green: "Implement Node runtime adapter."
+  refactor: "Share adapter runner helpers only after tests pass."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test runtime --test errors --test artifacts"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T023/summary.md"
+  test_results: ".ai-platform/evidence/T023/test-results.md"
+  diff: ".ai-platform/evidence/T023/diff.patch"
+acceptance_criteria:
+  - "JS success path writes ok: true envelope."
+  - "JS validation failure maps to recoverable ValidationError."
+  - "JS preflight or business failure maps to recoverable PolicyViolation."
+  - "Malformed output maps to ProtocolViolation."
+  - "Unexpected thrown error maps to non-recoverable RuntimeError."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T023"
+  next_status_after_execution: Accepted
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Runtime tests pass for Python and JS."
+  - "Run record contains Manifest/action hashes for JS."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

@@ -1,0 +1,212 @@
+diff --git a/src/adapters/mod.rs b/src/adapters/mod.rs
+new file mode 100644
+index 0000000..e11a53c
+--- /dev/null
++++ b/src/adapters/mod.rs
+@@ -0,0 +1,51 @@
++use std::path::Path;
++use std::time::Duration;
++
++use crate::schemas::Schemas;
++
++pub mod python;
++
++pub struct ActionRunRequest<'a> {
++    pub capsule_dir: &'a Path,
++    pub entrypoint: &'a str,
++    pub context_json: &'a Path,
++    pub input_json: &'a Path,
++    pub output_json: &'a Path,
++    pub artifact_dir: &'a Path,
++    pub env: &'a [(String, String)],
++    pub timeout: Duration,
++}
++
++pub struct ActionRunOutput {
++    pub success: bool,
++    pub stdout: Vec<u8>,
++    pub stderr: Vec<u8>,
++}
++
++pub fn extract_schemas(
++    adapter: &str,
++    capsule_dir: &Path,
++    action_path: &Path,
++) -> Result<Schemas, String> {
++    match adapter {
++        "python" => python::extract_schemas(capsule_dir, action_path),
++        _ => Err(format!("unsupported metadata adapter: {adapter}")),
++    }
++}
++
++pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
++    match adapter {
++        "python" => Ok(()),
++        _ => Err(format!("unsupported runtime adapter: {adapter}")),
++    }
++}
++
++pub fn run_action(
++    adapter: &str,
++    request: &ActionRunRequest<'_>,
++) -> Result<ActionRunOutput, String> {
++    match adapter {
++        "python" => python::run_action(request),
++        _ => Err(format!("unsupported runtime adapter: {adapter}")),
++    }
++}
+diff --git a/src/adapters/python.rs b/src/adapters/python.rs
+index 3e391c6..5e40af3 100644
+--- a/src/adapters/python.rs
++++ b/src/adapters/python.rs
+@@ -3,25 +3,9 @@ use std::process::{Command, Output, Stdio};
+ use std::thread;
+ use std::time::{Duration, Instant};
+
++use crate::adapters::{ActionRunOutput, ActionRunRequest};
+ use crate::schemas::Schemas;
+
+-pub struct ActionRunRequest<'a> {
+-    pub capsule_dir: &'a Path,
+-    pub entrypoint: &'a str,
+-    pub context_json: &'a Path,
+-    pub input_json: &'a Path,
+-    pub output_json: &'a Path,
+-    pub artifact_dir: &'a Path,
+-    pub env: &'a [(String, String)],
+-    pub timeout: Duration,
+-}
+-
+-pub struct ActionRunOutput {
+-    pub success: bool,
+-    pub stdout: Vec<u8>,
+-    pub stderr: Vec<u8>,
+-}
+-
+ pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
+     let action_path = action_path
+         .canonicalize()
+diff --git a/src/main.rs b/src/main.rs
+index cf74a68..a2ebbf5 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,5 +1,6 @@
+ use std::process::ExitCode;
+
++mod adapters;
+ mod cli;
+ mod config;
+ mod consumer;
+@@ -14,9 +15,6 @@ mod permissions;
+ mod run_record;
+ mod runtime;
+ mod schemas;
+-mod adapters {
+-    pub mod python;
+-}
+
+ fn main() -> ExitCode {
+     cli::run(std::env::args())
+diff --git a/src/manifest.rs b/src/manifest.rs
+index a78a773..b468569 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -3,7 +3,7 @@ use serde::Serialize;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+
+-use crate::adapters::python;
++use crate::adapters;
+ use crate::config::{self, ManifestPermissions, RuntimeConfig};
+ use crate::hashing;
+ use crate::schemas::Schemas;
+@@ -87,19 +87,21 @@ struct ErrorInfo {
+ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+     let capsule_dir = options.cwd.clone();
+     let skill_path = capsule_dir.join("SKILL.md");
+-    let action_path = capsule_dir.join("action.py");
+     let config_path = capsule_dir.join("skillrun.config.json");
+
+     require_file(&skill_path, "missing SKILL.md")?;
++    let config = config::load_config(&config_path)?;
++    let action_entrypoint = config.runtime.entrypoint.clone();
++    let adapter = config.runtime.adapter.clone();
++    let action_path = capsule_dir.join(&action_entrypoint);
+     if !action_path.is_file() {
+         return Err(format!(
+-            "missing action.py: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py before running `skillrun manifest`.",
+-            action_path.display()
++            "missing {action_entrypoint}: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit {action_entrypoint} before running `skillrun manifest`.",
++            action_path.display(),
+         ));
+     }
+
+-    let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
+-    let config = config::load_config(&config_path)?;
++    let schemas = adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?;
+     let skill_hash = hashing::sha256_file(&skill_path)?;
+     let action_hash = hashing::sha256_file(&action_path)?;
+     let config_source = if config_path.exists() {
+@@ -126,7 +128,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+                 sha256: skill_hash.clone(),
+             },
+             action: SourceInfo {
+-                path: "action.py".to_string(),
++                path: action_entrypoint,
+                 sha256: action_hash,
+             },
+             config: config_source,
+diff --git a/src/runtime.rs b/src/runtime.rs
+index 3d45cb8..641b6ab 100644
+--- a/src/runtime.rs
++++ b/src/runtime.rs
+@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
+ use std::sync::atomic::{AtomicU64, Ordering};
+ use std::time::{Duration, Instant};
+
+-use crate::adapters::python::{self, ActionRunRequest};
++use crate::adapters::{self, ActionRunRequest};
+ use crate::consumer;
+ use crate::errors;
+ use crate::permissions;
+@@ -77,9 +77,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
+ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
+     let manifest = load_manifest(&capsule_dir, mode)?;
+     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
+-    if adapter != "python" {
+-        return Err(format!("unsupported runtime adapter: {adapter}"));
+-    }
++    adapters::ensure_runtime_adapter(adapter)?;
+
+     let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
+     let timeout = string_at(&manifest.value, &["runtime", "timeout"])
+@@ -103,16 +101,19 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
+     });
+     write_json(&paths.context_json, &context)?;
+
+-    let adapter_output = match python::run_action(&ActionRunRequest {
+-        capsule_dir: &capsule_dir,
+-        entrypoint,
+-        context_json: &paths.context_json,
+-        input_json: &paths.input_json,
+-        output_json: &paths.output_json,
+-        artifact_dir: &paths.artifact_dir,
+-        env: &declared_env,
+-        timeout,
+-    }) {
++    let adapter_output = match adapters::run_action(
++        adapter,
++        &ActionRunRequest {
++            capsule_dir: &capsule_dir,
++            entrypoint,
++            context_json: &paths.context_json,
++            input_json: &paths.input_json,
++            output_json: &paths.output_json,
++            artifact_dir: &paths.artifact_dir,
++            env: &declared_env,
++            timeout,
++        },
++    ) {
+         Ok(output) => output,
+         Err(error) => {
+             fs::write(&paths.stdout_log, []).map_err(|write_error| {
