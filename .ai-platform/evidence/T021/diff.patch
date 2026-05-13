@@ -1,0 +1,438 @@
+﻿diff --git a/src/cli.rs b/src/cli.rs
+index 55e2eed..ac1503b 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -2,7 +2,7 @@ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
+ use crate::consumer;
+-use crate::init::{self, InitOptions};
++use crate::init::{self, InitLanguage, InitOptions};
+ use crate::inspect::{self, InspectOptions};
+ use crate::manifest::{self, ManifestOptions};
+ use crate::mcp;
+@@ -26,7 +26,7 @@ where
+             ExitCode::SUCCESS
+         }
+         Some("init") => match parse_init(args.collect()) {
+-            Ok(options) => match init::create_python_capsule(&options) {
++            Ok(options) => match init::create_capsule(&options) {
+                 Ok(path) => {
+                     println!("created {}", path.display());
+                     ExitCode::SUCCESS
+@@ -38,7 +38,7 @@ where
+             },
+             Err(error) => {
+                 eprintln!("error: {error}");
+-                eprintln!("usage: skillrun init <name> --python [--output <dir>]");
++                eprintln!("usage: skillrun init <name> (--python|--py|--js) [--output <dir>]");
+                 ExitCode::from(2)
+             }
+         },
+@@ -182,14 +182,18 @@ struct ServeOptions {
+ 
+ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
+     let mut name = None;
+-    let mut python = false;
++    let mut language = None;
+     let mut output_dir = PathBuf::from(".");
+     let mut index = 0;
+ 
+     while index < args.len() {
+         match args[index].as_str() {
+-            "--python" => {
+-                python = true;
++            "--python" | "--py" => {
++                set_language(&mut language, InitLanguage::Python)?;
++                index += 1;
++            }
++            "--js" => {
++                set_language(&mut language, InitLanguage::Js)?;
+                 index += 1;
+             }
+             "--output" => {
+@@ -212,12 +216,26 @@ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
+         }
+     }
+ 
+-    if !python {
+-        return Err("init currently requires --python".to_string());
+-    }
+-
+     let name = name.ok_or_else(|| "init requires a capsule name".to_string())?;
+-    Ok(InitOptions { name, output_dir })
++    let language = language.ok_or_else(|| "init requires --python, --py, or --js".to_string())?;
++    Ok(InitOptions {
++        name,
++        output_dir,
++        language,
++    })
++}
++
++fn set_language(language: &mut Option<InitLanguage>, value: InitLanguage) -> Result<(), String> {
++    match language {
++        Some(existing) if *existing != value => {
++            Err("choose only one language: --python/--py or --js".to_string())
++        }
++        Some(_) => Ok(()),
++        None => {
++            *language = Some(value);
++            Ok(())
++        }
++    }
+ }
+ 
+ fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
+@@ -376,7 +394,7 @@ Usage:
+   skillrun <command> [options]
+ 
+ MVP commands:
+-  init       create a Python action capsule skeleton
++  init       create a Python stable or JS alpha action capsule skeleton
+   manifest   generate the Manifest from SOP, action metadata, config and examples
+   inspect    show capsule contract, permissions and instruction-only status
+   test       run the default example through the runtime contract
+@@ -386,6 +404,8 @@ MVP commands:
+ 
+ Implemented:
+   init --python
++  init --py
++  init --js (alpha)
+   manifest
+   inspect
+   test
+diff --git a/src/init.rs b/src/init.rs
+index 9a2f056..99ced52 100644
+--- a/src/init.rs
++++ b/src/init.rs
+@@ -2,18 +2,29 @@ use std::fs;
+ use std::io;
+ use std::path::{Path, PathBuf};
+ 
+-const SKILL_TEMPLATE: &str = include_str!("../templates/python/SKILL.md");
+-const ACTION_TEMPLATE: &str = include_str!("../templates/python/action.py");
+-const DEFAULT_INPUT_TEMPLATE: &str =
++const PYTHON_SKILL_TEMPLATE: &str = include_str!("../templates/python/SKILL.md");
++const PYTHON_ACTION_TEMPLATE: &str = include_str!("../templates/python/action.py");
++const PYTHON_DEFAULT_INPUT_TEMPLATE: &str =
+     include_str!("../templates/python/examples/default.input.json");
+-const CONFIG_TEMPLATE: &str = include_str!("../templates/python/skillrun.config.json");
++const PYTHON_CONFIG_TEMPLATE: &str = include_str!("../templates/python/skillrun.config.json");
++const JS_SKILL_TEMPLATE: &str = include_str!("../templates/js/SKILL.md");
++const JS_ACTION_TEMPLATE: &str = include_str!("../templates/js/action.mjs");
++const JS_DEFAULT_INPUT_TEMPLATE: &str = include_str!("../templates/js/examples/default.input.json");
++const JS_CONFIG_TEMPLATE: &str = include_str!("../templates/js/skillrun.config.json");
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum InitLanguage {
++    Python,
++    Js,
++}
+ 
+ pub struct InitOptions {
+     pub name: String,
+     pub output_dir: PathBuf,
++    pub language: InitLanguage,
+ }
+ 
+-pub fn create_python_capsule(options: &InitOptions) -> Result<PathBuf, String> {
++pub fn create_capsule(options: &InitOptions) -> Result<PathBuf, String> {
+     validate_capsule_name(&options.name)?;
+ 
+     let target = options.output_dir.join(&options.name);
+@@ -26,22 +37,51 @@ pub fn create_python_capsule(options: &InitOptions) -> Result<PathBuf, String> {
+         )
+     })?;
+ 
+-    write_template(&target.join("SKILL.md"), SKILL_TEMPLATE, &options.name)?;
+-    write_template(&target.join("action.py"), ACTION_TEMPLATE, &options.name)?;
++    let templates = match options.language {
++        InitLanguage::Python => CapsuleTemplates {
++            skill: PYTHON_SKILL_TEMPLATE,
++            action_path: "action.py",
++            action: PYTHON_ACTION_TEMPLATE,
++            default_input: PYTHON_DEFAULT_INPUT_TEMPLATE,
++            config: PYTHON_CONFIG_TEMPLATE,
++        },
++        InitLanguage::Js => CapsuleTemplates {
++            skill: JS_SKILL_TEMPLATE,
++            action_path: "action.mjs",
++            action: JS_ACTION_TEMPLATE,
++            default_input: JS_DEFAULT_INPUT_TEMPLATE,
++            config: JS_CONFIG_TEMPLATE,
++        },
++    };
++
++    write_template(&target.join("SKILL.md"), templates.skill, &options.name)?;
++    write_template(
++        &target.join(templates.action_path),
++        templates.action,
++        &options.name,
++    )?;
+     write_template(
+         &target.join("examples").join("default.input.json"),
+-        DEFAULT_INPUT_TEMPLATE,
++        templates.default_input,
+         &options.name,
+     )?;
+     write_template(
+         &target.join("skillrun.config.json"),
+-        CONFIG_TEMPLATE,
++        templates.config,
+         &options.name,
+     )?;
+ 
+     Ok(target)
+ }
+ 
++struct CapsuleTemplates {
++    skill: &'static str,
++    action_path: &'static str,
++    action: &'static str,
++    default_input: &'static str,
++    config: &'static str,
++}
++
+ fn validate_capsule_name(name: &str) -> Result<(), String> {
+     let is_valid = !name.is_empty()
+         && name
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 9b76a8e..ae531cb 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -25,6 +25,10 @@ fn help_lists_core_commands() {
+             "help output should list planned command: {command}"
+         );
+     }
++
++    assert!(stdout.contains("init --python"));
++    assert!(stdout.contains("init --py"));
++    assert!(stdout.contains("init --js (alpha)"));
+ }
+ 
+ #[test]
+diff --git a/tests/init.rs b/tests/init.rs
+index 2df56e8..9728e6e 100644
+--- a/tests/init.rs
++++ b/tests/init.rs
+@@ -60,6 +60,63 @@ fn init_python_creates_standard_capsule() {
+     fs::remove_dir_all(output_root).ok();
+ }
+ 
++#[test]
++fn init_py_alias_creates_standard_python_capsule() {
++    let output_root = temp_dir("init-py-alias");
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["init", "refund", "--py", "--output", &output_arg]);
++
++    assert!(output.status.success());
++    let capsule = output_root.join("refund");
++    assert!(capsule.join("action.py").is_file());
++    assert!(!capsule.join("action.mjs").exists());
++    assert_file_contains(
++        &capsule.join("skillrun.config.json"),
++        "\"adapter\": \"python\"",
++    );
++    assert_file_contains(
++        &capsule.join("skillrun.config.json"),
++        "\"entrypoint\": \"action.py\"",
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn init_js_creates_alpha_capsule_without_package_manager_files() {
++    let output_root = temp_dir("init-js");
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++
++    assert!(output.status.success());
++    let capsule = output_root.join("refund");
++    assert!(capsule.join("SKILL.md").is_file());
++    assert!(capsule.join("action.mjs").is_file());
++    assert!(!capsule.join("action.py").exists());
++    assert!(!capsule.join("package.json").exists());
++    assert!(!capsule.join("tsconfig.json").exists());
++    assert!(capsule
++        .join("examples")
++        .join("default.input.json")
++        .is_file());
++    assert_file_contains(&capsule.join("action.mjs"), "export const inputSchema");
++    assert_file_contains(&capsule.join("action.mjs"), "export const outputSchema");
++    assert_file_contains(&capsule.join("action.mjs"), "export function preflight");
++    assert_file_contains(&capsule.join("action.mjs"), "export async function run");
++    assert_file_contains(
++        &capsule.join("skillrun.config.json"),
++        "\"adapter\": \"node\"",
++    );
++    assert_file_contains(
++        &capsule.join("skillrun.config.json"),
++        "\"entrypoint\": \"action.mjs\"",
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn init_refuses_non_empty_target() {
+     let output_root = temp_dir("init-non-empty");
+@@ -87,7 +144,16 @@ fn init_requires_python_flag() {
+ 
+     assert!(!output.status.success());
+     let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+-    assert!(stderr.contains("init currently requires --python"));
++    assert!(stderr.contains("init requires --python, --py, or --js"));
++}
++
++#[test]
++fn init_rejects_conflicting_language_flags() {
++    let output = run_skillrun(&["init", "refund", "--python", "--js"]);
++
++    assert!(!output.status.success());
++    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("choose only one language"));
+ }
+ 
+ #[test]
+
+diff --git "a/templates\\js\\SKILL.md" "b/templates\\js\\SKILL.md"
+new file mode 100644
+index 0000000..80d0b6d
+--- /dev/null
++++ "b/templates\\js\\SKILL.md"
+@@ -0,0 +1,34 @@
++# {{name}} Skill
++
++## Purpose
++
++Describe the business job this capsule performs and the situations where an
++agent is allowed to call it.
++
++## SOP
++
++1. Validate that the request contains enough context to make a decision.
++2. Apply policy limits before returning an approval.
++3. Return a structured rejection when approval is missing or the request is out
++   of scope.
++4. Keep the final decision auditable.
++
++## Required Context
++
++- `order_id`
++- `amount`
++- `reason`
++- `customer_tier`
++- `manager_approval_id` when policy requires escalation
++
++## Prohibited Behavior
++
++- Do not move money or trigger external side effects from this template.
++- Do not approve requests that violate the local policy.
++- Do not treat stdout as the business result.
++- Do not add package-manager dependencies for this starter capsule.
++
++## Recovery Guidance
++
++If the action returns a policy error, ask for the missing approval or context
++instead of retrying blindly.
+
+diff --git "a/templates\\js\\action.mjs" "b/templates\\js\\action.mjs"
+new file mode 100644
+index 0000000..6a11903
+--- /dev/null
++++ "b/templates\\js\\action.mjs"
+@@ -0,0 +1,52 @@
++export const inputSchema = {
++  type: "object",
++  required: ["order_id", "amount", "reason"],
++  additionalProperties: false,
++  properties: {
++    order_id: { type: "string", minLength: 1 },
++    amount: { type: "integer", minimum: 1 },
++    reason: { type: "string", enum: ["damaged", "duplicate", "wrong_item"] },
++    customer_tier: {
++      type: "string",
++      enum: ["standard", "gold", "enterprise"],
++      default: "standard"
++    },
++    manager_approval_id: { type: ["string", "null"] }
++  }
++};
++
++export const outputSchema = {
++  type: "object",
++  required: ["decision", "amount", "reasoning_summary", "audit_note"],
++  additionalProperties: false,
++  properties: {
++    decision: { type: "string", enum: ["approved", "needs_approval", "rejected"] },
++    amount: { type: "integer", minimum: 1 },
++    reasoning_summary: { type: "string" },
++    audit_note: { type: "string" }
++  }
++};
++
++export function preflight(input, ctx) {
++  if (input.amount > 500 && !input.manager_approval_id) {
++    throw new Error("manager approval is required for refunds above 500");
++  }
++}
++
++export async function run(input, ctx) {
++  if (input.amount > 500) {
++    return {
++      decision: "needs_approval",
++      amount: input.amount,
++      reasoning_summary: "Refund requires manager approval before execution.",
++      audit_note: `Order ${input.order_id} requires approval before refund.`
++    };
++  }
++
++  return {
++    decision: "approved",
++    amount: input.amount,
++    reasoning_summary: `Refund reason ${input.reason} is allowed by the starter policy.`,
++    audit_note: `Order ${input.order_id} approved for refund decision only.`
++  };
++}
+
+diff --git "a/templates\\js\\examples\\default.input.json" "b/templates\\js\\examples\\default.input.json"
+new file mode 100644
+index 0000000..972cc40
+--- /dev/null
++++ "b/templates\\js\\examples\\default.input.json"
+@@ -0,0 +1,6 @@
++{
++  "order_id": "order_1001",
++  "amount": 120,
++  "reason": "damaged",
++  "customer_tier": "standard"
++}
+
+diff --git "a/templates\\js\\skillrun.config.json" "b/templates\\js\\skillrun.config.json"
+new file mode 100644
+index 0000000..5c0c20f
+--- /dev/null
++++ "b/templates\\js\\skillrun.config.json"
+@@ -0,0 +1,19 @@
++{
++  "runtime": {
++    "adapter": "node",
++    "entrypoint": "action.mjs",
++    "timeout": "30s"
++  },
++  "permissions": {
++    "files": {
++      "read": [],
++      "write": [".skillrun/runs/**"]
++    },
++    "network": {
++      "outbound": []
++    },
++    "env": {
++      "read": []
++    }
++  }
++}

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::consumer;
-use crate::init::{self, InitOptions};
+use crate::init::{self, InitLanguage, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
@@ -26,7 +26,7 @@ where
             ExitCode::SUCCESS
         }
         Some("init") => match parse_init(args.collect()) {
-            Ok(options) => match init::create_python_capsule(&options) {
+            Ok(options) => match init::create_capsule(&options) {
                 Ok(path) => {
                     println!("created {}", path.display());
                     ExitCode::SUCCESS
@@ -38,7 +38,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun init <name> --python [--output <dir>]");
+                eprintln!("usage: skillrun init <name> (--python|--py|--js) [--output <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -182,14 +182,18 @@ struct ServeOptions {
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
     let mut name = None;
-    let mut python = false;
+    let mut language = None;
     let mut output_dir = PathBuf::from(".");
     let mut index = 0;
 
     while index < args.len() {
         match args[index].as_str() {
-            "--python" => {
-                python = true;
+            "--python" | "--py" => {
+                set_language(&mut language, InitLanguage::Python)?;
+                index += 1;
+            }
+            "--js" => {
+                set_language(&mut language, InitLanguage::Js)?;
                 index += 1;
             }
             "--output" => {
@@ -212,12 +216,26 @@ fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
         }
     }
 
-    if !python {
-        return Err("init currently requires --python".to_string());
-    }
-
     let name = name.ok_or_else(|| "init requires a capsule name".to_string())?;
-    Ok(InitOptions { name, output_dir })
+    let language = language.ok_or_else(|| "init requires --python, --py, or --js".to_string())?;
+    Ok(InitOptions {
+        name,
+        output_dir,
+        language,
+    })
+}
+
+fn set_language(language: &mut Option<InitLanguage>, value: InitLanguage) -> Result<(), String> {
+    match language {
+        Some(existing) if *existing != value => {
+            Err("choose only one language: --python/--py or --js".to_string())
+        }
+        Some(_) => Ok(()),
+        None => {
+            *language = Some(value);
+            Ok(())
+        }
+    }
 }
 
 fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
@@ -376,7 +394,7 @@ Usage:
   skillrun <command> [options]
 
 MVP commands:
-  init       create a Python action capsule skeleton
+  init       create a Python stable or JS alpha action capsule skeleton
   manifest   generate the Manifest from SOP, action metadata, config and examples
   inspect    show capsule contract, permissions and instruction-only status
   test       run the default example through the runtime contract
@@ -386,6 +404,8 @@ MVP commands:
 
 Implemented:
   init --python
+  init --py
+  init --js (alpha)
   manifest
   inspect
   test

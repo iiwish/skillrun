@@ -25,6 +25,10 @@ fn help_lists_core_commands() {
             "help output should list planned command: {command}"
         );
     }
+
+    assert!(stdout.contains("init --python"));
+    assert!(stdout.contains("init --py"));
+    assert!(stdout.contains("init --js (alpha)"));
 }
 
 #[test]

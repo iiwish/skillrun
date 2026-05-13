@@ -151,7 +151,7 @@ An author can start a JS alpha capsule from one command without learning SkillRu
 
 ### T021: Add Explicit Init Language Flags, `--py` Alias, And JS Templates
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T020
 Blocks: T022, T024, T027
@@ -213,7 +213,7 @@ Evidence required:
 
 ### T022: Implement Node Metadata Extraction From Explicit JSON Schema
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T020, T021
 Blocks: T023, T024

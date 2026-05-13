@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T022"
 feature_id: "v0.3"
 title: Implement Node Metadata Extraction From Explicit JSON Schema
-status: Blocked
+status: Ready
 priority: P0
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T022
   title: Implement Node Metadata Extraction From Explicit JSON Schema
-  status: Blocked
+  status: Ready
   feature_id: v0.3
 goal: Allow skillrun manifest to resolve adapter by config-first deterministic convention and generate Manifest schemas from action.mjs JSON Schema exports.
 requirement_mapping:

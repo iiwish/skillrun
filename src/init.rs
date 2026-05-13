@@ -2,18 +2,29 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const SKILL_TEMPLATE: &str = include_str!("../templates/python/SKILL.md");
-const ACTION_TEMPLATE: &str = include_str!("../templates/python/action.py");
-const DEFAULT_INPUT_TEMPLATE: &str =
+const PYTHON_SKILL_TEMPLATE: &str = include_str!("../templates/python/SKILL.md");
+const PYTHON_ACTION_TEMPLATE: &str = include_str!("../templates/python/action.py");
+const PYTHON_DEFAULT_INPUT_TEMPLATE: &str =
     include_str!("../templates/python/examples/default.input.json");
-const CONFIG_TEMPLATE: &str = include_str!("../templates/python/skillrun.config.json");
+const PYTHON_CONFIG_TEMPLATE: &str = include_str!("../templates/python/skillrun.config.json");
+const JS_SKILL_TEMPLATE: &str = include_str!("../templates/js/SKILL.md");
+const JS_ACTION_TEMPLATE: &str = include_str!("../templates/js/action.mjs");
+const JS_DEFAULT_INPUT_TEMPLATE: &str = include_str!("../templates/js/examples/default.input.json");
+const JS_CONFIG_TEMPLATE: &str = include_str!("../templates/js/skillrun.config.json");
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InitLanguage {
+    Python,
+    Js,
+}
 
 pub struct InitOptions {
     pub name: String,
     pub output_dir: PathBuf,
+    pub language: InitLanguage,
 }
 
-pub fn create_python_capsule(options: &InitOptions) -> Result<PathBuf, String> {
+pub fn create_capsule(options: &InitOptions) -> Result<PathBuf, String> {
     validate_capsule_name(&options.name)?;
 
     let target = options.output_dir.join(&options.name);
@@ -26,20 +37,49 @@ pub fn create_python_capsule(options: &InitOptions) -> Result<PathBuf, String> {
         )
     })?;
 
-    write_template(&target.join("SKILL.md"), SKILL_TEMPLATE, &options.name)?;
-    write_template(&target.join("action.py"), ACTION_TEMPLATE, &options.name)?;
+    let templates = match options.language {
+        InitLanguage::Python => CapsuleTemplates {
+            skill: PYTHON_SKILL_TEMPLATE,
+            action_path: "action.py",
+            action: PYTHON_ACTION_TEMPLATE,
+            default_input: PYTHON_DEFAULT_INPUT_TEMPLATE,
+            config: PYTHON_CONFIG_TEMPLATE,
+        },
+        InitLanguage::Js => CapsuleTemplates {
+            skill: JS_SKILL_TEMPLATE,
+            action_path: "action.mjs",
+            action: JS_ACTION_TEMPLATE,
+            default_input: JS_DEFAULT_INPUT_TEMPLATE,
+            config: JS_CONFIG_TEMPLATE,
+        },
+    };
+
+    write_template(&target.join("SKILL.md"), templates.skill, &options.name)?;
+    write_template(
+        &target.join(templates.action_path),
+        templates.action,
+        &options.name,
+    )?;
     write_template(
         &target.join("examples").join("default.input.json"),
-        DEFAULT_INPUT_TEMPLATE,
+        templates.default_input,
         &options.name,
     )?;
     write_template(
         &target.join("skillrun.config.json"),
-        CONFIG_TEMPLATE,
+        templates.config,
         &options.name,
     )?;
 
     Ok(target)
+}
+
+struct CapsuleTemplates {
+    skill: &'static str,
+    action_path: &'static str,
+    action: &'static str,
+    default_input: &'static str,
+    config: &'static str,
 }
 
 fn validate_capsule_name(name: &str) -> Result<(), String> {

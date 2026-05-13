@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T021"
 feature_id: "v0.3"
 title: Add Explicit Init Language Flags, --py Alias, And JS Templates
-status: Ready
+status: Accepted
 priority: P0
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T021
   title: Add Explicit Init Language Flags, --py Alias, And JS Templates
-  status: Ready
+  status: Accepted
   feature_id: v0.3
 goal: Add explicit init language selection, the --py alias, and the JS alpha capsule skeleton without implementing Node runtime execution.
 requirement_mapping:
@@ -87,7 +87,7 @@ acceptance_criteria:
   - "--js and Python flags are mutually exclusive."
 handoff:
   evidence_dir: ".ai-platform/evidence/T021"
-  next_status_after_execution: Needs_Review
+  next_status_after_execution: Accepted
   commit_policy: "Commit only after review passes and user requests git handoff."
 definition_of_done:
   - "Init and CLI tests pass."

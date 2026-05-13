@@ -1,0 +1,19 @@
+{
+  "runtime": {
+    "adapter": "node",
+    "entrypoint": "action.mjs",
+    "timeout": "30s"
+  },
+  "permissions": {
+    "files": {
+      "read": [],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": []
+    },
+    "env": {
+      "read": []
+    }
+  }
+}

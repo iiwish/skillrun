@@ -127,17 +127,18 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T021 only.
+Ready for execution: T022 only.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
 - Execution packets are created for T019-T028.
 - T019 has been accepted.
 - T020 has been accepted.
-- T021 has no unfinished dependencies and may start.
-- T022-T028 remain blocked by their declared dependencies.
+- T021 has been accepted.
+- T022 has no unfinished dependencies and may start.
+- T023-T028 remain blocked by their declared dependencies.
 
-Ready for user review: Yes.
+Ready for user review: No.
 
 Recommended next step:
-Start T021: add explicit init language flags, the `--py` alias and JS alpha templates.
+Start T022: implement Node metadata extraction from explicit JSON Schema while preserving Consumer Mode static Manifest behavior.

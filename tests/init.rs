@@ -61,6 +61,63 @@ fn init_python_creates_standard_capsule() {
 }
 
 #[test]
+fn init_py_alias_creates_standard_python_capsule() {
+    let output_root = temp_dir("init-py-alias");
+    let output_arg = output_root.to_string_lossy().to_string();
+
+    let output = run_skillrun(&["init", "refund", "--py", "--output", &output_arg]);
+
+    assert!(output.status.success());
+    let capsule = output_root.join("refund");
+    assert!(capsule.join("action.py").is_file());
+    assert!(!capsule.join("action.mjs").exists());
+    assert_file_contains(
+        &capsule.join("skillrun.config.json"),
+        "\"adapter\": \"python\"",
+    );
+    assert_file_contains(
+        &capsule.join("skillrun.config.json"),
+        "\"entrypoint\": \"action.py\"",
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn init_js_creates_alpha_capsule_without_package_manager_files() {
+    let output_root = temp_dir("init-js");
+    let output_arg = output_root.to_string_lossy().to_string();
+
+    let output = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+
+    assert!(output.status.success());
+    let capsule = output_root.join("refund");
+    assert!(capsule.join("SKILL.md").is_file());
+    assert!(capsule.join("action.mjs").is_file());
+    assert!(!capsule.join("action.py").exists());
+    assert!(!capsule.join("package.json").exists());
+    assert!(!capsule.join("tsconfig.json").exists());
+    assert!(capsule
+        .join("examples")
+        .join("default.input.json")
+        .is_file());
+    assert_file_contains(&capsule.join("action.mjs"), "export const inputSchema");
+    assert_file_contains(&capsule.join("action.mjs"), "export const outputSchema");
+    assert_file_contains(&capsule.join("action.mjs"), "export function preflight");
+    assert_file_contains(&capsule.join("action.mjs"), "export async function run");
+    assert_file_contains(
+        &capsule.join("skillrun.config.json"),
+        "\"adapter\": \"node\"",
+    );
+    assert_file_contains(
+        &capsule.join("skillrun.config.json"),
+        "\"entrypoint\": \"action.mjs\"",
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn init_refuses_non_empty_target() {
     let output_root = temp_dir("init-non-empty");
     let capsule = output_root.join("refund");
@@ -87,7 +144,16 @@ fn init_requires_python_flag() {
 
     assert!(!output.status.success());
     let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
-    assert!(stderr.contains("init currently requires --python"));
+    assert!(stderr.contains("init requires --python, --py, or --js"));
+}
+
+#[test]
+fn init_rejects_conflicting_language_flags() {
+    let output = run_skillrun(&["init", "refund", "--python", "--js"]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("choose only one language"));
 }
 
 #[test]
