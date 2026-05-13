@@ -142,6 +142,15 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
     let unpacked_capsule = output_root.join("unpacked-refund");
     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
     unpack_archive(&archive_path, &unpacked_capsule);
+    let unpacked_manifest = fs::read_to_string(
+        unpacked_capsule
+            .join(".skillrun")
+            .join("manifest.generated.yaml"),
+    )
+    .expect("unpacked Manifest should be readable");
+    assert!(unpacked_manifest.contains("requirements:"));
+    assert!(unpacked_manifest.contains("name: python"));
+    assert!(unpacked_manifest.contains("name: pydantic"));
     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
     assert!(
@@ -236,6 +245,15 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
     let unpacked_capsule = output_root.join("unpacked-js-refund");
     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
     unpack_archive(&archive_path, &unpacked_capsule);
+    let unpacked_manifest = fs::read_to_string(
+        unpacked_capsule
+            .join(".skillrun")
+            .join("manifest.generated.yaml"),
+    )
+    .expect("unpacked JS Manifest should be readable");
+    assert!(unpacked_manifest.contains("requirements:"));
+    assert!(unpacked_manifest.contains("name: node"));
+    assert!(!unpacked_manifest.contains("name: pydantic"));
     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
     assert!(

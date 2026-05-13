@@ -84,7 +84,7 @@ Evidence required:
 
 ### T030: Add Manifest Runtime Requirements Contract
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T029
 Blocks: T031
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029 was reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029 and T030 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
