@@ -2,6 +2,7 @@ use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::adapters;
 use crate::hashing;
 use crate::manifest;
 
@@ -17,6 +18,7 @@ pub struct ReadinessReport {
     pub adapter: Option<String>,
     pub entrypoint: Option<String>,
     pub requirements: RequirementsView,
+    pub dependency_checks: Vec<HostDependencyCheck>,
     pub source_checks: Vec<SourceCheck>,
     pub example_checks: Vec<ExampleCheck>,
     pub ok: bool,
@@ -56,6 +58,14 @@ pub struct PackageView {
     pub name: String,
     pub version: String,
     pub required_for: Vec<String>,
+}
+
+pub struct HostDependencyCheck {
+    pub kind: &'static str,
+    pub name: String,
+    pub required: String,
+    pub detected: Option<String>,
+    pub status: &'static str,
 }
 
 impl FileStatus {
@@ -154,6 +164,7 @@ fn report_without_manifest(
         adapter: None,
         entrypoint: None,
         requirements: RequirementsView::default(),
+        dependency_checks: Vec::new(),
         source_checks: Vec::new(),
         ok: false,
     }
@@ -174,15 +185,21 @@ fn report_with_manifest(
     let source_checks = source_checks(&cwd, &manifest);
     let example_checks = example_checks(&cwd, &manifest);
     let requirements = requirements_view(&manifest);
+    let dependency_checks = dependency_checks(adapter.as_deref(), &requirements);
     let runtime_present = adapter.is_some() && entrypoint.is_some();
     let all_fresh = source_checks.iter().all(|check| check.status == "fresh");
     let examples_present = example_checks.iter().all(|check| check.present);
+    let dependencies_ready = dependency_checks
+        .iter()
+        .all(|check| check.status == "satisfied");
     let status = if !all_fresh {
         "stale-manifest"
     } else if !runtime_present {
         "invalid-manifest"
     } else if !examples_present {
         "missing-examples"
+    } else if !dependencies_ready {
+        "dependency-error"
     } else {
         "ok"
     };
@@ -195,6 +212,7 @@ fn report_with_manifest(
                 cwd.display()
             )
         }
+        "dependency-error" => "Install or select a runtime matching the declared requirements, then retry `skillrun check`.".to_string(),
         _ => format!("Run `skillrun manifest --cwd {}`.", cwd.display()),
     };
 
@@ -210,6 +228,7 @@ fn report_with_manifest(
         adapter,
         entrypoint,
         requirements,
+        dependency_checks,
         source_checks,
         example_checks,
         ok: status == "ok",
@@ -343,6 +362,111 @@ fn requirements_view(manifest: &Value) -> RequirementsView {
     }
 }
 
+fn dependency_checks(
+    adapter: Option<&str>,
+    requirements: &RequirementsView,
+) -> Vec<HostDependencyCheck> {
+    let Some(adapter) = adapter else {
+        return Vec::new();
+    };
+    if !requirements.present {
+        return Vec::new();
+    }
+
+    let Some(discovery) = adapters::discover_runtime(adapter) else {
+        return Vec::new();
+    };
+    let mut checks = Vec::new();
+
+    if let Some(required) = requirements.executable.as_ref() {
+        checks.push(host_dependency_check(
+            "executable",
+            &required.name,
+            &required.version,
+            &discovery.executable,
+        ));
+    }
+
+    for required in &requirements.packages {
+        let discovered = discovery
+            .packages
+            .iter()
+            .find(|item| item.name == required.name);
+        checks.push(match discovered {
+            Some(discovered) => {
+                host_dependency_check("package", &required.name, &required.version, discovered)
+            }
+            None => HostDependencyCheck {
+                kind: "package",
+                name: required.name.clone(),
+                required: required.version.clone(),
+                detected: None,
+                status: "missing",
+            },
+        });
+    }
+
+    checks
+}
+
+fn host_dependency_check(
+    kind: &'static str,
+    name: &str,
+    required: &str,
+    discovered: &adapters::DiscoveredDependency,
+) -> HostDependencyCheck {
+    let status = if !discovered.available {
+        "missing"
+    } else if discovered
+        .detected
+        .as_deref()
+        .is_some_and(|detected| version_satisfies(detected, required))
+    {
+        "satisfied"
+    } else {
+        "unsupported-version"
+    };
+
+    HostDependencyCheck {
+        kind,
+        name: name.to_string(),
+        required: required.to_string(),
+        detected: discovered.detected.clone(),
+        status,
+    }
+}
+
+fn version_satisfies(detected: &str, requirement: &str) -> bool {
+    let Some(detected) = parse_version(detected) else {
+        return false;
+    };
+
+    requirement.split(',').all(|clause| {
+        let clause = clause.trim();
+        if let Some(required) = clause.strip_prefix(">=") {
+            parse_version(required).is_some_and(|required| detected >= required)
+        } else if let Some(required) = clause.strip_prefix('<') {
+            parse_version(required).is_some_and(|required| detected < required)
+        } else {
+            false
+        }
+    })
+}
+
+fn parse_version(value: &str) -> Option<Vec<u64>> {
+    let numbers = value
+        .split(|ch: char| !ch.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .take(3)
+        .filter_map(|part| part.parse::<u64>().ok())
+        .collect::<Vec<_>>();
+    if numbers.is_empty() {
+        None
+    } else {
+        Some(numbers)
+    }
+}
+
 pub fn render_check(report: &ReadinessReport) -> String {
     format!(
         "\
@@ -359,6 +483,8 @@ runtime:
 {runtime}
 requirements:
 {requirements}
+host readiness:
+{host_readiness}
 sources:
 {sources}
 examples:
@@ -373,6 +499,7 @@ note: check reads Manifest, files and hashes only; it does not run or import act
         freshness = report.freshness,
         runtime = render_runtime(report),
         requirements = render_requirements(&report.requirements),
+        host_readiness = render_host_readiness(&report.dependency_checks),
         sources = render_source_checks(&report.source_checks),
         examples = render_example_checks(&report.example_checks),
         reason = render_reason(report),
@@ -483,6 +610,27 @@ fn render_requirements(requirements: &RequirementsView) -> String {
     };
 
     format!("{executable}\n{packages}")
+}
+
+fn render_host_readiness(checks: &[HostDependencyCheck]) -> String {
+    if checks.is_empty() {
+        return "  none".to_string();
+    }
+
+    checks
+        .iter()
+        .map(|check| {
+            format!(
+                "  {kind}: {name} required: {required} detected: {detected} status: {status}",
+                kind = check.kind,
+                name = check.name,
+                required = check.required,
+                detected = check.detected.as_deref().unwrap_or("missing"),
+                status = check.status,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn render_files(files: &FileStatus) -> String {

@@ -6,6 +6,17 @@ use crate::schemas::Schemas;
 pub mod node;
 pub mod python;
 
+pub struct RuntimeDiscovery {
+    pub executable: DiscoveredDependency,
+    pub packages: Vec<DiscoveredDependency>,
+}
+
+pub struct DiscoveredDependency {
+    pub name: String,
+    pub detected: Option<String>,
+    pub available: bool,
+}
+
 pub struct ActionRunRequest<'a> {
     pub capsule_dir: &'a Path,
     pub entrypoint: &'a str,
@@ -40,6 +51,14 @@ pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
         "node" => Ok(()),
         "python" => Ok(()),
         _ => Err(format!("unsupported runtime adapter: {adapter}")),
+    }
+}
+
+pub fn discover_runtime(adapter: &str) -> Option<RuntimeDiscovery> {
+    match adapter {
+        "node" => Some(node::discover_runtime()),
+        "python" => Some(python::discover_runtime()),
+        _ => None,
     }
 }
 

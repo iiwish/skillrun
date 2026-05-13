@@ -1,0 +1,700 @@
+﻿diff --git a/.ai-platform/specs/v0.4/tasks.md b/.ai-platform/specs/v0.4/tasks.md
+index cfdc0b4..c86b8fc 100644
+--- a/.ai-platform/specs/v0.4/tasks.md
++++ b/.ai-platform/specs/v0.4/tasks.md
+@@ -204,7 +204,7 @@ Evidence required:
+
+ ### T032: Add Python And Node Runtime Discovery
+
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T031
+ Blocks: T033
+@@ -491,4 +491,4 @@ Evidence required:
+ ## User Review Gate
+
+ - Approval: Pending.
+-- Reviewer notes: T029, T030 and T031 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
++- Reviewer notes: T029, T030, T031 and T032 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+diff --git a/src/adapters/mod.rs b/src/adapters/mod.rs
+index d4ff173..a8e85c3 100644
+--- a/src/adapters/mod.rs
++++ b/src/adapters/mod.rs
+@@ -6,6 +6,17 @@ use crate::schemas::Schemas;
+ pub mod node;
+ pub mod python;
+
++pub struct RuntimeDiscovery {
++    pub executable: DiscoveredDependency,
++    pub packages: Vec<DiscoveredDependency>,
++}
++
++pub struct DiscoveredDependency {
++    pub name: String,
++    pub detected: Option<String>,
++    pub available: bool,
++}
++
+ pub struct ActionRunRequest<'a> {
+     pub capsule_dir: &'a Path,
+     pub entrypoint: &'a str,
+@@ -43,6 +54,14 @@ pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
+     }
+ }
+
++pub fn discover_runtime(adapter: &str) -> Option<RuntimeDiscovery> {
++    match adapter {
++        "node" => Some(node::discover_runtime()),
++        "python" => Some(python::discover_runtime()),
++        _ => None,
++    }
++}
++
+ pub fn run_action(
+     adapter: &str,
+     request: &ActionRunRequest<'_>,
+diff --git a/src/adapters/node.rs b/src/adapters/node.rs
+index 76b89ab..ac7d6ef 100644
+--- a/src/adapters/node.rs
++++ b/src/adapters/node.rs
+@@ -3,9 +3,35 @@ use std::process::{Command, Output, Stdio};
+ use std::thread;
+ use std::time::{Duration, Instant};
+
+-use crate::adapters::{ActionRunOutput, ActionRunRequest};
++use crate::adapters::{ActionRunOutput, ActionRunRequest, DiscoveredDependency, RuntimeDiscovery};
+ use crate::schemas::Schemas;
+
++pub fn discover_runtime() -> RuntimeDiscovery {
++    RuntimeDiscovery {
++        executable: discover_node(),
++        packages: Vec::new(),
++    }
++}
++
++fn discover_node() -> DiscoveredDependency {
++    let output = Command::new("node").arg("--version").output();
++    match output {
++        Ok(output) if output.status.success() => {
++            let detected = command_text(&output);
++            DiscoveredDependency {
++                name: "node".to_string(),
++                detected: non_empty(detected),
++                available: true,
++            }
++        }
++        _ => DiscoveredDependency {
++            name: "node".to_string(),
++            detected: None,
++            available: false,
++        },
++    }
++}
++
+ pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
+     let action_path = action_path
+         .canonicalize()
+@@ -326,6 +352,22 @@ fn apply_process_env(command: &mut Command) {
+     }
+ }
+
++fn command_text(output: &Output) -> String {
++    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
++    if !stdout.is_empty() {
++        return stdout;
++    }
++    String::from_utf8_lossy(&output.stderr).trim().to_string()
++}
++
++fn non_empty(value: String) -> Option<String> {
++    if value.is_empty() {
++        None
++    } else {
++        Some(value)
++    }
++}
++
+ fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
+     let mut child = command
+         .spawn()
+diff --git a/src/adapters/python.rs b/src/adapters/python.rs
+index 5e40af3..6d667a6 100644
+--- a/src/adapters/python.rs
++++ b/src/adapters/python.rs
+@@ -3,9 +3,90 @@ use std::process::{Command, Output, Stdio};
+ use std::thread;
+ use std::time::{Duration, Instant};
+
+-use crate::adapters::{ActionRunOutput, ActionRunRequest};
++use crate::adapters::{ActionRunOutput, ActionRunRequest, DiscoveredDependency, RuntimeDiscovery};
+ use crate::schemas::Schemas;
+
++pub fn discover_runtime() -> RuntimeDiscovery {
++    let executable = discover_python();
++    let packages = if executable.available {
++        vec![discover_pydantic()]
++    } else {
++        vec![DiscoveredDependency {
++            name: "pydantic".to_string(),
++            detected: None,
++            available: false,
++        }]
++    };
++
++    RuntimeDiscovery {
++        executable,
++        packages,
++    }
++}
++
++fn discover_python() -> DiscoveredDependency {
++    let output = run_python_probe(&["--version"]);
++    match output {
++        Ok(output) if output.status.success() => {
++            let detected = command_text(&output);
++            DiscoveredDependency {
++                name: "python".to_string(),
++                detected: non_empty(detected),
++                available: true,
++            }
++        }
++        _ => DiscoveredDependency {
++            name: "python".to_string(),
++            detected: None,
++            available: false,
++        },
++    }
++}
++
++fn discover_pydantic() -> DiscoveredDependency {
++    let output = run_python_probe(&["-c", "import pydantic; print(pydantic.__version__)"]);
++    match output {
++        Ok(output) if output.status.success() => {
++            let detected = command_text(&output);
++            DiscoveredDependency {
++                name: "pydantic".to_string(),
++                detected: non_empty(detected),
++                available: true,
++            }
++        }
++        _ => DiscoveredDependency {
++            name: "pydantic".to_string(),
++            detected: None,
++            available: false,
++        },
++    }
++}
++
++fn run_python_probe(args: &[&str]) -> Result<Output, std::io::Error> {
++    let mut last_error = None;
++    for executable in python_probe_commands() {
++        let output = Command::new(executable).args(args).output();
++        match output {
++            Ok(output) => return Ok(output),
++            Err(error) => last_error = Some(error),
++        }
++    }
++    Err(last_error.unwrap_or_else(|| {
++        std::io::Error::new(std::io::ErrorKind::NotFound, "python executable not found")
++    }))
++}
++
++fn python_probe_commands() -> &'static [&'static str] {
++    #[cfg(windows)]
++    {
++        &["python", "python.cmd"]
++    }
++    #[cfg(not(windows))]
++    {
++        &["python"]
++    }
++}
++
+ pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
+     let action_path = action_path
+         .canonicalize()
+@@ -230,6 +311,22 @@ fn metadata_timeout() -> Duration {
+         .unwrap_or_else(|| Duration::from_secs(10))
+ }
+
++fn command_text(output: &Output) -> String {
++    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
++    if !stdout.is_empty() {
++        return stdout;
++    }
++    String::from_utf8_lossy(&output.stderr).trim().to_string()
++}
++
++fn non_empty(value: String) -> Option<String> {
++    if value.is_empty() {
++        None
++    } else {
++        Some(value)
++    }
++}
++
+ fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
+     let mut child = command
+         .spawn()
+diff --git a/src/readiness.rs b/src/readiness.rs
+index 832ba12..fe61603 100644
+--- a/src/readiness.rs
++++ b/src/readiness.rs
+@@ -2,6 +2,7 @@ use serde_yaml::Value;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+
++use crate::adapters;
+ use crate::hashing;
+ use crate::manifest;
+
+@@ -17,6 +18,7 @@ pub struct ReadinessReport {
+     pub adapter: Option<String>,
+     pub entrypoint: Option<String>,
+     pub requirements: RequirementsView,
++    pub dependency_checks: Vec<HostDependencyCheck>,
+     pub source_checks: Vec<SourceCheck>,
+     pub example_checks: Vec<ExampleCheck>,
+     pub ok: bool,
+@@ -58,6 +60,14 @@ pub struct PackageView {
+     pub required_for: Vec<String>,
+ }
+
++pub struct HostDependencyCheck {
++    pub kind: &'static str,
++    pub name: String,
++    pub required: String,
++    pub detected: Option<String>,
++    pub status: &'static str,
++}
++
+ impl FileStatus {
+     fn read(cwd: &Path) -> Self {
+         Self {
+@@ -154,6 +164,7 @@ fn report_without_manifest(
+         adapter: None,
+         entrypoint: None,
+         requirements: RequirementsView::default(),
++        dependency_checks: Vec::new(),
+         source_checks: Vec::new(),
+         ok: false,
+     }
+@@ -174,15 +185,21 @@ fn report_with_manifest(
+     let source_checks = source_checks(&cwd, &manifest);
+     let example_checks = example_checks(&cwd, &manifest);
+     let requirements = requirements_view(&manifest);
++    let dependency_checks = dependency_checks(adapter.as_deref(), &requirements);
+     let runtime_present = adapter.is_some() && entrypoint.is_some();
+     let all_fresh = source_checks.iter().all(|check| check.status == "fresh");
+     let examples_present = example_checks.iter().all(|check| check.present);
++    let dependencies_ready = dependency_checks
++        .iter()
++        .all(|check| check.status == "satisfied");
+     let status = if !all_fresh {
+         "stale-manifest"
+     } else if !runtime_present {
+         "invalid-manifest"
+     } else if !examples_present {
+         "missing-examples"
++    } else if !dependencies_ready {
++        "dependency-error"
+     } else {
+         "ok"
+     };
+@@ -195,6 +212,7 @@ fn report_with_manifest(
+                 cwd.display()
+             )
+         }
++        "dependency-error" => "Install or select a runtime matching the declared requirements, then retry `skillrun check`.".to_string(),
+         _ => format!("Run `skillrun manifest --cwd {}`.", cwd.display()),
+     };
+
+@@ -210,6 +228,7 @@ fn report_with_manifest(
+         adapter,
+         entrypoint,
+         requirements,
++        dependency_checks,
+         source_checks,
+         example_checks,
+         ok: status == "ok",
+@@ -343,6 +362,111 @@ fn requirements_view(manifest: &Value) -> RequirementsView {
+     }
+ }
+
++fn dependency_checks(
++    adapter: Option<&str>,
++    requirements: &RequirementsView,
++) -> Vec<HostDependencyCheck> {
++    let Some(adapter) = adapter else {
++        return Vec::new();
++    };
++    if !requirements.present {
++        return Vec::new();
++    }
++
++    let Some(discovery) = adapters::discover_runtime(adapter) else {
++        return Vec::new();
++    };
++    let mut checks = Vec::new();
++
++    if let Some(required) = requirements.executable.as_ref() {
++        checks.push(host_dependency_check(
++            "executable",
++            &required.name,
++            &required.version,
++            &discovery.executable,
++        ));
++    }
++
++    for required in &requirements.packages {
++        let discovered = discovery
++            .packages
++            .iter()
++            .find(|item| item.name == required.name);
++        checks.push(match discovered {
++            Some(discovered) => {
++                host_dependency_check("package", &required.name, &required.version, discovered)
++            }
++            None => HostDependencyCheck {
++                kind: "package",
++                name: required.name.clone(),
++                required: required.version.clone(),
++                detected: None,
++                status: "missing",
++            },
++        });
++    }
++
++    checks
++}
++
++fn host_dependency_check(
++    kind: &'static str,
++    name: &str,
++    required: &str,
++    discovered: &adapters::DiscoveredDependency,
++) -> HostDependencyCheck {
++    let status = if !discovered.available {
++        "missing"
++    } else if discovered
++        .detected
++        .as_deref()
++        .is_some_and(|detected| version_satisfies(detected, required))
++    {
++        "satisfied"
++    } else {
++        "unsupported-version"
++    };
++
++    HostDependencyCheck {
++        kind,
++        name: name.to_string(),
++        required: required.to_string(),
++        detected: discovered.detected.clone(),
++        status,
++    }
++}
++
++fn version_satisfies(detected: &str, requirement: &str) -> bool {
++    let Some(detected) = parse_version(detected) else {
++        return false;
++    };
++
++    requirement.split(',').all(|clause| {
++        let clause = clause.trim();
++        if let Some(required) = clause.strip_prefix(">=") {
++            parse_version(required).is_some_and(|required| detected >= required)
++        } else if let Some(required) = clause.strip_prefix('<') {
++            parse_version(required).is_some_and(|required| detected < required)
++        } else {
++            false
++        }
++    })
++}
++
++fn parse_version(value: &str) -> Option<Vec<u64>> {
++    let numbers = value
++        .split(|ch: char| !ch.is_ascii_digit())
++        .filter(|part| !part.is_empty())
++        .take(3)
++        .filter_map(|part| part.parse::<u64>().ok())
++        .collect::<Vec<_>>();
++    if numbers.is_empty() {
++        None
++    } else {
++        Some(numbers)
++    }
++}
++
+ pub fn render_check(report: &ReadinessReport) -> String {
+     format!(
+         "\
+@@ -359,6 +483,8 @@ runtime:
+ {runtime}
+ requirements:
+ {requirements}
++host readiness:
++{host_readiness}
+ sources:
+ {sources}
+ examples:
+@@ -373,6 +499,7 @@ note: check reads Manifest, files and hashes only; it does not run or import act
+         freshness = report.freshness,
+         runtime = render_runtime(report),
+         requirements = render_requirements(&report.requirements),
++        host_readiness = render_host_readiness(&report.dependency_checks),
+         sources = render_source_checks(&report.source_checks),
+         examples = render_example_checks(&report.example_checks),
+         reason = render_reason(report),
+@@ -485,6 +612,27 @@ fn render_requirements(requirements: &RequirementsView) -> String {
+     format!("{executable}\n{packages}")
+ }
+
++fn render_host_readiness(checks: &[HostDependencyCheck]) -> String {
++    if checks.is_empty() {
++        return "  none".to_string();
++    }
++
++    checks
++        .iter()
++        .map(|check| {
++            format!(
++                "  {kind}: {name} required: {required} detected: {detected} status: {status}",
++                kind = check.kind,
++                name = check.name,
++                required = check.required,
++                detected = check.detected.as_deref().unwrap_or("missing"),
++                status = check.status,
++            )
++        })
++        .collect::<Vec<_>>()
++        .join("\n")
++}
++
+ fn render_files(files: &FileStatus) -> String {
+     format!(
+         "\
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index b90cf57..667f067 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -11,6 +11,23 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
+         .expect("skillrun binary should run")
+ }
+
++fn run_skillrun_with_path(args: &[&str], path: &Path) -> std::process::Output {
++    run_skillrun_with_path_and_env(args, path, &[])
++}
++
++fn run_skillrun_with_path_and_env(
++    args: &[&str],
++    path: &Path,
++    envs: &[(&str, &str)],
++) -> std::process::Output {
++    let mut command = Command::new(env!("CARGO_BIN_EXE_skillrun"));
++    command.args(args).env("PATH", path);
++    for (key, value) in envs {
++        command.env(key, value);
++    }
++    command.output().expect("skillrun binary should run")
++}
++
+ fn temp_dir(label: &str) -> PathBuf {
+     let stamp = SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+@@ -19,6 +36,55 @@ fn temp_dir(label: &str) -> PathBuf {
+     std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
+ }
+
++fn write_fake_python(fake_dir: &Path, pydantic_version: Option<&str>) {
++    fs::create_dir_all(fake_dir).expect("fake runtime dir should be created");
++    let pydantic_branch = match pydantic_version {
++        Some(version) => format!("echo {version}"),
++        None => "echo ModuleNotFoundError: No module named pydantic 1>&2\nexit /b 1".to_string(),
++    };
++
++    #[cfg(windows)]
++    {
++        let script = format!(
++            "@echo off\r\n\
++if not \"%SKILLRUN_FAKE_PYTHON_LOG%\"==\"\" echo %*>>\"%SKILLRUN_FAKE_PYTHON_LOG%\"\r\n\
++if \"%1\"==\"--version\" (\r\n\
++  echo Python 3.11.0\r\n\
++  exit /b 0\r\n\
++)\r\n\
++{pydantic_branch}\r\n\
++exit /b 0\r\n"
++        );
++        fs::write(fake_dir.join("python.cmd"), script).expect("fake python should be written");
++    }
++
++    #[cfg(not(windows))]
++    {
++        use std::os::unix::fs::PermissionsExt;
++
++        let pydantic_branch = match pydantic_version {
++            Some(version) => format!("echo {version}"),
++            None => "echo 'ModuleNotFoundError: No module named pydantic' >&2\nexit 1".to_string(),
++        };
++        let script = format!(
++            "#!/bin/sh\n\
++if [ -n \"$SKILLRUN_FAKE_PYTHON_LOG\" ]; then printf '%s\\n' \"$*\" >> \"$SKILLRUN_FAKE_PYTHON_LOG\"; fi\n\
++if [ \"$1\" = \"--version\" ]; then\n\
++  echo 'Python 3.11.0'\n\
++  exit 0\n\
++fi\n\
++{pydantic_branch}\n"
++        );
++        let path = fake_dir.join("python");
++        fs::write(&path, script).expect("fake python should be written");
++        let mut permissions = fs::metadata(&path)
++            .expect("fake python metadata should exist")
++            .permissions();
++        permissions.set_mode(0o755);
++        fs::set_permissions(path, permissions).expect("fake python should be executable");
++    }
++}
++
+ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
+     let output_root = temp_dir(label);
+     let output_arg = output_root.to_string_lossy().to_string();
+@@ -288,6 +354,9 @@ fn check_reports_valid_python_and_js_capsules_without_language_flags() {
+         "manifest freshness: fresh",
+         "executable: python >=3.10",
+         "package: pydantic >=2,<3",
++        "executable: python required: >=3.10 detected:",
++        "package: pydantic required: >=2,<3 detected:",
++        "status: satisfied",
+         "examples/default.input.json: present",
+     ] {
+         assert!(
+@@ -309,6 +378,7 @@ fn check_reports_valid_python_and_js_capsules_without_language_flags() {
+         "entrypoint: action.mjs",
+         "manifest freshness: fresh",
+         "executable: node >=18",
++        "executable: node required: >=18 detected:",
+         "packages: none",
+         "examples/default.input.json: present",
+     ] {
+@@ -324,6 +394,120 @@ fn check_reports_valid_python_and_js_capsules_without_language_flags() {
+     fs::remove_dir_all(js_root).ok();
+ }
+
++#[test]
++fn check_reports_missing_python_without_raw_program_not_found() {
++    let (output_root, capsule) = generated_capsule("check-missing-python");
++    let fake_path = output_root.join("empty-path");
++    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let check = run_skillrun_with_path(&["check", "--cwd", &cwd_arg], &fake_path);
++    let stdout = assert_failure_stdout(&check, "missing python check");
++
++    for expected in [
++        "status: dependency-error",
++        "executable: python required: >=3.10 detected: missing status: missing",
++        "package: pydantic required: >=2,<3 detected: missing status: missing",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "missing python check missing {expected:?}\n{stdout}"
++        );
++    }
++    assert!(
++        !stdout.contains("program not found"),
++        "check should hide raw spawn wording\n{stdout}"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn check_reports_missing_node_without_package_manager_checks() {
++    let (output_root, capsule) = generated_js_capsule("check-missing-node");
++    let fake_path = output_root.join("empty-path");
++    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let check = run_skillrun_with_path(&["check", "--cwd", &cwd_arg], &fake_path);
++    let stdout = assert_failure_stdout(&check, "missing node check");
++
++    for expected in [
++        "status: dependency-error",
++        "executable: node required: >=18 detected: missing status: missing",
++        "packages: none",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "missing node check missing {expected:?}\n{stdout}"
++        );
++    }
++    assert!(!stdout.contains("npm"));
++    assert!(!stdout.contains("node_modules"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn check_reports_missing_pydantic_without_importing_action_source() {
++    let (output_root, capsule) = generated_capsule("check-missing-pydantic");
++    let fake_path = output_root.join("fake-path");
++    write_fake_python(&fake_path, None);
++    let fake_log = output_root.join("fake-python.log");
++    let fake_log_arg = fake_log.to_string_lossy().to_string();
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let check = run_skillrun_with_path_and_env(
++        ["check", "--cwd", &cwd_arg].as_slice(),
++        &fake_path,
++        &[("SKILLRUN_FAKE_PYTHON_LOG", &fake_log_arg)],
++    );
++    let stdout = assert_failure_stdout(&check, "missing pydantic check");
++
++    for expected in [
++        "status: dependency-error",
++        "executable: python required: >=3.10 detected: Python 3.11.0 status: satisfied",
++        "package: pydantic required: >=2,<3 detected: missing status: missing",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "missing pydantic check missing {expected:?}\n{stdout}"
++        );
++    }
++
++    let fake_log = fs::read_to_string(fake_log).expect("fake python log should be readable");
++    assert!(fake_log.contains("pydantic"));
++    assert!(
++        !fake_log.contains("action.py"),
++        "pydantic probe must not receive action source path\n{fake_log}"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn check_reports_incompatible_pydantic_version() {
++    let (output_root, capsule) = generated_capsule("check-pydantic-v1");
++    let fake_path = output_root.join("fake-path");
++    write_fake_python(&fake_path, Some("1.10.0"));
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let check = run_skillrun_with_path(&["check", "--cwd", &cwd_arg], &fake_path);
++    let stdout = assert_failure_stdout(&check, "pydantic v1 check");
++
++    for expected in [
++        "status: dependency-error",
++        "package: pydantic required: >=2,<3 detected: 1.10.0 status: unsupported-version",
++    ] {
++        assert!(
++            stdout.contains(expected),
++            "pydantic v1 check missing {expected:?}\n{stdout}"
++        );
++    }
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn doctor_reports_stale_manifest_without_creating_run_records() {
+     let (output_root, capsule) = generated_js_capsule("doctor-stale-js");

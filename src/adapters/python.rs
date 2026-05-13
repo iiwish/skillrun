@@ -3,8 +3,89 @@ use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::adapters::{ActionRunOutput, ActionRunRequest};
+use crate::adapters::{ActionRunOutput, ActionRunRequest, DiscoveredDependency, RuntimeDiscovery};
 use crate::schemas::Schemas;
+
+pub fn discover_runtime() -> RuntimeDiscovery {
+    let executable = discover_python();
+    let packages = if executable.available {
+        vec![discover_pydantic()]
+    } else {
+        vec![DiscoveredDependency {
+            name: "pydantic".to_string(),
+            detected: None,
+            available: false,
+        }]
+    };
+
+    RuntimeDiscovery {
+        executable,
+        packages,
+    }
+}
+
+fn discover_python() -> DiscoveredDependency {
+    let output = run_python_probe(&["--version"]);
+    match output {
+        Ok(output) if output.status.success() => {
+            let detected = command_text(&output);
+            DiscoveredDependency {
+                name: "python".to_string(),
+                detected: non_empty(detected),
+                available: true,
+            }
+        }
+        _ => DiscoveredDependency {
+            name: "python".to_string(),
+            detected: None,
+            available: false,
+        },
+    }
+}
+
+fn discover_pydantic() -> DiscoveredDependency {
+    let output = run_python_probe(&["-c", "import pydantic; print(pydantic.__version__)"]);
+    match output {
+        Ok(output) if output.status.success() => {
+            let detected = command_text(&output);
+            DiscoveredDependency {
+                name: "pydantic".to_string(),
+                detected: non_empty(detected),
+                available: true,
+            }
+        }
+        _ => DiscoveredDependency {
+            name: "pydantic".to_string(),
+            detected: None,
+            available: false,
+        },
+    }
+}
+
+fn run_python_probe(args: &[&str]) -> Result<Output, std::io::Error> {
+    let mut last_error = None;
+    for executable in python_probe_commands() {
+        let output = Command::new(executable).args(args).output();
+        match output {
+            Ok(output) => return Ok(output),
+            Err(error) => last_error = Some(error),
+        }
+    }
+    Err(last_error.unwrap_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "python executable not found")
+    }))
+}
+
+fn python_probe_commands() -> &'static [&'static str] {
+    #[cfg(windows)]
+    {
+        &["python", "python.cmd"]
+    }
+    #[cfg(not(windows))]
+    {
+        &["python"]
+    }
+}
 
 pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
     let action_path = action_path
@@ -228,6 +309,22 @@ fn metadata_timeout() -> Duration {
         .and_then(|value| value.parse::<u64>().ok())
         .map(Duration::from_millis)
         .unwrap_or_else(|| Duration::from_secs(10))
+}
+
+fn command_text(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !stdout.is_empty() {
+        return stdout;
+    }
+    String::from_utf8_lossy(&output.stderr).trim().to_string()
+}
+
+fn non_empty(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }
 
 fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {

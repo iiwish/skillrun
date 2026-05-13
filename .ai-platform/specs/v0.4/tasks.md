@@ -204,7 +204,7 @@ Evidence required:
 
 ### T032: Add Python And Node Runtime Discovery
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T031
 Blocks: T033
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029, T030 and T031 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029, T030, T031 and T032 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
