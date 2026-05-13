@@ -179,10 +179,16 @@ The current runtime only implements the refund capsule. The other examples expla
 
 ## Documentation
 
+- [Documentation index](docs/README.md)
 - [MVP contract](docs/mvp.md)
 - [Architecture SSOT](docs/ssot.md)
 - [Business examples](docs/business-examples.md)
-- [Test strategy](.ai-platform/docs/test-strategy.md)
+- [Test strategy](docs/testing.md)
+- [Release policy](docs/release-policy.md)
+- [Branch protection guidance](docs/branch-protection.md)
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
 Project governance documents are primarily written in Chinese so future agents can parse and maintain the approved product contract consistently.
 
