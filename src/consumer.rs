@@ -89,19 +89,33 @@ fn validate_source(
 
 fn missing_manifest_error(capsule_dir: &Path, manifest_path: &Path, command: &str) -> String {
     let skill_path = capsule_dir.join("SKILL.md");
-    let action_path = capsule_dir.join("action.py");
-    if skill_path.is_file() && !action_path.is_file() {
+    let python_action_path = capsule_dir.join("action.py");
+    let node_action_path = capsule_dir.join("action.mjs");
+    let typescript_action_path = capsule_dir.join("action.ts");
+    let has_python_action = python_action_path.is_file();
+    let has_node_action = node_action_path.is_file();
+    let has_typescript_action = typescript_action_path.is_file();
+
+    if skill_path.is_file() && !has_python_action && !has_node_action && !has_typescript_action {
         return format!(
-            "{command} refused instruction-only Skill at {}: missing action.py and {}. Add an explicit action.py, then run `skillrun manifest --cwd {}`. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
+            "{command} refused instruction-only Skill at {}: missing action.py or action.mjs and {}. Add an explicit action.py or action.mjs, then run `skillrun manifest --cwd {}`. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
             capsule_dir.display(),
             manifest_path.display(),
             capsule_dir.display()
         );
     }
 
-    if !action_path.is_file() {
+    if has_typescript_action && !has_python_action && !has_node_action {
         return format!(
-            "{command} refused non-runnable SkillRun directory at {}: missing action.py. Add an explicit action.py, then run `skillrun manifest --cwd {}`.",
+            "{command} refused unsupported TypeScript action at {}: action.ts is not supported in v0.3 JS alpha. compile to action.mjs, then run `skillrun manifest --cwd {}`.",
+            capsule_dir.display(),
+            capsule_dir.display()
+        );
+    }
+
+    if !has_python_action && !has_node_action {
+        return format!(
+            "{command} refused non-runnable SkillRun directory at {}: missing action.py or action.mjs. Add an explicit action.py or action.mjs, then run `skillrun manifest --cwd {}`.",
             capsule_dir.display(),
             capsule_dir.display()
         );

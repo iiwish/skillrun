@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::schemas::Schemas;
 
+pub mod node;
 pub mod python;
 
 pub struct ActionRunRequest<'a> {
@@ -28,6 +29,7 @@ pub fn extract_schemas(
     action_path: &Path,
 ) -> Result<Schemas, String> {
     match adapter {
+        "node" => node::extract_schemas(capsule_dir, action_path),
         "python" => python::extract_schemas(capsule_dir, action_path),
         _ => Err(format!("unsupported metadata adapter: {adapter}")),
     }

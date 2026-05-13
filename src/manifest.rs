@@ -90,9 +90,10 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     let config_path = capsule_dir.join("skillrun.config.json");
 
     require_file(&skill_path, "missing SKILL.md")?;
-    let config = config::load_config(&config_path)?;
+    let config = resolve_capsule_config(&capsule_dir, &config_path)?;
     let action_entrypoint = config.runtime.entrypoint.clone();
     let adapter = config.runtime.adapter.clone();
+    ensure_supported_entrypoint(&action_entrypoint)?;
     let action_path = capsule_dir.join(&action_entrypoint);
     if !action_path.is_file() {
         return Err(format!(
@@ -183,4 +184,71 @@ fn require_file(path: &Path, message: &str) -> Result<(), String> {
     } else {
         Err(format!("{message}: {}", path.display()))
     }
+}
+
+fn resolve_capsule_config(
+    capsule_dir: &Path,
+    config_path: &Path,
+) -> Result<config::CapsuleConfig, String> {
+    if config_path.exists() {
+        return config::load_config(config_path);
+    }
+
+    Ok(config::CapsuleConfig {
+        runtime: convention_runtime(capsule_dir)?,
+        permissions: config::default_permissions(),
+    })
+}
+
+fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
+    let known_actions = [
+        ("action.py", "python"),
+        ("action.mjs", "node"),
+        ("action.ts", "typescript"),
+    ];
+    let found: Vec<(&str, &str)> = known_actions
+        .into_iter()
+        .filter(|(path, _)| capsule_dir.join(path).is_file())
+        .collect();
+
+    match found.as_slice() {
+        [] => Err(format!(
+            "missing action.py or action.mjs: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py or action.mjs before running `skillrun manifest`.",
+            capsule_dir.display()
+        )),
+        [(entrypoint, "typescript")] => Err(unsupported_typescript_message(entrypoint)),
+        [(entrypoint, adapter)] => Ok(RuntimeConfig {
+            adapter: (*adapter).to_string(),
+            entrypoint: (*entrypoint).to_string(),
+            timeout: "30s".to_string(),
+        }),
+        _ => {
+            let names = found
+                .iter()
+                .map(|(path, _)| *path)
+                .collect::<Vec<_>>()
+                .join(", ");
+            Err(format!(
+                "ambiguous action files without skillrun.config.json: found {names}. Add skillrun.config.json with runtime.adapter and runtime.entrypoint before running `skillrun manifest`."
+            ))
+        }
+    }
+}
+
+fn ensure_supported_entrypoint(entrypoint: &str) -> Result<(), String> {
+    if Path::new(entrypoint)
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("ts"))
+    {
+        return Err(unsupported_typescript_message(entrypoint));
+    }
+
+    Ok(())
+}
+
+fn unsupported_typescript_message(entrypoint: &str) -> String {
+    format!(
+        "{entrypoint} is not supported in v0.3 JS alpha. compile to action.mjs and set runtime.entrypoint to action.mjs before running `skillrun manifest`."
+    )
 }

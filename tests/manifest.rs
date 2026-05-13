@@ -38,24 +38,11 @@ fn assert_contains(text: &str, expected: &str) {
     );
 }
 
-fn sha_lines_are_64_hex(manifest: &str) -> bool {
+fn has_source_sha(manifest: &str, path: &str) -> bool {
+    let expected_path = format!("path: {path}");
     let lines: Vec<&str> = manifest.lines().collect();
     lines.windows(2).any(|window| {
-        window[0].trim_start().starts_with("path: SKILL.md")
-            && window[1]
-                .trim_start()
-                .strip_prefix("sha256: ")
-                .is_some_and(is_64_hex)
-    }) && lines.windows(2).any(|window| {
-        window[0].trim_start().starts_with("path: action.py")
-            && window[1]
-                .trim_start()
-                .strip_prefix("sha256: ")
-                .is_some_and(is_64_hex)
-    }) && lines.windows(2).any(|window| {
-        window[0]
-            .trim_start()
-            .starts_with("path: skillrun.config.json")
+        window[0].trim_start().starts_with(&expected_path)
             && window[1]
                 .trim_start()
                 .strip_prefix("sha256: ")
@@ -63,8 +50,37 @@ fn sha_lines_are_64_hex(manifest: &str) -> bool {
     })
 }
 
+fn assert_source_hash(manifest: &str, path: &str) {
+    assert!(
+        has_source_sha(manifest, path),
+        "manifest should record a 64-hex source hash for {path}\n{manifest}"
+    );
+}
+
 fn is_64_hex(value: &str) -> bool {
     value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
+fn valid_js_action() -> &'static str {
+    r#"
+export const inputSchema = {
+  type: "object",
+  required: ["order_id"],
+  additionalProperties: false,
+  properties: {
+    order_id: { type: "string", minLength: 1 }
+  }
+};
+
+export const outputSchema = {
+  type: "object",
+  required: ["decision"],
+  additionalProperties: false,
+  properties: {
+    decision: { type: "string", enum: ["approved", "rejected"] }
+  }
+};
+"#
 }
 
 #[test]
@@ -91,7 +107,211 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
     assert_contains(&manifest_text, "order_id");
     assert_contains(&manifest_text, "manager_approval_id");
     assert_contains(&manifest_text, "decision");
-    assert!(sha_lines_are_64_hex(&manifest_text));
+    assert_source_hash(&manifest_text, "SKILL.md");
+    assert_source_hash(&manifest_text, "action.py");
+    assert_source_hash(&manifest_text, "skillrun.config.json");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_generates_yaml_for_js_alpha_with_explicit_json_schemas() {
+    let output_root = temp_dir("manifest-js");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let manifest_path = generated_manifest(&capsule);
+    assert!(manifest_path.is_file());
+    let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+
+    assert_contains(&manifest_text, "adapter: node");
+    assert_contains(&manifest_text, "entrypoint: action.mjs");
+    assert_contains(&manifest_text, "path: action.mjs");
+    assert_contains(&manifest_text, "order_id");
+    assert_contains(&manifest_text, "decision");
+    assert_source_hash(&manifest_text, "SKILL.md");
+    assert_source_hash(&manifest_text, "action.mjs");
+    assert_source_hash(&manifest_text, "skillrun.config.json");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_uses_config_entrypoint_before_action_file_convention() {
+    let output_root = temp_dir("manifest-js-config-first");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    fs::write(capsule.join("action.py"), "not valid python\n").expect("extra action should write");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(
+        manifest.status.success(),
+        "config should select action.mjs before convention\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let manifest_text =
+        fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable");
+    assert_contains(&manifest_text, "path: action.mjs");
+    assert!(!manifest_text.contains("path: action.py"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_uses_action_mjs_convention_without_config() {
+    let output_root = temp_dir("manifest-js-convention");
+    let capsule = output_root.join("refund");
+    fs::create_dir_all(&capsule).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
+    fs::write(capsule.join("action.mjs"), valid_js_action()).expect("action should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(
+        manifest.status.success(),
+        "manifest should use action.mjs convention\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let manifest_text =
+        fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable");
+    assert_contains(&manifest_text, "adapter: node");
+    assert_contains(&manifest_text, "entrypoint: action.mjs");
+    assert_source_hash(&manifest_text, "action.mjs");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_fails_for_ambiguous_action_files_without_config() {
+    let output_root = temp_dir("manifest-ambiguous-actions");
+    let capsule = output_root.join("refund");
+    fs::create_dir_all(&capsule).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
+    fs::write(
+        capsule.join("action.py"),
+        "from pydantic import BaseModel\n",
+    )
+    .expect("python action should be written");
+    fs::write(capsule.join("action.mjs"), valid_js_action()).expect("js action should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("ambiguous action files"));
+    assert!(stderr.contains("skillrun.config.json"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_fails_for_unsupported_typescript_action_without_config() {
+    let output_root = temp_dir("manifest-typescript");
+    let capsule = output_root.join("refund");
+    fs::create_dir_all(&capsule).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
+    fs::write(
+        capsule.join("action.ts"),
+        "export const inputSchema = {};\n",
+    )
+    .expect("ts action should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("action.ts is not supported"));
+    assert!(stderr.contains("compile to action.mjs"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_fails_when_js_schema_export_is_missing() {
+    let output_root = temp_dir("manifest-js-missing-schema");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    fs::write(
+        capsule.join("action.mjs"),
+        "export const inputSchema = { type: \"object\" };\n",
+    )
+    .expect("action should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("missing outputSchema export"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_fails_when_js_schema_export_is_not_object() {
+    let output_root = temp_dir("manifest-js-invalid-schema");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    fs::write(
+        capsule.join("action.mjs"),
+        "export const inputSchema = [];\nexport const outputSchema = { type: \"object\" };\n",
+    )
+    .expect("action should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("inputSchema must export a JSON Schema object"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_fails_clearly_when_node_is_missing() {
+    let output_root = temp_dir("manifest-js-missing-node");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun_with_env(&["manifest", "--cwd", &cwd_arg], &[("PATH", "")]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("failed to spawn Node metadata extractor"));
+    assert!(stderr.contains("program not found"));
+    assert!(!generated_manifest(&capsule).exists());
 
     fs::remove_dir_all(output_root).ok();
 }

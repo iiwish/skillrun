@@ -1,0 +1,638 @@
+﻿diff --git a/src/adapters/mod.rs b/src/adapters/mod.rs
+index e11a53c..e8aec1e 100644
+--- a/src/adapters/mod.rs
++++ b/src/adapters/mod.rs
+@@ -3,6 +3,7 @@ use std::time::Duration;
+ 
+ use crate::schemas::Schemas;
+ 
++pub mod node;
+ pub mod python;
+ 
+ pub struct ActionRunRequest<'a> {
+@@ -28,6 +29,7 @@ pub fn extract_schemas(
+     action_path: &Path,
+ ) -> Result<Schemas, String> {
+     match adapter {
++        "node" => node::extract_schemas(capsule_dir, action_path),
+         "python" => python::extract_schemas(capsule_dir, action_path),
+         _ => Err(format!("unsupported metadata adapter: {adapter}")),
+     }
+diff --git a/src/consumer.rs b/src/consumer.rs
+index 2809ab3..931dae8 100644
+--- a/src/consumer.rs
++++ b/src/consumer.rs
+@@ -89,19 +89,33 @@ fn validate_source(
+ 
+ fn missing_manifest_error(capsule_dir: &Path, manifest_path: &Path, command: &str) -> String {
+     let skill_path = capsule_dir.join("SKILL.md");
+-    let action_path = capsule_dir.join("action.py");
+-    if skill_path.is_file() && !action_path.is_file() {
++    let python_action_path = capsule_dir.join("action.py");
++    let node_action_path = capsule_dir.join("action.mjs");
++    let typescript_action_path = capsule_dir.join("action.ts");
++    let has_python_action = python_action_path.is_file();
++    let has_node_action = node_action_path.is_file();
++    let has_typescript_action = typescript_action_path.is_file();
++
++    if skill_path.is_file() && !has_python_action && !has_node_action && !has_typescript_action {
+         return format!(
+-            "{command} refused instruction-only Skill at {}: missing action.py and {}. Add an explicit action.py, then run `skillrun manifest --cwd {}`. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
++            "{command} refused instruction-only Skill at {}: missing action.py or action.mjs and {}. Add an explicit action.py or action.mjs, then run `skillrun manifest --cwd {}`. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
+             capsule_dir.display(),
+             manifest_path.display(),
+             capsule_dir.display()
+         );
+     }
+ 
+-    if !action_path.is_file() {
++    if has_typescript_action && !has_python_action && !has_node_action {
+         return format!(
+-            "{command} refused non-runnable SkillRun directory at {}: missing action.py. Add an explicit action.py, then run `skillrun manifest --cwd {}`.",
++            "{command} refused unsupported TypeScript action at {}: action.ts is not supported in v0.3 JS alpha. compile to action.mjs, then run `skillrun manifest --cwd {}`.",
++            capsule_dir.display(),
++            capsule_dir.display()
++        );
++    }
++
++    if !has_python_action && !has_node_action {
++        return format!(
++            "{command} refused non-runnable SkillRun directory at {}: missing action.py or action.mjs. Add an explicit action.py or action.mjs, then run `skillrun manifest --cwd {}`.",
+             capsule_dir.display(),
+             capsule_dir.display()
+         );
+diff --git a/src/manifest.rs b/src/manifest.rs
+index b468569..4ddf4a8 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -90,9 +90,10 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+     let config_path = capsule_dir.join("skillrun.config.json");
+ 
+     require_file(&skill_path, "missing SKILL.md")?;
+-    let config = config::load_config(&config_path)?;
++    let config = resolve_capsule_config(&capsule_dir, &config_path)?;
+     let action_entrypoint = config.runtime.entrypoint.clone();
+     let adapter = config.runtime.adapter.clone();
++    ensure_supported_entrypoint(&action_entrypoint)?;
+     let action_path = capsule_dir.join(&action_entrypoint);
+     if !action_path.is_file() {
+         return Err(format!(
+@@ -184,3 +185,70 @@ fn require_file(path: &Path, message: &str) -> Result<(), String> {
+         Err(format!("{message}: {}", path.display()))
+     }
+ }
++
++fn resolve_capsule_config(
++    capsule_dir: &Path,
++    config_path: &Path,
++) -> Result<config::CapsuleConfig, String> {
++    if config_path.exists() {
++        return config::load_config(config_path);
++    }
++
++    Ok(config::CapsuleConfig {
++        runtime: convention_runtime(capsule_dir)?,
++        permissions: config::default_permissions(),
++    })
++}
++
++fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
++    let known_actions = [
++        ("action.py", "python"),
++        ("action.mjs", "node"),
++        ("action.ts", "typescript"),
++    ];
++    let found: Vec<(&str, &str)> = known_actions
++        .into_iter()
++        .filter(|(path, _)| capsule_dir.join(path).is_file())
++        .collect();
++
++    match found.as_slice() {
++        [] => Err(format!(
++            "missing action.py or action.mjs: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py or action.mjs before running `skillrun manifest`.",
++            capsule_dir.display()
++        )),
++        [(entrypoint, "typescript")] => Err(unsupported_typescript_message(entrypoint)),
++        [(entrypoint, adapter)] => Ok(RuntimeConfig {
++            adapter: (*adapter).to_string(),
++            entrypoint: (*entrypoint).to_string(),
++            timeout: "30s".to_string(),
++        }),
++        _ => {
++            let names = found
++                .iter()
++                .map(|(path, _)| *path)
++                .collect::<Vec<_>>()
++                .join(", ");
++            Err(format!(
++                "ambiguous action files without skillrun.config.json: found {names}. Add skillrun.config.json with runtime.adapter and runtime.entrypoint before running `skillrun manifest`."
++            ))
++        }
++    }
++}
++
++fn ensure_supported_entrypoint(entrypoint: &str) -> Result<(), String> {
++    if Path::new(entrypoint)
++        .extension()
++        .and_then(|value| value.to_str())
++        .is_some_and(|extension| extension.eq_ignore_ascii_case("ts"))
++    {
++        return Err(unsupported_typescript_message(entrypoint));
++    }
++
++    Ok(())
++}
++
++fn unsupported_typescript_message(entrypoint: &str) -> String {
++    format!(
++        "{entrypoint} is not supported in v0.3 JS alpha. compile to action.mjs and set runtime.entrypoint to action.mjs before running `skillrun manifest`."
++    )
++}
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index 3d8ced7..c388355 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -42,6 +42,29 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+ 
++fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
+ fn append_to(path: &Path, text: &str) {
+     let mut current = fs::read_to_string(path).expect("file should be readable");
+     current.push_str(text);
+@@ -120,6 +143,38 @@ fn serve_refuses_stale_action_before_unimplemented_fallback() {
+     fs::remove_dir_all(output_root).ok();
+ }
+ 
++#[test]
++fn serve_refuses_stale_js_action_before_runtime_dispatch() {
++    let (output_root, capsule) = generated_js_capsule("guard-stale-js-action");
++    append_to(&capsule.join("action.mjs"), "\n// changed after manifest\n");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert_guard_failure(&serve, "action.mjs");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn js_capsule_without_manifest_is_not_reported_as_missing_python_action() {
++    let output_root = temp_dir("guard-js-missing-manifest");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++
++    assert!(!serve.status.success());
++    let stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("missing Manifest"));
++    assert!(stderr.contains("skillrun manifest"));
++    assert!(!stderr.contains("missing action.py"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn pack_refuses_stale_config_before_archive_creation() {
+     let (output_root, capsule) = generated_capsule("guard-stale-config");
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index 1fc6b08..7d79fb8 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -38,24 +38,11 @@ fn assert_contains(text: &str, expected: &str) {
+     );
+ }
+ 
+-fn sha_lines_are_64_hex(manifest: &str) -> bool {
++fn has_source_sha(manifest: &str, path: &str) -> bool {
++    let expected_path = format!("path: {path}");
+     let lines: Vec<&str> = manifest.lines().collect();
+     lines.windows(2).any(|window| {
+-        window[0].trim_start().starts_with("path: SKILL.md")
+-            && window[1]
+-                .trim_start()
+-                .strip_prefix("sha256: ")
+-                .is_some_and(is_64_hex)
+-    }) && lines.windows(2).any(|window| {
+-        window[0].trim_start().starts_with("path: action.py")
+-            && window[1]
+-                .trim_start()
+-                .strip_prefix("sha256: ")
+-                .is_some_and(is_64_hex)
+-    }) && lines.windows(2).any(|window| {
+-        window[0]
+-            .trim_start()
+-            .starts_with("path: skillrun.config.json")
++        window[0].trim_start().starts_with(&expected_path)
+             && window[1]
+                 .trim_start()
+                 .strip_prefix("sha256: ")
+@@ -63,10 +50,39 @@ fn sha_lines_are_64_hex(manifest: &str) -> bool {
+     })
+ }
+ 
++fn assert_source_hash(manifest: &str, path: &str) {
++    assert!(
++        has_source_sha(manifest, path),
++        "manifest should record a 64-hex source hash for {path}\n{manifest}"
++    );
++}
++
+ fn is_64_hex(value: &str) -> bool {
+     value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
+ }
+ 
++fn valid_js_action() -> &'static str {
++    r#"
++export const inputSchema = {
++  type: "object",
++  required: ["order_id"],
++  additionalProperties: false,
++  properties: {
++    order_id: { type: "string", minLength: 1 }
++  }
++};
++
++export const outputSchema = {
++  type: "object",
++  required: ["decision"],
++  additionalProperties: false,
++  properties: {
++    decision: { type: "string", enum: ["approved", "rejected"] }
++  }
++};
++"#
++}
++
+ #[test]
+ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     let output_root = temp_dir("manifest");
+@@ -91,7 +107,211 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     assert_contains(&manifest_text, "order_id");
+     assert_contains(&manifest_text, "manager_approval_id");
+     assert_contains(&manifest_text, "decision");
+-    assert!(sha_lines_are_64_hex(&manifest_text));
++    assert_source_hash(&manifest_text, "SKILL.md");
++    assert_source_hash(&manifest_text, "action.py");
++    assert_source_hash(&manifest_text, "skillrun.config.json");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_generates_yaml_for_js_alpha_with_explicit_json_schemas() {
++    let output_root = temp_dir("manifest-js");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    let manifest_path = generated_manifest(&capsule);
++    assert!(manifest_path.is_file());
++    let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
++
++    assert_contains(&manifest_text, "adapter: node");
++    assert_contains(&manifest_text, "entrypoint: action.mjs");
++    assert_contains(&manifest_text, "path: action.mjs");
++    assert_contains(&manifest_text, "order_id");
++    assert_contains(&manifest_text, "decision");
++    assert_source_hash(&manifest_text, "SKILL.md");
++    assert_source_hash(&manifest_text, "action.mjs");
++    assert_source_hash(&manifest_text, "skillrun.config.json");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_uses_config_entrypoint_before_action_file_convention() {
++    let output_root = temp_dir("manifest-js-config-first");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    fs::write(capsule.join("action.py"), "not valid python\n").expect("extra action should write");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(
++        manifest.status.success(),
++        "config should select action.mjs before convention\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    let manifest_text =
++        fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable");
++    assert_contains(&manifest_text, "path: action.mjs");
++    assert!(!manifest_text.contains("path: action.py"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_uses_action_mjs_convention_without_config() {
++    let output_root = temp_dir("manifest-js-convention");
++    let capsule = output_root.join("refund");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
++    fs::write(capsule.join("action.mjs"), valid_js_action()).expect("action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(
++        manifest.status.success(),
++        "manifest should use action.mjs convention\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    let manifest_text =
++        fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable");
++    assert_contains(&manifest_text, "adapter: node");
++    assert_contains(&manifest_text, "entrypoint: action.mjs");
++    assert_source_hash(&manifest_text, "action.mjs");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_for_ambiguous_action_files_without_config() {
++    let output_root = temp_dir("manifest-ambiguous-actions");
++    let capsule = output_root.join("refund");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
++    fs::write(
++        capsule.join("action.py"),
++        "from pydantic import BaseModel\n",
++    )
++    .expect("python action should be written");
++    fs::write(capsule.join("action.mjs"), valid_js_action()).expect("js action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("ambiguous action files"));
++    assert!(stderr.contains("skillrun.config.json"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_for_unsupported_typescript_action_without_config() {
++    let output_root = temp_dir("manifest-typescript");
++    let capsule = output_root.join("refund");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# refund").expect("skill should be written");
++    fs::write(
++        capsule.join("action.ts"),
++        "export const inputSchema = {};\n",
++    )
++    .expect("ts action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("action.ts is not supported"));
++    assert!(stderr.contains("compile to action.mjs"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_when_js_schema_export_is_missing() {
++    let output_root = temp_dir("manifest-js-missing-schema");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    fs::write(
++        capsule.join("action.mjs"),
++        "export const inputSchema = { type: \"object\" };\n",
++    )
++    .expect("action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("missing outputSchema export"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_when_js_schema_export_is_not_object() {
++    let output_root = temp_dir("manifest-js-invalid-schema");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    fs::write(
++        capsule.join("action.mjs"),
++        "export const inputSchema = [];\nexport const outputSchema = { type: \"object\" };\n",
++    )
++    .expect("action should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("inputSchema must export a JSON Schema object"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_fails_clearly_when_node_is_missing() {
++    let output_root = temp_dir("manifest-js-missing-node");
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(init.status.success());
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun_with_env(&["manifest", "--cwd", &cwd_arg], &[("PATH", "")]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("failed to spawn Node metadata extractor"));
++    assert!(stderr.contains("program not found"));
++    assert!(!generated_manifest(&capsule).exists());
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
+
+diff --git "a/src\\adapters\\node.rs" "b/src\\adapters\\node.rs"
+new file mode 100644
+index 0000000..01f3063
+--- /dev/null
++++ "b/src\\adapters\\node.rs"
+@@ -0,0 +1,123 @@
++use std::path::Path;
++use std::process::{Command, Output, Stdio};
++use std::thread;
++use std::time::{Duration, Instant};
++
++use crate::schemas::Schemas;
++
++pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
++    let action_path = action_path
++        .canonicalize()
++        .map_err(|error| format!("failed to resolve {}: {error}", action_path.display()))?;
++    let script = r#"
++import { pathToFileURL } from "node:url";
++
++const actionPath = process.argv[1];
++const action = await import(pathToFileURL(actionPath).href);
++
++function schemaFor(name) {
++  if (!Object.prototype.hasOwnProperty.call(action, name)) {
++    throw new Error(`missing ${name} export`);
++  }
++
++  const schema = action[name];
++  if (schema === null || typeof schema !== "object" || Array.isArray(schema)) {
++    throw new Error(`${name} must export a JSON Schema object`);
++  }
++
++  return schema;
++}
++
++process.stdout.write(JSON.stringify({
++  input: schemaFor("inputSchema"),
++  output: schemaFor("outputSchema")
++}));
++"#;
++
++    let mut command = Command::new("node");
++    command
++        .arg("--input-type=module")
++        .arg("-e")
++        .arg(script)
++        .arg(&action_path)
++        .current_dir(capsule_dir);
++    apply_process_env(&mut command);
++    command.stdout(Stdio::piped()).stderr(Stdio::piped());
++
++    let timeout = metadata_timeout();
++    let output = run_with_timeout(command, timeout).map_err(|error| {
++        format!(
++            "failed to run Node metadata extractor for {}: {error}",
++            action_path.display()
++        )
++    })?;
++
++    if !output.status.success() {
++        let stderr = String::from_utf8_lossy(&output.stderr);
++        return Err(format!(
++            "node metadata extraction failed for {}: {}",
++            action_path.display(),
++            stderr.trim()
++        ));
++    }
++
++    serde_json::from_slice(&output.stdout)
++        .map_err(|error| format!("node metadata output was not valid JSON: {error}"))
++}
++
++fn metadata_timeout() -> Duration {
++    std::env::var("SKILLRUN_METADATA_TIMEOUT_MS")
++        .ok()
++        .and_then(|value| value.parse::<u64>().ok())
++        .map(Duration::from_millis)
++        .unwrap_or_else(|| Duration::from_secs(10))
++}
++
++fn apply_process_env(command: &mut Command) {
++    command.env_clear();
++    for key in [
++        "SystemRoot",
++        "WINDIR",
++        "COMSPEC",
++        "TEMP",
++        "TMP",
++        "USERPROFILE",
++        "LOCALAPPDATA",
++        "APPDATA",
++        "PATH",
++    ] {
++        if let Ok(value) = std::env::var(key) {
++            command.env(key, value);
++        }
++    }
++}
++
++fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
++    let mut child = command
++        .spawn()
++        .map_err(|error| format!("failed to spawn Node metadata extractor: {error}"))?;
++    let started_at = Instant::now();
++
++    loop {
++        if child
++            .try_wait()
++            .map_err(|error| format!("failed to poll Node metadata extractor: {error}"))?
++            .is_some()
++        {
++            return child
++                .wait_with_output()
++                .map_err(|error| format!("failed to collect Node metadata output: {error}"));
++        }
++
++        if started_at.elapsed() >= timeout {
++            let _ = child.kill();
++            let _ = child.wait_with_output();
++            return Err(format!(
++                "metadata extraction timed out after {} ms",
++                timeout.as_millis()
++            ));
++        }
++
++        thread::sleep(Duration::from_millis(10));
++    }
++}

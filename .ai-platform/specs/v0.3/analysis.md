@@ -127,7 +127,7 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T022 only.
+Ready for execution: T023 only.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
@@ -135,10 +135,11 @@ Reason:
 - T019 has been accepted.
 - T020 has been accepted.
 - T021 has been accepted.
-- T022 has no unfinished dependencies and may start.
-- T023-T028 remain blocked by their declared dependencies.
+- T022 has been accepted.
+- T023 has no unfinished dependencies and may start.
+- T024-T028 remain blocked by their declared dependencies.
 
 Ready for user review: No.
 
 Recommended next step:
-Start T022: implement Node metadata extraction from explicit JSON Schema while preserving Consumer Mode static Manifest behavior.
+Start T023: implement Node runtime adapter while preserving Python behavior and Rust-side artifact validation.

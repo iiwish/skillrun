@@ -42,6 +42,29 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let output_arg = output_root.to_string_lossy().to_string();
+
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(
+        init.status.success(),
+        "init should succeed\nstderr: {}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    (output_root, capsule)
+}
+
 fn append_to(path: &Path, text: &str) {
     let mut current = fs::read_to_string(path).expect("file should be readable");
     current.push_str(text);
@@ -116,6 +139,38 @@ fn serve_refuses_stale_action_before_unimplemented_fallback() {
     let cwd_arg = capsule.to_string_lossy().to_string();
     let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
     assert_guard_failure(&serve, "action.py");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn serve_refuses_stale_js_action_before_runtime_dispatch() {
+    let (output_root, capsule) = generated_js_capsule("guard-stale-js-action");
+    append_to(&capsule.join("action.mjs"), "\n// changed after manifest\n");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+    assert_guard_failure(&serve, "action.mjs");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_capsule_without_manifest_is_not_reported_as_missing_python_action() {
+    let output_root = temp_dir("guard-js-missing-manifest");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+
+    assert!(!serve.status.success());
+    let stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("missing Manifest"));
+    assert!(stderr.contains("skillrun manifest"));
+    assert!(!stderr.contains("missing action.py"));
 
     fs::remove_dir_all(output_root).ok();
 }

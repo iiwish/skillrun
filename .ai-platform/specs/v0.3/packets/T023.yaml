@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T023"
 feature_id: "v0.3"
 title: Implement Node Runtime Adapter
-status: Blocked
+status: Ready
 priority: P0
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T023
   title: Implement Node Runtime Adapter
-  status: Blocked
+  status: Ready
   feature_id: v0.3
 goal: Run action.mjs through the existing runtime envelope, artifact and run record path.
 requirement_mapping:

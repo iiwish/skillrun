@@ -213,7 +213,7 @@ Evidence required:
 
 ### T022: Implement Node Metadata Extraction From Explicit JSON Schema
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T020, T021
 Blocks: T023, T024
@@ -279,7 +279,7 @@ The same Skill Capsule commands work for JS alpha without creating a separate pr
 
 ### T023: Implement Node Runtime Adapter
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T020, T022
 Blocks: T024, T025
