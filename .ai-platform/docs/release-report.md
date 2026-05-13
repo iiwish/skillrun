@@ -1,9 +1,9 @@
 # SkillRun v0.3 Release Report
 
-Version: v0.3.0 draft
-Status: Accepted_For_Release_Handoff
+Version: v0.3.0
+Status: Released_Local
 Last updated: 2026-05-13
-Review gate: T028 evidence accepted; release handoff decisions remain separate
+Review gate: T028 evidence accepted; local release handoff requested by maintainer
 
 ## Scope
 
@@ -23,9 +23,9 @@ v0.3 is not a general Node framework, TypeScript runtime, package manager, regis
 - v0.3 checklist: `.ai-platform/specs/v0.3/checklists/requirements.md`
 - v0.3 analysis: `.ai-platform/specs/v0.3/analysis.md`
 - Release notes draft: `RELEASE_NOTES.md`
-- Release report status: `Accepted_For_Release_Handoff`
-- Local release tag: not created by T028
-- Remote push and package publication: not performed by T028
+- Release report status: `Released_Local`
+- Local release tag: `v0.3.0`
+- Remote push and package publication: not performed by this handoff
 
 ## Accepted v0.3 Tasks
 
@@ -81,10 +81,10 @@ Release-candidate validation completed on 2026-05-13:
 Current local binary version output:
 
 ```text
-skillrun 0.2.0
+skillrun 0.3.0
 ```
 
-The SemVer bump, local tag and publication steps are intentionally outside T028 and require explicit maintainer approval.
+The SemVer bump and local tag are part of the post-T028 release handoff. Remote tag push and package publication still require explicit maintainer approval.
 
 ## Known Limitations
 
@@ -105,12 +105,12 @@ The SemVer bump, local tag and publication steps are intentionally outside T028 
 - [x] T028 release matrix and report prepared.
 - [x] Maintainer reviews T028 diff and evidence.
 - [x] Maintainer accepts v0.3 release candidate.
-- [ ] Decide whether to bump Cargo/package version from `0.2.0` to `0.3.0`.
-- [ ] Create local release tag after explicit approval.
+- [x] Decide whether to bump Cargo/package version from `0.2.0` to `0.3.0`.
+- [x] Create local release tag after explicit approval.
 - [ ] Push tag to remote, if desired.
 - [ ] Publish package/artifact, if desired.
 
 ## User Review Gate
 
 - Approval: Granted for T028 on 2026-05-13.
-- Reviewer notes: v0.3 release candidate evidence is accepted. No remote publication, tag creation or package release has been performed.
+- Reviewer notes: v0.3 release candidate evidence is accepted and the local release tag is created. Remote publication and package release have not been performed.

@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.3 is being prepared on top of the v0.2.0 public release candidate. No tag or public package has been published yet.
+SkillRun v0.3.0 is the current local release handoff. The `v0.3.0` tag is local; no remote tag or public package has been published by this handoff.
 
-- Current implementation: v0.2 release-candidate behavior plus v0.3 JS Action Alpha and adapter-aware diagnostics on the integration branch.
+- Current implementation: v0.2 MCP stdio behavior plus v0.3 JS Action Alpha and adapter-aware diagnostics.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
@@ -125,6 +125,24 @@ The JS alpha contract is canonical ESM `action.mjs` with explicit `inputSchema`,
 
 `action.ts` is not a runtime entrypoint. Authors may compile TypeScript to `action.mjs` themselves, but SkillRun v0.3 does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
 
+## Let an Agent Learn a Capsule Before Calling It
+
+SkillRun capsules are designed to be learned before they are called. Give an AI assistant a URL or repository path that points directly to a capsule folder, not just a generic project homepage. The folder should include `SKILL.md`, `skillrun.config.json`, an action entrypoint such as `action.py` or `action.mjs`, and `examples/`.
+
+```text
+Learn this SkillRun Capsule before using it:
+<capsule-folder-url-or-repo-path>
+
+1. Read SKILL.md for purpose, SOP, prohibited behavior, required context, and recovery guidance.
+2. Read skillrun.config.json and the generated Manifest, if present, to confirm adapter and entrypoint.
+3. Read action.py or action.mjs only as the action contract for this capsule; do not infer unsupported languages or package-manager behavior.
+4. Read examples/default.input.json to understand the expected input shape.
+5. If you can access the workspace, run `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, and `skillrun test --cwd <capsule>`.
+6. When calling the MCP tool, do not infer success from stdout. Use the output/error envelope, artifacts, and run record.
+```
+
+Use a real capsule folder when publishing a skill. This keeps the model from treating the capsule as a loose function call: it learns the SOP, adapter entrypoint, example input, and failure behavior before it uses the MCP tool.
+
 ## What Works Today
 
 The repository currently contains the Rust CLI, `init --python` and `init --py` Python capsule generator, `init --js` JS alpha capsule generator, Manifest generator, inspect renderer, doctor diagnostics, test/run path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
@@ -146,7 +164,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Example output:
 
 ```text
-skillrun 0.2.0
+skillrun 0.3.0
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -155,7 +173,7 @@ The `.skr` package is a source/Manifest archive. It is not signed, does not vend
 
 ## Release Candidate Limits
 
-v0.2.0 is intentionally narrow:
+v0.3.0 is intentionally narrow:
 
 - MCP transport is stdio only.
 - Each capsule exposes one primary Manifest-derived tool.
@@ -164,7 +182,7 @@ v0.2.0 is intentionally narrow:
 - `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
 - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- No tag or public release should be created until the release report is accepted by the maintainer.
+- The `v0.3.0` tag is local in this handoff. Remote tag push and package publication are separate explicit decisions.
 
 ## Security Model
 

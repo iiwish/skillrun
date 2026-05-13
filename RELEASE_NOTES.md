@@ -1,11 +1,11 @@
 # SkillRun Release Notes
 
-## v0.3.0 Draft
+## v0.3.0
 
-Status: Release_Candidate_Accepted
+Status: Released_Local
 Prepared on: 2026-05-13
 Previous public handoff: v0.2.0 local release candidate
-Publication: not tagged, not pushed, and not published by this release-candidate handoff
+Publication: local tag `v0.3.0` created; remote tag push and package publication were not performed
 
 ### Headline
 
@@ -44,7 +44,7 @@ SkillRun keeps the Python capsule path stable while proving the Core is a Manife
 - Runtime commands are Manifest-only. `skillrun test`, `skillrun run`, `skillrun serve --mcp`, and `skillrun pack` do not accept `--python`, `--py`, or `--js`.
 - `.skr` remains a source + Manifest archive. It is not signed, not a registry package, not a dependency bundle, and not a reproducible runtime image.
 - SkillRun is not an OS sandbox. Running third-party actions still means executing third-party code.
-- Version bump, tag creation, remote push, and package publication require a separate explicit release handoff.
+- Remote tag push and package publication require separate explicit approval.
 
 ### Validation
 

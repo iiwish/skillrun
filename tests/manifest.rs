@@ -100,7 +100,7 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
     let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
 
     assert_contains(&manifest_text, "manifest_version: 0.1.0");
-    assert_contains(&manifest_text, "generated_by: skillrun@0.2.0");
+    assert_contains(&manifest_text, "generated_by: skillrun@0.3.0");
     assert_contains(&manifest_text, "name: refund");
     assert_contains(&manifest_text, "adapter: python");
     assert_contains(&manifest_text, "entrypoint: action.py");
