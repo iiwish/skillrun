@@ -456,7 +456,7 @@ Authors can diagnose common Python/JS capsule issues without reading source code
 
 ### T026: Implement Adapter-aware `doctor` / `validate`
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T020
 Blocks: T028

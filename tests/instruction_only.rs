@@ -68,6 +68,16 @@ fn assert_instruction_refusal(output: &std::process::Output, command: &str) -> S
     stderr
 }
 
+fn assert_failure_stdout(output: &std::process::Output, command: &str) -> String {
+    assert!(
+        !output.status.success(),
+        "{command} should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
+}
+
 #[test]
 fn inspect_reports_instruction_only_status_with_scripts_and_examples_present() {
     let (output_root, skill) = instruction_only_skill("instruction-inspect");
@@ -159,6 +169,61 @@ fn missing_action_with_manifest_is_not_treated_as_runnable() {
     let stdout = String::from_utf8(inspect.stdout).expect("stdout should be utf-8");
     assert!(stdout.contains("status: invalid-runnable"));
     assert!(stdout.contains("action.py"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn doctor_reports_instruction_only_skill_without_inference() {
+    let (output_root, skill) = instruction_only_skill("instruction-doctor");
+    let cwd_arg = skill.to_string_lossy().to_string();
+
+    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&doctor, "instruction-only doctor");
+
+    for expected in [
+        "SkillRun Doctor",
+        "status: instruction-only",
+        "SKILL.md: present",
+        "action.py: absent",
+        "action.mjs: absent",
+        "does not infer actions",
+        "skillrun manifest",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "instruction-only doctor missing {expected:?}\n{stdout}"
+        );
+    }
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn doctor_reports_unsupported_typescript_action() {
+    let output_root = temp_dir("instruction-doctor-typescript");
+    let skill = output_root.join("ts-skill");
+    fs::create_dir_all(&skill).expect("skill dir should be created");
+    fs::write(skill.join("SKILL.md"), "# TS Skill\n").expect("SKILL.md should be written");
+    fs::write(skill.join("action.ts"), "export async function run() {}\n")
+        .expect("action.ts should be written");
+
+    let cwd_arg = skill.to_string_lossy().to_string();
+    let doctor = run_skillrun(&["doctor", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&doctor, "typescript doctor");
+
+    for expected in [
+        "status: unsupported-typescript",
+        "action.ts: present",
+        "action.ts is not supported",
+        "compile to action.mjs",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "TypeScript doctor missing {expected:?}\n{stdout}"
+        );
+    }
+    assert!(!stdout.contains("--js"));
 
     fs::remove_dir_all(output_root).ok();
 }

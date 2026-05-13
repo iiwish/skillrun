@@ -4,6 +4,7 @@ mod adapters;
 mod cli;
 mod config;
 mod consumer;
+mod doctor;
 mod errors;
 mod hashing;
 mod init;
