@@ -133,7 +133,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.3.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -171,7 +171,7 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     assert!(readme.contains("Support Triage"));
     assert!(readme.contains("Access Request Approval"));
     assert!(readme.contains("Vendor Risk Review"));
-    assert!(readme.contains("manifest-driven Agent skill capsule"));
+    assert!(readme.contains("portable Agent skill"));
     assert!(readme.contains("FastMCP turns functions into MCP tools"));
     assert!(!readme.contains("tested MCP skill package"));
     assert!(!cargo_toml.contains("tested MCP skill package"));

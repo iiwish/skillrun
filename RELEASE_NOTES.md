@@ -2,10 +2,10 @@
 
 ## v0.4.0
 
-Status: Integration_Ready_For_Review
+Status: Ready_For_Release_Decision
 Prepared on: 2026-05-13
 Previous local release handoff: v0.3.0
-Publication: no tag, remote push, package publication, registry entry, or artifact publication has been performed
+Publication: package version bumped to `0.4.0`; no `v0.4.0` tag, remote push, package publication, registry entry, or artifact publication has been performed
 
 ### Headline
 

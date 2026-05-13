@@ -262,7 +262,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.3.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.0.skr");
     assert!(archive_path.is_file(), "A012 archive should exist");
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack target should exist");
@@ -546,7 +546,7 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
     let pack_stdout = assert_success(&pack, "JS pack");
     assert!(pack_stdout.contains("does not vendor dependencies"));
     assert!(
-        capsule.join("dist").join("refund-0.3.0.skr").is_file(),
+        capsule.join("dist").join("refund-0.4.0.skr").is_file(),
         "JS pack should create .skr archive"
     );
 

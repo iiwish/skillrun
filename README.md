@@ -1,6 +1,6 @@
 # SkillRun
 
-> Turn one SOP and one action into a manifest-driven Agent skill capsule.
+> Package one SOP and one action into a portable Agent skill.
 
 [简体中文](README.zh-CN.md)
 
@@ -13,7 +13,7 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.4 is the current integration milestone. The last local release handoff is still `v0.3.0`; v0.4 documentation and validation are being prepared on the integration branch before any tag, remote push, or package publication.
+SkillRun v0.4.0 is the current release-candidate version. The package version has been bumped to `0.4.0`; no `v0.4.0` tag, remote push, or package publication has been performed yet.
 
 - Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, and v0.4 Portable Consumer Checks.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
@@ -175,10 +175,10 @@ cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
 cargo run -- pack --cwd tmp/e2e-init/refund
 ```
 
-Example output:
+Current local binary output:
 
 ```text
-skillrun 0.3.0
+skillrun 0.4.0
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -198,7 +198,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The `v0.3.0` tag is local in this handoff. Remote tag push and package publication are separate explicit decisions.
+- No `v0.4.0` tag has been created yet. Tag creation, remote push and package publication are separate explicit decisions.
 
 ## Security Model
 

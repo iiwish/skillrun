@@ -7,7 +7,7 @@ Review gate: T029-T036 evidence accepted; release handoff decisions remain pendi
 
 ## Scope
 
-This report records the v0.4 integration evidence for SkillRun after the v0.3.0 local release handoff.
+This report records the v0.4.0 release-candidate evidence for SkillRun after the v0.3.0 local release handoff.
 
 The release story is deliberately narrow:
 
@@ -24,7 +24,7 @@ v0.4 is not an HTTP transport, installer, package manager, registry, sandbox, si
 - v0.4 analysis: `.ai-platform/specs/v0.4/analysis.md`
 - Release notes draft: `RELEASE_NOTES.md`
 - Release report status: `Ready_For_Release_Decision`
-- Local release tag: not created by this task
+- Local release tag: `v0.4.0` not created by this task
 - Remote push and package publication: not performed by this handoff
 
 ## Accepted v0.4 Tasks
@@ -73,13 +73,13 @@ Release-documentation validation completed on 2026-05-13:
 - `cargo test`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 
-Current local binary version output still reflects the last version handoff until a release bump is explicitly approved:
+Current local binary version output after the release bump:
 
 ```text
-skillrun 0.3.0
+skillrun 0.4.0
 ```
 
-Version bump, tag creation, remote push and package publication remain separate release handoff decisions.
+Tag creation, remote push and package publication remain separate release handoff decisions.
 
 ## Known Limitations
 
@@ -97,8 +97,8 @@ Version bump, tag creation, remote push and package publication remain separate 
 - [x] T029-T035 accepted.
 - [x] T036 release docs prepared.
 - [x] Maintainer reviews T036 diff and evidence.
-- [ ] Maintainer accepts v0.4 release candidate.
-- [ ] Decide whether to bump Cargo/package version from `0.3.0` to `0.4.0`.
+- [x] Maintainer accepts v0.4 release candidate.
+- [x] Bump Cargo/package version from `0.3.0` to `0.4.0`.
 - [ ] Create local release tag after explicit approval.
 - [ ] Push tag to remote, if desired.
 - [ ] Publish package/artifact, if desired.
@@ -106,4 +106,4 @@ Version bump, tag creation, remote push and package publication remain separate 
 ## User Review Gate
 
 - Approval: Granted for T036 on 2026-05-13.
-- Reviewer notes: v0.4 implementation and documentation evidence through T036 is accepted. Version bump, local tag, remote push and package publication remain separate explicit decisions.
+- Reviewer notes: v0.4 implementation and documentation evidence through T036 is accepted. The package version has been bumped to `0.4.0`; local tag, remote push and package publication remain separate explicit decisions.

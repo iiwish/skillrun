@@ -1,6 +1,6 @@
 # SkillRun SSOT: SOP-backed Skill Capsule Runtime
 
-**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已进入本地集成验证；v0.1 未单独公开发布。
+**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已进入 release decision；v0.1 未单独公开发布。
 **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。  
 **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
 
