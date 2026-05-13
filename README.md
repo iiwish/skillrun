@@ -214,6 +214,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `T011` | End-to-end acceptance matrix and business examples |
 | `v0.2` | Real MCP stdio server and public release candidate readiness |
 | `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
+| `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
 
 ## Classic Business Examples
 
@@ -231,6 +232,7 @@ The current runtime only implements the refund capsule. The other examples expla
 - [Documentation index](docs/README.md)
 - [MVP contract](docs/mvp.md)
 - [Architecture SSOT](docs/ssot.md)
+- [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)

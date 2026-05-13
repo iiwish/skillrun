@@ -42,5 +42,6 @@ release candidate 至少需要：
 - 优先验证用户可观察行为，而不是内部实现细节。
 - 对 fail-closed 行为写回归测试：缺失 Manifest、stale Manifest、instruction-only skill、artifact escape、结构化错误等。
 - 对每个新增 adapter 或 Manifest 字段补 contract 测试。
+- v0.4 起，新增 dependency-aware Consumer Mode 测试必须覆盖 hostile host environment：缺 Python、缺 Node、缺 Pydantic、版本不满足、`.skr` 解包后检查，以及 MCP `tools/call` 依赖失败后 server 继续存活。
 - 不把 stdout 当结构化成功来源；测试必须检查 output/error envelope。
 - 新增 fixtures 应保持小而可读，不引入无关生成产物。
