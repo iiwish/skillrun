@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use crate::check::{self, CheckOptions};
 use crate::consumer;
 use crate::doctor::{self, DoctorOptions};
 use crate::init::{self, InitLanguage, InitOptions};
@@ -74,6 +75,27 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun inspect [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("check") => match parse_check(args.collect()) {
+            Ok(options) => match check::run(&options) {
+                Ok(report) => {
+                    println!("{}", report.output);
+                    if report.ok {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun check [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -320,6 +342,26 @@ fn parse_doctor(args: Vec<String>) -> Result<DoctorOptions, String> {
     Ok(DoctorOptions { cwd })
 }
 
+fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected check argument: {value}")),
+        }
+    }
+
+    Ok(CheckOptions { cwd })
+}
+
 fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
     let mut cwd = PathBuf::from(".");
     let mut index = 0;
@@ -439,6 +481,7 @@ MVP commands:
   init       create a Python stable or JS alpha action capsule skeleton
   manifest   generate the Manifest from SOP, action metadata, config and examples
   inspect    show capsule contract, permissions and instruction-only status
+  check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
   test       run the default example through the runtime contract
   run        run a capsule with an explicit input file
@@ -451,6 +494,7 @@ Implemented:
   init --js (alpha)
   manifest
   inspect
+  check
   doctor
   test
   run

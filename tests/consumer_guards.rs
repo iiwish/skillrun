@@ -274,6 +274,57 @@ fn doctor_reports_valid_python_and_js_capsules_without_language_flags() {
 }
 
 #[test]
+fn check_reports_valid_python_and_js_capsules_without_language_flags() {
+    let (python_root, python_capsule) = generated_capsule("check-valid-python");
+    let python_cwd = python_capsule.to_string_lossy().to_string();
+    let python = run_skillrun(&["check", "--cwd", &python_cwd]);
+    let python_stdout = assert_success_stdout(&python, "python check");
+
+    for expected in [
+        "SkillRun Check",
+        "status: ok",
+        "adapter: python",
+        "entrypoint: action.py",
+        "manifest freshness: fresh",
+        "executable: python >=3.10",
+        "package: pydantic >=2,<3",
+        "examples/default.input.json: present",
+    ] {
+        assert!(
+            python_stdout.contains(expected),
+            "python check missing {expected:?}\n{python_stdout}"
+        );
+    }
+    assert!(!python_stdout.contains("--python"));
+    assert!(!python_stdout.contains("--js"));
+
+    let (js_root, js_capsule) = generated_js_capsule("check-valid-js");
+    let js_cwd = js_capsule.to_string_lossy().to_string();
+    let js = run_skillrun(&["check", "--cwd", &js_cwd]);
+    let js_stdout = assert_success_stdout(&js, "JS check");
+
+    for expected in [
+        "status: ok",
+        "adapter: node",
+        "entrypoint: action.mjs",
+        "manifest freshness: fresh",
+        "executable: node >=18",
+        "packages: none",
+        "examples/default.input.json: present",
+    ] {
+        assert!(
+            js_stdout.contains(expected),
+            "JS check missing {expected:?}\n{js_stdout}"
+        );
+    }
+    assert!(!js_stdout.contains("--python"));
+    assert!(!js_stdout.contains("--js"));
+
+    fs::remove_dir_all(python_root).ok();
+    fs::remove_dir_all(js_root).ok();
+}
+
+#[test]
 fn doctor_reports_stale_manifest_without_creating_run_records() {
     let (output_root, capsule) = generated_js_capsule("doctor-stale-js");
     append_to(&capsule.join("action.mjs"), "\n// changed before doctor\n");
@@ -296,6 +347,35 @@ fn doctor_reports_stale_manifest_without_creating_run_records() {
     assert!(
         !capsule.join(".skillrun").join("runs").exists(),
         "doctor must not create run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn check_reports_stale_manifest_without_creating_run_records() {
+    let (output_root, capsule) = generated_js_capsule("check-stale-js");
+    append_to(&capsule.join("action.mjs"), "\n// changed before check\n");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&check, "stale JS check");
+
+    for expected in [
+        "SkillRun Check",
+        "status: stale-manifest",
+        "manifest freshness: stale",
+        "action.mjs: stale",
+        "skillrun manifest",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "stale check missing {expected:?}\n{stdout}"
+        );
+    }
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "check must not create run records"
     );
 
     fs::remove_dir_all(output_root).ok();
@@ -328,6 +408,38 @@ fn doctor_does_not_import_js_action_for_metadata() {
     assert!(
         !marker.exists(),
         "doctor must not import action.mjs for metadata"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn check_does_not_import_js_action_for_metadata() {
+    let (output_root, capsule) = generated_js_capsule("check-js-no-import");
+    let marker = output_root.join("check-import-marker.txt");
+    let marker_literal = serde_json::to_string(&marker.to_string_lossy().to_string())
+        .expect("marker should serialize");
+    let action_path = capsule.join("action.mjs");
+    let action = fs::read_to_string(&action_path).expect("action should be readable");
+    let action = format!(
+        "import fs from \"node:fs\";\nfs.writeFileSync({marker_literal}, \"imported\", \"utf8\");\n{action}"
+    );
+    fs::write(&action_path, action).expect("action should be updated");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(manifest.status.success());
+    assert!(
+        marker.is_file(),
+        "manifest metadata extraction imports action.mjs in Author Mode"
+    );
+    fs::remove_file(&marker).expect("marker should be removed before check");
+
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    assert_success_stdout(&check, "JS check no import");
+    assert!(
+        !marker.exists(),
+        "check must not import action.mjs for metadata"
     );
 
     fs::remove_dir_all(output_root).ok();

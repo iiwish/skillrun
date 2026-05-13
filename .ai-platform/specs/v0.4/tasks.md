@@ -145,7 +145,7 @@ Consumers can understand whether a capsule is runnable on their machine without 
 
 ### T031: Implement Readiness Engine And `skillrun check`
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T030
 Blocks: T032, T035
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029 and T030 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029, T030 and T031 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
