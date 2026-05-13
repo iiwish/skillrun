@@ -242,8 +242,9 @@ SkillRun's business proof is intentionally narrow:
 - `B002: Support Triage` is a docs-level example showing stable routing labels and missing-context recovery.
 - `B003: Access Request Approval` is a docs-level example showing approval boundaries, declared environment, and audit notes.
 - `B004: Vendor Risk Review` is a docs-level example showing artifact-first review summaries and package distribution without dependency vendoring.
+- `B005: WeCom Team Notice` is implemented in `examples/wecom_team_notice` as a v0.4.1 official runnable example. It shows dry-run previews, approval boundaries, declared `WECOM_WEBHOOK_URL`, structured `DependencyError`, markdown artifacts, and MCP usage for a real local notification workflow.
 
-The current runtime only implements the refund capsule. The other examples explain where the same SOP + action + Manifest pattern is valuable without expanding the runtime scope.
+The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper.
 
 ## Documentation
 

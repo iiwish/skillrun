@@ -1,0 +1,9 @@
+{
+  "title": "Daily handoff ready",
+  "summary": "The release checklist has been reviewed. No blocking issues remain. Please check the linked run artifact before the final handoff.",
+  "audience": "team",
+  "urgency": "normal",
+  "dry_run": true,
+  "approval_id": null,
+  "mentioned_mobile_list": []
+}

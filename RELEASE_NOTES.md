@@ -1,5 +1,31 @@
 # SkillRun Release Notes
 
+## v0.4.1
+
+Status: In_Development
+Prepared on: 2026-05-13
+Publication: no v0.4.1 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds `wecom_team_notice`, an official runnable example that turns a local WeCom group notification workflow into a dry-run-first, approval-bound Skill Capsule.
+
+### What Is Included
+
+- `examples/wecom_team_notice` as a Python stable Skill Capsule.
+- Dry-run preview path that does not require a real webhook.
+- Real send path guarded by `dry_run=false` and declared `WECOM_WEBHOOK_URL`.
+- Approval boundary for high, critical and all-hands notices.
+- Secret-like content blocking through `PolicyViolation`.
+- Missing webhook behavior through structured `DependencyError`.
+- Markdown notice artifact and run record evidence.
+
+### Boundaries
+
+- This is an example release, not a WeCom adapter.
+- It is not OpenAPI-to-MCP, a WeCom CLI wrapper, bash action support or hosted server behavior.
+- Real webhook sending is manual and opt-in; CI uses dry-run and structured error paths.
+
 ## v0.4.0
 
 Status: Ready_For_Release_Decision

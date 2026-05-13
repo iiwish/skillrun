@@ -1,0 +1,19 @@
+{
+  "runtime": {
+    "adapter": "python",
+    "entrypoint": "action.py",
+    "timeout": "30s"
+  },
+  "permissions": {
+    "files": {
+      "read": [],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": ["qyapi.weixin.qq.com"]
+    },
+    "env": {
+      "read": ["WECOM_WEBHOOK_URL"]
+    }
+  }
+}

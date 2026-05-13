@@ -15,6 +15,7 @@
 - [MVP 合同](mvp.md)：MVP 范围、非目标和发布边界。
 - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
 - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
+- [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
 ## 维护者流程

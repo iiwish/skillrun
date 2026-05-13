@@ -241,8 +241,9 @@ SkillRun 的业务证明刻意保持收敛：
 - `B002: Support Triage` 是 docs-level example，用于说明 stable routing labels 和 missing-context recovery。
 - `B003: Access Request Approval` 是 docs-level example，用于说明 approval boundary、declared env 和 audit note。
 - `B004: Vendor Risk Review` 是 docs-level example，用于说明 artifact-first review summary，以及不 vendor dependencies 的 package distribution。
+- `B005: WeCom Team Notice` 已在 `examples/wecom_team_notice` 中作为 v0.4.1 official runnable example 实现，用于说明 dry-run preview、approval boundary、declared `WECOM_WEBHOOK_URL`、structured `DependencyError`、markdown artifact，以及真实本地通知工作流的 MCP 使用方式。
 
-当前 runtime 只完整实现 `refund` capsule。其他示例只解释同一套 SOP + action + Manifest 模式的业务价值，不扩大 runtime scope。
+当前可运行示例仍刻意保持收敛：`refund` 证明安全与审计边界，`wecom_team_notice` 证明更贴近日常工作的本地通知场景，但不把 SkillRun 变成企业微信 adapter 或 API wrapper。
 
 ## 文档
 
