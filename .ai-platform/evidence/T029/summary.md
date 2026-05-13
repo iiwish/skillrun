@@ -41,7 +41,7 @@ Spec compliance review: Passed. The task implements only the error-code skeleton
 
 Engineering review: Passed. Change is additive and does not alter existing envelope shape.
 
-QA acceptance: Pending user acceptance.
+QA acceptance: Passed on 2026-05-13.
 
 ## Residual Risk
 
