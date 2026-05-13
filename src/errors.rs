@@ -3,6 +3,7 @@ use serde_json::{json, Value};
 pub const VALIDATION_ERROR: &str = "ValidationError";
 pub const POLICY_VIOLATION: &str = "PolicyViolation";
 pub const PERMISSION_DENIED: &str = "PermissionDenied";
+pub const DEPENDENCY_ERROR: &str = "DependencyError";
 pub const PROTOCOL_VIOLATION: &str = "ProtocolViolation";
 pub const RUNTIME_ERROR: &str = "RuntimeError";
 
@@ -61,6 +62,7 @@ pub fn validate_error_envelope(value: &Value) -> Result<(), String> {
         VALIDATION_ERROR,
         POLICY_VIOLATION,
         PERMISSION_DENIED,
+        DEPENDENCY_ERROR,
         PROTOCOL_VIOLATION,
         RUNTIME_ERROR,
     ]
@@ -84,4 +86,21 @@ pub fn validate_error_envelope(value: &Value) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dependency_error_is_a_valid_structured_error_code() {
+        let value = envelope(
+            "DependencyError",
+            "Python runtime is missing.",
+            false,
+            Some("Ask the user to install Python before retrying."),
+        );
+
+        assert_eq!(validate_error_envelope(&value), Ok(()));
+    }
 }

@@ -30,7 +30,7 @@ Maintainers get a stable contract for dependency-aware Consumer Mode before impl
 
 ### T029: Add v0.4 Contract Tests And DependencyError Skeleton
 
-Status: Draft
+Status: Needs_Review
 Priority: P0
 Depends on: T028
 Blocks: T030
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: This work graph is ready for user review. Tasks remain `Draft` until the user confirms v0.4 scope and task breakdown.
+- Reviewer notes: T029 has been executed and is awaiting review/user acceptance. Remaining tasks stay `Draft`.
