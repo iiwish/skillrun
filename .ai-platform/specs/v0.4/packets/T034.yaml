@@ -1,0 +1,83 @@
+task_id: T034
+schema_version: "1.0"
+packet_id: "v0.4-T034"
+feature_id: "v0.4"
+title: Preserve MCP Server On DependencyError
+status: Draft
+priority: P0
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T034
+  title: Preserve MCP Server On DependencyError
+  status: Draft
+  feature_id: v0.4
+goal: Map DependencyError into MCP tool error results while keeping the stdio server alive.
+requirement_mapping:
+  - FR-006
+  - NFR-004
+dependencies:
+  - T033
+blocks:
+  - T036
+allowed_files:
+  - src/mcp.rs
+  - tests/mcp_server.rs
+  - tests/fixtures/mcp_stdio.rs
+conflicts_with:
+  - T033
+must_not_change:
+  - src/runtime.rs
+  - src/adapters/python.rs
+  - src/adapters/node.rs
+codebase_context:
+  - "MCP tools/call currently delegates to runtime and returns tool content."
+  - "MCP server must not crash after runtime returns a structured error."
+  - "stdout discipline is validated by scripted MCP client tests."
+execution_constraints:
+  - "Do not add HTTP transport."
+  - "Do not create language-specific MCP branches unless absolutely necessary."
+  - "Do not change runtime envelope shape."
+tdd_plan:
+  red: "Add failing MCP dependency failure survival test."
+  green: "Adjust MCP error mapping or fixture control to keep server alive."
+  refactor: "Keep MCP language-neutral."
+validation_loop:
+  failure_policy: "If failure requires runtime changes, stop and verify T033 was completed correctly."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test mcp_server"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T034/summary.md"
+  test_results: ".ai-platform/evidence/T034/test-results.md"
+  diff: ".ai-platform/evidence/T034/diff.patch"
+acceptance_criteria:
+  - "tools/call dependency failure returns isError: true."
+  - "Server responds to a later tools/list or resources/list request."
+  - "stdout discipline remains intact."
+definition_of_done:
+  - "Target tests pass."
+  - "Full cargo test passes."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T034"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Implementation drifts into HTTP/SSE/Streamable HTTP."
+  - "Tool error mapping requires hiding structured DependencyError content."

@@ -1,0 +1,86 @@
+task_id: T035
+schema_version: "1.0"
+packet_id: "v0.4-T035"
+feature_id: "v0.4"
+title: Add Portable .skr Check Matrix
+status: Draft
+priority: P1
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T035
+  title: Add Portable .skr Check Matrix
+  status: Draft
+  feature_id: v0.4
+goal: Prove unpacked .skr archives can be inspected and checked without vendored dependencies or git context.
+requirement_mapping:
+  - FR-007
+  - NFR-001
+  - NFR-002
+dependencies:
+  - T031
+blocks:
+  - T036
+allowed_files:
+  - src/pack.rs
+  - tests/pack.rs
+  - tests/e2e_matrix.rs
+  - docs/v0.4-portable-consumer-checks.md
+conflicts_with:
+  - T030
+  - T031
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - src/adapters/python.rs
+  - src/adapters/node.rs
+codebase_context:
+  - ".skr currently packages source, examples and generated Manifest, excluding run history and dependencies."
+  - "v0.4 must prove .skr is diagnosable, not executable everywhere."
+execution_constraints:
+  - "Do not add dependencies to .skr."
+  - "Do not include node_modules, package-manager artifacts or run history."
+  - "Do not describe .skr as runtime image."
+tdd_plan:
+  red: "Add failing pack/unpack tests for inspect and check on Python and JS capsules."
+  green: "Adjust pack/check behavior only as needed."
+  refactor: "Keep archive content rules narrow and explicit."
+validation_loop:
+  failure_policy: "If check depends on unstable requirements format, stop until T030/T031 are settled."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test pack --test e2e_matrix"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T035/summary.md"
+  test_results: ".ai-platform/evidence/T035/test-results.md"
+  diff: ".ai-platform/evidence/T035/diff.patch"
+acceptance_criteria:
+  - "Unpacked Python and JS capsules can run inspect."
+  - "Unpacked Python and JS capsules can run check."
+  - "Dependency failure does not affect source hash freshness."
+definition_of_done:
+  - "Target tests pass."
+  - "Full cargo test passes."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T035"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Implementation starts vendoring dependencies."
+  - "Fix requires package-manager or runtime-image behavior."

@@ -1,0 +1,89 @@
+task_id: T032
+schema_version: "1.0"
+packet_id: "v0.4-T032"
+feature_id: "v0.4"
+title: Add Python And Node Runtime Discovery
+status: Draft
+priority: P0
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T032
+  title: Add Python And Node Runtime Discovery
+  status: Draft
+  feature_id: v0.4
+goal: Probe host Python/Node executables and required adapter packages without importing action source.
+requirement_mapping:
+  - FR-003
+  - FR-004
+  - NFR-004
+dependencies:
+  - T031
+blocks:
+  - T033
+allowed_files:
+  - src/adapters/python.rs
+  - src/adapters/node.rs
+  - src/adapters/mod.rs
+  - src/readiness.rs
+  - tests/consumer_guards.rs
+  - tests/manifest.rs
+conflicts_with:
+  - T031
+  - T033
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - src/pack.rs
+codebase_context:
+  - "Python metadata/runtime currently call python subprocesses."
+  - "Node metadata/runtime currently call node subprocesses."
+  - "Pydantic probe may import pydantic only; it must never import the capsule action module."
+execution_constraints:
+  - "Do not implement automatic install."
+  - "Do not parse package manager lockfiles."
+  - "Keep version comparison minimal and adapter-default scoped."
+tdd_plan:
+  red: "Add failing tests for missing Python/Node and missing or incompatible Pydantic using deterministic environment simulation where feasible."
+  green: "Implement executable and package probes in readiness."
+  refactor: "Keep probe APIs adapter-neutral and reusable by runtime in T033."
+validation_loop:
+  failure_policy: "If host simulation is unreliable, stop and document the deterministic test approach rather than weakening assertions."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test consumer_guards --test manifest"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T032/summary.md"
+  test_results: ".ai-platform/evidence/T032/test-results.md"
+  diff: ".ai-platform/evidence/T032/diff.patch"
+acceptance_criteria:
+  - "Missing executable is not reported as raw program not found."
+  - "Detected and required versions are present in check output."
+  - "Pydantic check imports only Pydantic, not action source."
+  - "JS Alpha does not require npm package-manager checks."
+definition_of_done:
+  - "Target tests pass."
+  - "Full cargo test passes."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T032"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Implementation starts managing virtualenv, npm, pip, uv, pnpm, yarn or lockfiles."
+  - "Action source import is needed to pass tests."
