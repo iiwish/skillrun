@@ -1,10 +1,10 @@
 # SkillRun v0.4.1 Work Graph: WeCom Team Notice Example
 
 Version: v0.4.1
-Status: Ready_For_User_Review
+Status: In_Progress
 Source spec: `.ai-platform/specs/v0.4.1-wecom-team-notice/spec.md`
 Last updated: 2026-05-13
-Review: Drafted for user review; no task is Ready until user confirms the spec and work graph.
+Review: User approved the spec and requested implementation continuation on 2026-05-13. T041-T044 are accepted; T045 is waiting for maintainer-provided webhook credentials.
 
 ## Work Graph Summary
 
@@ -22,7 +22,7 @@ Ship `wecom_team_notice` as the first official real-world local notification exa
 
 ### T041: Create WeCom Capsule Skeleton And SOP
 
-Status: Ready_For_User_Review
+Status: Accepted
 Priority: P0
 Depends on: v0.4.0 release
 Blocks: T042
@@ -72,7 +72,7 @@ Evidence required:
 
 ### T042: Implement Python Action With Dry-run, Policy And Artifact
 
-Status: Ready_For_User_Review
+Status: Accepted
 Priority: P0
 Depends on: T041
 Blocks: T043, T045
@@ -130,7 +130,7 @@ Evidence required:
 
 ### T043: Add Business Example Tests
 
-Status: Ready_For_User_Review
+Status: Accepted
 Priority: P0
 Depends on: T042
 Blocks: T044, T046
@@ -178,7 +178,7 @@ Evidence required:
 
 ### T044: Add Docs And README Narrative
 
-Status: Ready_For_User_Review
+Status: Accepted
 Priority: P1
 Depends on: T043
 Blocks: T046
@@ -233,7 +233,7 @@ Evidence required:
 
 ### T045: Manual Real-send Evidence
 
-Status: Ready_For_User_Review
+Status: Blocked
 Priority: P1
 Depends on: T042
 Blocks: T046
@@ -264,6 +264,9 @@ Acceptance criteria:
 - Evidence records success or blocked outcome.
 - CI does not depend on real webhook.
 
+Blocker:
+- Requires maintainer-provided `WECOM_WEBHOOK_URL`. This must be run locally by a maintainer and redacted in evidence.
+
 Definition of Done:
 - Manual evidence exists and contains no secret.
 - Automated tests remain independent of real webhook.
@@ -280,7 +283,7 @@ Evidence required:
 
 ### T046: Prepare v0.4.1 Release Notes
 
-Status: Ready_For_User_Review
+Status: Pending
 Priority: P1
 Depends on: T043, T044, T045
 Blocks: None
@@ -335,5 +338,5 @@ Evidence required:
 
 ## User Review Gate
 
-- Approval: Pending.
-- Reviewer notes: Awaiting user approval before any task moves to Ready or implementation begins.
+- Approval: Granted on 2026-05-13.
+- Reviewer notes: T041, T042, T043 and T044 were implemented, reviewed and accepted. T045 is blocked on maintainer-only real webhook validation. T046 remains pending until T045 is completed or explicitly waived.

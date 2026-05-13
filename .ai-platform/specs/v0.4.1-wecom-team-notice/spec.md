@@ -1,11 +1,11 @@
 # SkillRun v0.4.1 Feature Spec: WeCom Team Notice Example
 
 Version: v0.4.1
-Status: Ready_For_User_Review
+Status: Confirmed
 Created: 2026-05-13
 Updated: 2026-05-13
 Source: `docs/v0.4.1-wecom-team-notice.md`
-Review: Drafted for user review; implementation is not authorized until the user confirms this scope and work graph.
+Review: User approved the scope and requested implementation continuation on 2026-05-13.
 
 ## 一句话判断
 
@@ -105,6 +105,5 @@ SkillRun 的产品原子仍然是 Skill Capsule，而不是企业微信 API、MC
 
 ## Review Gate
 
-- Approval: Pending.
-- Reviewer notes: This spec is ready for user review. It does not authorize implementation until the user confirms the v0.4.1 example scope.
-
+- Approval: Granted on 2026-05-13.
+- Reviewer notes: Scope approved for implementation. T041-T044 have been implemented and reviewed; T045 remains manual real-send validation because it requires a real `WECOM_WEBHOOK_URL`.

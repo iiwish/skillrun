@@ -1,7 +1,7 @@
 # SkillRun v0.4.1 Plan: WeCom Team Notice Example
 
 Version: v0.4.1
-Status: Ready_For_User_Review
+Status: Confirmed
 Source spec: `.ai-platform/specs/v0.4.1-wecom-team-notice/spec.md`
 Created: 2026-05-13
 
@@ -57,6 +57,5 @@ Manual validation:
 
 ## Review Gate
 
-- Approval: Pending.
-- Reviewer notes: Awaiting user confirmation before implementation tasks become Ready.
-
+- Approval: Granted on 2026-05-13.
+- Reviewer notes: Implementation path accepted. T041-T044 are complete; T045 requires maintainer-provided webhook credentials and must not be faked in CI.
