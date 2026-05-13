@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T028"
 feature_id: "v0.3"
 title: Prepare v0.3 Release Matrix And Report
-status: Blocked
+status: Accepted
 priority: P1
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T028
   title: Prepare v0.3 Release Matrix And Report
-  status: Blocked
+  status: Accepted
   feature_id: v0.3
 goal: Prepare release-facing evidence that v0.3 delivered adapter boundary, JS alpha and author quality loop without expanding out-of-scope claims.
 requirement_mapping:

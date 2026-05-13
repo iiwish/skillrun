@@ -143,7 +143,34 @@ Reason:
 - T027 has been accepted.
 - T028 dependencies are satisfied and it may start.
 
-Ready for user review: No.
+Ready for user review: Yes.
 
 Recommended next step:
-Start T028: prepare v0.3 release matrix and report.
+Review T028 release matrix, release notes and release report. If accepted, prepare the explicit v0.3 release handoff decision for version bump, local tag, remote push and package publication.
+
+## T028 Release Readiness Review
+
+Review date: 2026-05-13
+Result: Ready_For_User_Review
+
+Findings:
+- Critical: 0
+- High: 0
+- Medium: 0
+- Low: 0
+
+Review notes:
+- Release-facing docs keep Python as the stable path and JS as `action.mjs` alpha.
+- TypeScript direct runtime, package manager install, dependency vendoring, runtime image, sandbox, registry and HTTP transport remain out of scope.
+- `.skr` remains described as a source + Manifest archive.
+- T028 does not create a tag, push to remote, publish a package or bump the binary version.
+
+## T028 Acceptance
+
+Review date: 2026-05-13
+Result: Accepted
+
+Acceptance notes:
+- T028 release notes, release matrix, release report and evidence were reviewed with no blocking findings.
+- v0.3 implementation tasks T019-T028 are now accepted.
+- The next workflow boundary is explicit release handoff: version bump, local tag, remote push and package publication must be decided separately.

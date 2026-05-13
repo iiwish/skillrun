@@ -572,7 +572,7 @@ Evidence required:
 
 ### T028: Prepare v0.3 Release Matrix And Report
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T024, T025, T026, T027
 Blocks: None
@@ -633,4 +633,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Approved on 2026-05-13.
-- Reviewer notes: Work graph reviewed with no blocking findings. Packets T019-T028 are created. T019 is the only currently ready task because downstream tasks depend on unfinished work.
+- Reviewer notes: T028 release matrix and report were reviewed and accepted on 2026-05-13. Version bump, tag creation, remote push and package publication remain separate release handoff decisions.
