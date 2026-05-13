@@ -18,7 +18,7 @@ fn help_lists_core_commands() {
     assert!(stdout.contains("skillrun"));
 
     for command in [
-        "init", "manifest", "inspect", "doctor", "test", "run", "serve", "pack",
+        "init", "manifest", "inspect", "check", "doctor", "test", "run", "serve", "pack",
     ] {
         assert!(
             stdout.contains(command),
@@ -38,7 +38,7 @@ fn version_uses_approved_project_name() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).expect("version output should be utf-8"),
-        "skillrun 0.3.0\n"
+        "skillrun 0.4.0\n"
     );
 }
 

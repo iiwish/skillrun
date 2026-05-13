@@ -1,0 +1,95 @@
+task_id: T031
+schema_version: "1.0"
+packet_id: "v0.4-T031"
+feature_id: "v0.4"
+title: Implement Readiness Engine And skillrun check
+status: Draft
+priority: P0
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T031
+  title: Implement Readiness Engine And skillrun check
+  status: Draft
+  feature_id: v0.4
+goal: Add a Consumer Mode readiness engine and expose it through `skillrun check --cwd PATH`.
+requirement_mapping:
+  - FR-001
+  - FR-008
+  - NFR-003
+dependencies:
+  - T030
+blocks:
+  - T032
+  - T035
+allowed_files:
+  - src/main.rs
+  - src/cli.rs
+  - src/doctor.rs
+  - src/consumer.rs
+  - src/check.rs
+  - src/readiness.rs
+  - tests/cli.rs
+  - tests/consumer_guards.rs
+  - tests/instruction_only.rs
+conflicts_with:
+  - T030
+  - T032
+  - T035
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - src/adapters/python.rs
+  - src/adapters/node.rs
+codebase_context:
+  - "doctor.rs already performs non-executing file and Manifest freshness diagnostics."
+  - "check should be automation-grade; doctor may reuse the same readiness engine but can stay human-friendly."
+  - "Consumer Mode must not import action source for metadata."
+execution_constraints:
+  - "Do not execute preflight or run."
+  - "Do not create run records."
+  - "Do not add dependency probing beyond entrypoint/source/example/requirement presence in this task."
+tdd_plan:
+  red: "Add failing tests for skillrun check, help text, stale Manifest, instruction-only, and no-import markers."
+  green: "Implement readiness model, check command parsing and static rendering."
+  refactor: "Share logic with doctor after tests pass."
+validation_loop:
+  failure_policy: "Fix command parsing or readiness rendering only. Stop if runtime or adapter execution changes are needed."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test cli --test consumer_guards --test instruction_only"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T031/summary.md"
+  test_results: ".ai-platform/evidence/T031/test-results.md"
+  diff: ".ai-platform/evidence/T031/diff.patch"
+acceptance_criteria:
+  - "check does not import action.py or action.mjs."
+  - "check does not create run records."
+  - "instruction-only and unsupported TypeScript cases remain clear."
+  - "CLI help lists check separately from doctor."
+definition_of_done:
+  - "Target tests pass."
+  - "Full cargo test passes."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T031"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Implementation needs to run action source."
+  - "The task begins implementing executable/package version probing; that belongs to T032."

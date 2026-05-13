@@ -1,6 +1,7 @@
 use std::process::ExitCode;
 
 mod adapters;
+mod check;
 mod cli;
 mod config;
 mod consumer;
@@ -13,6 +14,7 @@ mod manifest;
 mod mcp;
 mod pack;
 mod permissions;
+mod readiness;
 mod run_record;
 mod runtime;
 mod schemas;

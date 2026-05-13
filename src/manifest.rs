@@ -221,6 +221,7 @@ fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
             adapter: (*adapter).to_string(),
             entrypoint: (*entrypoint).to_string(),
             timeout: "30s".to_string(),
+            requirements: config::runtime_requirements_for_adapter(adapter),
         }),
         _ => {
             let names = found

@@ -1,0 +1,276 @@
+﻿diff --git a/.ai-platform/specs/v0.4/tasks.md b/.ai-platform/specs/v0.4/tasks.md
+index b5d8f12..54c6af8 100644
+--- a/.ai-platform/specs/v0.4/tasks.md
++++ b/.ai-platform/specs/v0.4/tasks.md
+@@ -84,7 +84,7 @@ Evidence required:
+
+ ### T030: Add Manifest Runtime Requirements Contract
+
+-Status: Draft
++Status: Accepted
+ Priority: P0
+ Depends on: T029
+ Blocks: T031
+@@ -491,4 +491,4 @@ Evidence required:
+ ## User Review Gate
+
+ - Approval: Pending.
+-- Reviewer notes: T029 was reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
++- Reviewer notes: T029 and T030 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+diff --git a/src/config.rs b/src/config.rs
+index b24ddec..f8c4ca2 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -13,6 +13,26 @@ pub struct RuntimeConfig {
+     pub adapter: String,
+     pub entrypoint: String,
+     pub timeout: String,
++    pub requirements: RuntimeRequirements,
++}
++
++#[derive(Debug, Serialize)]
++pub struct RuntimeRequirements {
++    pub executable: ExecutableRequirement,
++    pub packages: Vec<PackageRequirement>,
++}
++
++#[derive(Debug, Serialize)]
++pub struct ExecutableRequirement {
++    pub name: String,
++    pub version: String,
++}
++
++#[derive(Debug, Serialize)]
++pub struct PackageRequirement {
++    pub name: String,
++    pub version: String,
++    pub required_for: Vec<String>,
+ }
+
+ #[derive(Debug, Serialize)]
+@@ -53,13 +73,14 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
+
+     let runtime = json.get("runtime").unwrap_or(&serde_json::Value::Null);
+
++    let adapter = runtime
++        .get("adapter")
++        .and_then(serde_json::Value::as_str)
++        .unwrap_or("python")
++        .to_string();
++
+     Ok(CapsuleConfig {
+         runtime: RuntimeConfig {
+-            adapter: runtime
+-                .get("adapter")
+-                .and_then(serde_json::Value::as_str)
+-                .unwrap_or("python")
+-                .to_string(),
+             entrypoint: runtime
+                 .get("entrypoint")
+                 .and_then(serde_json::Value::as_str)
+@@ -70,6 +91,8 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
+                 .and_then(serde_json::Value::as_str)
+                 .unwrap_or("30s")
+                 .to_string(),
++            requirements: runtime_requirements_for_adapter(&adapter),
++            adapter,
+         },
+         permissions: parse_permissions(json.get("permissions"))?,
+     })
+@@ -148,5 +171,36 @@ fn default_runtime_config() -> RuntimeConfig {
+         adapter: "python".to_string(),
+         entrypoint: "action.py".to_string(),
+         timeout: "30s".to_string(),
++        requirements: runtime_requirements_for_adapter("python"),
++    }
++}
++
++pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
++    match adapter {
++        "node" => RuntimeRequirements {
++            executable: ExecutableRequirement {
++                name: "node".to_string(),
++                version: ">=18".to_string(),
++            },
++            packages: Vec::new(),
++        },
++        "python" => RuntimeRequirements {
++            executable: ExecutableRequirement {
++                name: "python".to_string(),
++                version: ">=3.10".to_string(),
++            },
++            packages: vec![PackageRequirement {
++                name: "pydantic".to_string(),
++                version: ">=2,<3".to_string(),
++                required_for: vec!["metadata".to_string(), "runtime".to_string()],
++            }],
++        },
++        other => RuntimeRequirements {
++            executable: ExecutableRequirement {
++                name: other.to_string(),
++                version: "unsupported".to_string(),
++            },
++            packages: Vec::new(),
++        },
+     }
+ }
+diff --git a/src/manifest.rs b/src/manifest.rs
+index 4ddf4a8..32de5bc 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -221,6 +221,7 @@ fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
+             adapter: (*adapter).to_string(),
+             entrypoint: (*entrypoint).to_string(),
+             timeout: "30s".to_string(),
++            requirements: config::runtime_requirements_for_adapter(adapter),
+         }),
+         _ => {
+             let names = found
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index 6fb4895..5ee44b7 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -1,3 +1,4 @@
++use serde_yaml::Value as YamlValue;
+ use std::fs;
+ use std::path::{Path, PathBuf};
+ use std::process::Command;
+@@ -57,6 +58,37 @@ fn assert_source_hash(manifest: &str, path: &str) {
+     );
+ }
+
++fn manifest_yaml(capsule: &Path) -> YamlValue {
++    let manifest_text =
++        fs::read_to_string(generated_manifest(capsule)).expect("manifest should be readable");
++    serde_yaml::from_str(&manifest_text).expect("manifest should parse as YAML")
++}
++
++fn yaml_at<'a>(value: &'a YamlValue, path: &[&str]) -> &'a YamlValue {
++    let mut current = value;
++    for segment in path {
++        current = if let Some(sequence) = current.as_sequence() {
++            let index = segment
++                .parse::<usize>()
++                .unwrap_or_else(|_| panic!("YAML path {} needs a sequence index", path.join(".")));
++            sequence
++                .get(index)
++                .unwrap_or_else(|| panic!("missing YAML path {}", path.join(".")))
++        } else {
++            current
++                .get(*segment)
++                .unwrap_or_else(|| panic!("missing YAML path {}", path.join(".")))
++        };
++    }
++    current
++}
++
++fn yaml_str_at<'a>(value: &'a YamlValue, path: &[&str]) -> &'a str {
++    yaml_at(value, path)
++        .as_str()
++        .unwrap_or_else(|| panic!("YAML path {} should be a string", path.join(".")))
++}
++
+ fn is_64_hex(value: &str) -> bool {
+     value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
+ }
+@@ -110,6 +142,35 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     assert_source_hash(&manifest_text, "SKILL.md");
+     assert_source_hash(&manifest_text, "action.py");
+     assert_source_hash(&manifest_text, "skillrun.config.json");
++    let manifest_yaml = manifest_yaml(&capsule);
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "executable", "name"]
++        ),
++        "python"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "executable", "version"]
++        ),
++        ">=3.10"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "packages", "0", "name"]
++        ),
++        "pydantic"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "packages", "0", "version"]
++        ),
++        ">=2,<3"
++    );
+
+     fs::remove_dir_all(output_root).ok();
+ }
+@@ -142,6 +203,28 @@ fn manifest_generates_yaml_for_js_alpha_with_explicit_json_schemas() {
+     assert_source_hash(&manifest_text, "SKILL.md");
+     assert_source_hash(&manifest_text, "action.mjs");
+     assert_source_hash(&manifest_text, "skillrun.config.json");
++    let manifest_yaml = manifest_yaml(&capsule);
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "executable", "name"]
++        ),
++        "node"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["runtime", "requirements", "executable", "version"]
++        ),
++        ">=18"
++    );
++    assert_eq!(
++        yaml_at(&manifest_yaml, &["runtime", "requirements", "packages"])
++            .as_sequence()
++            .expect("packages should be a sequence")
++            .len(),
++        0
++    );
+
+     fs::remove_dir_all(output_root).ok();
+ }
+diff --git a/tests/pack.rs b/tests/pack.rs
+index 46ff779..e94dd29 100644
+--- a/tests/pack.rs
++++ b/tests/pack.rs
+@@ -142,6 +142,15 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
+     let unpacked_capsule = output_root.join("unpacked-refund");
+     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
+     unpack_archive(&archive_path, &unpacked_capsule);
++    let unpacked_manifest = fs::read_to_string(
++        unpacked_capsule
++            .join(".skillrun")
++            .join("manifest.generated.yaml"),
++    )
++    .expect("unpacked Manifest should be readable");
++    assert!(unpacked_manifest.contains("requirements:"));
++    assert!(unpacked_manifest.contains("name: python"));
++    assert!(unpacked_manifest.contains("name: pydantic"));
+     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
+     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
+     assert!(
+@@ -236,6 +245,15 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
+     let unpacked_capsule = output_root.join("unpacked-js-refund");
+     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
+     unpack_archive(&archive_path, &unpacked_capsule);
++    let unpacked_manifest = fs::read_to_string(
++        unpacked_capsule
++            .join(".skillrun")
++            .join("manifest.generated.yaml"),
++    )
++    .expect("unpacked JS Manifest should be readable");
++    assert!(unpacked_manifest.contains("requirements:"));
++    assert!(unpacked_manifest.contains("name: node"));
++    assert!(!unpacked_manifest.contains("name: pydantic"));
+     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
+     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
+     assert!(

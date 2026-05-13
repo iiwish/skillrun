@@ -13,6 +13,26 @@ pub struct RuntimeConfig {
     pub adapter: String,
     pub entrypoint: String,
     pub timeout: String,
+    pub requirements: RuntimeRequirements,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RuntimeRequirements {
+    pub executable: ExecutableRequirement,
+    pub packages: Vec<PackageRequirement>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExecutableRequirement {
+    pub name: String,
+    pub version: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PackageRequirement {
+    pub name: String,
+    pub version: String,
+    pub required_for: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -53,13 +73,14 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
 
     let runtime = json.get("runtime").unwrap_or(&serde_json::Value::Null);
 
+    let adapter = runtime
+        .get("adapter")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("python")
+        .to_string();
+
     Ok(CapsuleConfig {
         runtime: RuntimeConfig {
-            adapter: runtime
-                .get("adapter")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("python")
-                .to_string(),
             entrypoint: runtime
                 .get("entrypoint")
                 .and_then(serde_json::Value::as_str)
@@ -70,6 +91,8 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("30s")
                 .to_string(),
+            requirements: runtime_requirements_for_adapter(&adapter),
+            adapter,
         },
         permissions: parse_permissions(json.get("permissions"))?,
     })
@@ -148,5 +171,36 @@ fn default_runtime_config() -> RuntimeConfig {
         adapter: "python".to_string(),
         entrypoint: "action.py".to_string(),
         timeout: "30s".to_string(),
+        requirements: runtime_requirements_for_adapter("python"),
+    }
+}
+
+pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
+    match adapter {
+        "node" => RuntimeRequirements {
+            executable: ExecutableRequirement {
+                name: "node".to_string(),
+                version: ">=18".to_string(),
+            },
+            packages: Vec::new(),
+        },
+        "python" => RuntimeRequirements {
+            executable: ExecutableRequirement {
+                name: "python".to_string(),
+                version: ">=3.10".to_string(),
+            },
+            packages: vec![PackageRequirement {
+                name: "pydantic".to_string(),
+                version: ">=2,<3".to_string(),
+                required_for: vec!["metadata".to_string(), "runtime".to_string()],
+            }],
+        },
+        other => RuntimeRequirements {
+            executable: ExecutableRequirement {
+                name: other.to_string(),
+                version: "unsupported".to_string(),
+            },
+            packages: Vec::new(),
+        },
     }
 }

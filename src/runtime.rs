@@ -10,6 +10,7 @@ use crate::adapters::{self, ActionRunRequest};
 use crate::consumer;
 use crate::errors;
 use crate::permissions;
+use crate::readiness;
 use crate::run_record::{self, RunRecordInput};
 
 static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -101,6 +102,34 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     });
     write_json(&paths.context_json, &context)?;
 
+    if let Some(message) = dependency_failure_message(capsule_dir)? {
+        fs::write(&paths.stdout_log, []).map_err(|write_error| {
+            format!(
+                "failed to write {}: {write_error}",
+                paths.stdout_log.display()
+            )
+        })?;
+        fs::write(&paths.stderr_log, message.as_bytes()).map_err(|write_error| {
+            format!(
+                "failed to write {}: {write_error}",
+                paths.stderr_log.display()
+            )
+        })?;
+        return finish_run(
+            FinishRunInput {
+                run_id: &run_id,
+                mode,
+                success: false,
+                started_at,
+                duration_started_at: started,
+                capsule_dir,
+                manifest: &manifest,
+                paths: &paths,
+            },
+            errors::dependency_error(message),
+        );
+    }
+
     let adapter_output = match adapters::run_action(
         adapter,
         &ActionRunRequest {
@@ -162,6 +191,34 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
         },
         envelope,
     )
+}
+
+fn dependency_failure_message(capsule_dir: &Path) -> Result<Option<String>, String> {
+    let report = readiness::evaluate(capsule_dir)?;
+    let failures = report
+        .dependency_checks
+        .iter()
+        .filter(|check| check.status != "satisfied")
+        .map(|check| {
+            format!(
+                "{} {} required {} detected {} status {}",
+                check.kind,
+                check.name,
+                check.required,
+                check.detected.as_deref().unwrap_or("missing"),
+                check.status
+            )
+        })
+        .collect::<Vec<_>>();
+
+    if failures.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(format!(
+            "Capsule runtime does not satisfy declared runtime requirements: {}.",
+            failures.join("; ")
+        )))
+    }
 }
 
 struct FinishRunInput<'a> {

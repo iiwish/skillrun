@@ -1,6 +1,6 @@
 # SkillRun SSOT: SOP-backed Skill Capsule Runtime
 
-**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.1 未单独公开发布。
+**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已进入 release decision；v0.1 未单独公开发布。
 **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。  
 **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
 
@@ -746,6 +746,14 @@ v0.3 CLI 语言边界：
 - `skillrun init refund --js` 生成 JS Action Alpha capsule。
 - `test`、`run`、`serve --mcp`、`pack` 和 `doctor` 不接受语言 flag；它们读取 Manifest 和文件状态。
 
+v0.4 引入 `check` 作为严肃的 capsule readiness command：
+
+- `inspect` 回答“这个 capsule 的 Manifest 合同是什么”。
+- `check` 回答“当前 host 能否消费或运行这个 capsule，不能运行时缺什么”。
+- `doctor` 保留为人类友好的诊断入口，可复用 `check` 的 readiness engine。
+- `check` 和 `doctor` 属于 Consumer Mode，不得 import `action.py` / `action.mjs` 提取 metadata。
+- 缺 Python、Node、Pydantic 或 adapter runtime dependency 时，`run` 和 MCP `tools/call` 应返回 structured `DependencyError`，而不是泄漏底层 spawn/import 错误。
+
 命令职责：
 
 | Command | 作用 |
@@ -753,6 +761,7 @@ v0.3 CLI 语言边界：
 | `init` | 生成最小 Skill Capsule |
 | `manifest` | Author Mode 下生成或刷新 Manifest |
 | `inspect` | 展示 SOP、tool、schema、permissions、adapter、examples |
+| `check` | 从 Manifest 和 host 环境诊断 capsule readiness |
 | `doctor` | 非执行诊断 capsule 文件、Manifest freshness、adapter recovery |
 | `test` | 使用 examples 运行并校验 IPC/output/artifacts |
 | `run` | 执行一次真实输入 |
@@ -790,6 +799,12 @@ examples/
 ```
 
 v0.3 `.skr` 是 source + Manifest archive，不是 dependency bundle、registry package、secure install format 或 reproducible runtime image。
+
+v0.4 的 `.skr` 目标不是变成 runtime image，而是变成可被 Consumer Mode 静态诊断的 skill package。解包后的 capsule 已支持：
+
+- `skillrun inspect --cwd <capsule>`：读取 Manifest contract。
+- `skillrun check --cwd <capsule>`：读取 Manifest、source hashes、entrypoint、examples 和 runtime requirements，解释当前 host 缺什么。
+- 在缺少 runtime dependency 时返回 `DependencyError`，不自动安装依赖。
 
 依赖策略必须保守：
 

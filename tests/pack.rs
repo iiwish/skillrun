@@ -12,6 +12,34 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .expect("skillrun binary should run")
 }
 
+fn run_skillrun_with_path(args: &[&str], path: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("PATH", path)
+        .output()
+        .expect("skillrun binary should run")
+}
+
+fn assert_success_stdout(output: &std::process::Output, label: &str) -> String {
+    assert!(
+        output.status.success(),
+        "{label} should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
+}
+
+fn assert_failure_stdout(output: &std::process::Output, label: &str) -> String {
+    assert!(
+        !output.status.success(),
+        "{label} should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
+}
+
 fn temp_dir(label: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -109,10 +137,10 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
     );
     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
     assert!(stdout.contains("created"));
-    assert!(stdout.contains("refund-0.3.0.skr"));
+    assert!(stdout.contains("refund-0.4.0.skr"));
     assert!(stdout.contains("does not vendor dependencies"));
 
-    let archive_path = capsule.join("dist").join("refund-0.3.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.0.skr");
     assert!(archive_path.is_file(), "archive should exist");
 
     let entries = archive_entries(&archive_path);
@@ -142,6 +170,15 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
     let unpacked_capsule = output_root.join("unpacked-refund");
     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
     unpack_archive(&archive_path, &unpacked_capsule);
+    let unpacked_manifest = fs::read_to_string(
+        unpacked_capsule
+            .join(".skillrun")
+            .join("manifest.generated.yaml"),
+    )
+    .expect("unpacked Manifest should be readable");
+    assert!(unpacked_manifest.contains("requirements:"));
+    assert!(unpacked_manifest.contains("name: python"));
+    assert!(unpacked_manifest.contains("name: pydantic"));
     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
     assert!(
@@ -150,6 +187,39 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
         String::from_utf8_lossy(&inspect.stdout),
         String::from_utf8_lossy(&inspect.stderr)
     );
+    let check = run_skillrun(&["check", "--cwd", &inspect_cwd]);
+    let check_stdout = assert_success_stdout(&check, "unpacked Python capsule check");
+    for expected in [
+        "SkillRun Check",
+        "status: ok",
+        "adapter: python",
+        "entrypoint: action.py",
+        "manifest freshness: fresh",
+        "action.py: fresh",
+    ] {
+        assert!(
+            check_stdout.contains(expected),
+            "unpacked Python check missing {expected:?}\n{check_stdout}"
+        );
+    }
+
+    let empty_path = output_root.join("empty-python-path");
+    fs::create_dir_all(&empty_path).expect("empty PATH dir should be created");
+    let dependency_check = run_skillrun_with_path(&["check", "--cwd", &inspect_cwd], &empty_path);
+    let dependency_stdout =
+        assert_failure_stdout(&dependency_check, "unpacked Python dependency check");
+    for expected in [
+        "status: dependency-error",
+        "manifest freshness: fresh",
+        "action.py: fresh",
+        "executable: python required: >=3.10 detected: missing status: missing",
+        "package: pydantic required: >=2,<3 detected: missing status: missing",
+    ] {
+        assert!(
+            dependency_stdout.contains(expected),
+            "unpacked Python dependency check missing {expected:?}\n{dependency_stdout}"
+        );
+    }
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -191,10 +261,10 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
     );
     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
     assert!(stdout.contains("created"));
-    assert!(stdout.contains("refund-0.3.0.skr"));
+    assert!(stdout.contains("refund-0.4.0.skr"));
     assert!(stdout.contains("does not vendor dependencies"));
 
-    let archive_path = capsule.join("dist").join("refund-0.3.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.0.skr");
     assert!(archive_path.is_file(), "archive should exist");
 
     let entries = archive_entries(&archive_path);
@@ -236,6 +306,15 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
     let unpacked_capsule = output_root.join("unpacked-js-refund");
     fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
     unpack_archive(&archive_path, &unpacked_capsule);
+    let unpacked_manifest = fs::read_to_string(
+        unpacked_capsule
+            .join(".skillrun")
+            .join("manifest.generated.yaml"),
+    )
+    .expect("unpacked JS Manifest should be readable");
+    assert!(unpacked_manifest.contains("requirements:"));
+    assert!(unpacked_manifest.contains("name: node"));
+    assert!(!unpacked_manifest.contains("name: pydantic"));
     let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
     let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
     assert!(
@@ -244,6 +323,42 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
         String::from_utf8_lossy(&inspect.stdout),
         String::from_utf8_lossy(&inspect.stderr)
     );
+    let check = run_skillrun(&["check", "--cwd", &inspect_cwd]);
+    let check_stdout = assert_success_stdout(&check, "unpacked JS capsule check");
+    for expected in [
+        "SkillRun Check",
+        "status: ok",
+        "adapter: node",
+        "entrypoint: action.mjs",
+        "manifest freshness: fresh",
+        "action.mjs: fresh",
+        "packages: none",
+    ] {
+        assert!(
+            check_stdout.contains(expected),
+            "unpacked JS check missing {expected:?}\n{check_stdout}"
+        );
+    }
+
+    let empty_path = output_root.join("empty-node-path");
+    fs::create_dir_all(&empty_path).expect("empty PATH dir should be created");
+    let dependency_check = run_skillrun_with_path(&["check", "--cwd", &inspect_cwd], &empty_path);
+    let dependency_stdout =
+        assert_failure_stdout(&dependency_check, "unpacked JS dependency check");
+    for expected in [
+        "status: dependency-error",
+        "manifest freshness: fresh",
+        "action.mjs: fresh",
+        "executable: node required: >=18 detected: missing status: missing",
+        "packages: none",
+    ] {
+        assert!(
+            dependency_stdout.contains(expected),
+            "unpacked JS dependency check missing {expected:?}\n{dependency_stdout}"
+        );
+    }
+    assert!(!dependency_stdout.contains("npm"));
+    assert!(!dependency_stdout.contains("node_modules"));
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -260,7 +375,7 @@ fn pack_uses_capsule_name_for_archive_filename() {
         String::from_utf8_lossy(&pack.stderr)
     );
 
-    assert!(capsule.join("dist").join("triage-0.3.0.skr").is_file());
+    assert!(capsule.join("dist").join("triage-0.4.0.skr").is_file());
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -284,7 +399,7 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
     assert!(stderr.contains("action.py"));
     assert!(!stderr.contains("command not implemented yet"));
     assert!(
-        !capsule.join("dist").join("refund-0.3.0.skr").exists(),
+        !capsule.join("dist").join("refund-0.4.0.skr").exists(),
         "stale pack must not create an archive"
     );
 
@@ -308,11 +423,11 @@ fn pack_rejects_manifest_name_that_would_escape_dist() {
     let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
     assert!(stderr.contains("invalid package name from Manifest"));
     assert!(
-        !capsule.join("escape-0.3.0.skr").exists(),
+        !capsule.join("escape-0.4.0.skr").exists(),
         "invalid Manifest name must not escape dist"
     );
     assert!(
-        !capsule.join("dist").join("escape-0.3.0.skr").exists(),
+        !capsule.join("dist").join("escape-0.4.0.skr").exists(),
         "invalid Manifest name must not create a package"
     );
 

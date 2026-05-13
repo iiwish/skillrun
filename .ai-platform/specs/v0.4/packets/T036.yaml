@@ -1,0 +1,92 @@
+task_id: T036
+schema_version: "1.0"
+packet_id: "v0.4-T036"
+feature_id: "v0.4"
+title: Prepare v0.4 Release Docs And Validation Matrix
+status: Draft
+priority: P1
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T036
+  title: Prepare v0.4 Release Docs And Validation Matrix
+  status: Draft
+  feature_id: v0.4
+goal: Update release-facing documentation and validation evidence for Portable Consumer Checks.
+requirement_mapping:
+  - FR-009
+  - NFR-001
+  - NFR-004
+dependencies:
+  - T033
+  - T034
+  - T035
+blocks: []
+allowed_files:
+  - README.md
+  - README.zh-CN.md
+  - RELEASE_NOTES.md
+  - docs/ssot.md
+  - docs/testing.md
+  - .ai-platform/docs/release-report.md
+  - .ai-platform/specs/v0.4/tasks.md
+  - .ai-platform/specs/v0.4/analysis.md
+conflicts_with:
+  - all_v0.4_implementation_tasks
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - src/manifest.rs
+  - src/adapters/python.rs
+  - src/adapters/node.rs
+codebase_context:
+  - "Release docs must distinguish implemented behavior from planned behavior."
+  - "v0.4 narrative is Portable Consumer Checks, not HTTP or installer support."
+  - "No task may be marked Accepted without user acceptance."
+execution_constraints:
+  - "Do not claim dependency installation, vendoring, sandboxing or runtime-image behavior."
+  - "Do not create remote tag, push or package publication unless user explicitly asks."
+  - "Do not describe check as executing action code."
+tdd_plan:
+  red: "RED/GREEN applies only if release matrix tests need code changes."
+  green: "Use full validation and release report review evidence."
+  refactor: "Keep docs concise and traceable."
+validation_loop:
+  failure_policy: "Fix only release documentation or matrix evidence. Stop if implementation files need changes."
+  commands_source: validation_commands
+validation_commands:
+  - "git diff --check"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T036/summary.md"
+  test_results: ".ai-platform/evidence/T036/test-results.md"
+  diff: ".ai-platform/evidence/T036/diff.patch"
+acceptance_criteria:
+  - "Docs do not claim dependency installation, vendoring, sandboxing or runtime image behavior."
+  - "v0.4 narrative stays focused on portable checks."
+  - "Full validation is green or known limitations are documented."
+definition_of_done:
+  - "Release report is ready for user review."
+  - "No task is marked Accepted without user acceptance."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T036"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Implementation task evidence is missing."
+  - "Release docs would overclaim install, sandbox, HTTP, registry or runtime-image behavior."

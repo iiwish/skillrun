@@ -200,6 +200,32 @@ fn doctor_reports_instruction_only_skill_without_inference() {
 }
 
 #[test]
+fn check_reports_instruction_only_skill_without_inference() {
+    let (output_root, skill) = instruction_only_skill("instruction-check");
+    let cwd_arg = skill.to_string_lossy().to_string();
+
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&check, "instruction-only check");
+
+    for expected in [
+        "SkillRun Check",
+        "status: instruction-only",
+        "SKILL.md: present",
+        "action.py: absent",
+        "action.mjs: absent",
+        "does not infer actions",
+        "skillrun manifest",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "instruction-only check missing {expected:?}\n{stdout}"
+        );
+    }
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn doctor_reports_unsupported_typescript_action() {
     let output_root = temp_dir("instruction-doctor-typescript");
     let skill = output_root.join("ts-skill");
@@ -221,6 +247,35 @@ fn doctor_reports_unsupported_typescript_action() {
         assert!(
             stdout.contains(expected),
             "TypeScript doctor missing {expected:?}\n{stdout}"
+        );
+    }
+    assert!(!stdout.contains("--js"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn check_reports_unsupported_typescript_action() {
+    let output_root = temp_dir("instruction-check-typescript");
+    let skill = output_root.join("ts-skill");
+    fs::create_dir_all(&skill).expect("skill dir should be created");
+    fs::write(skill.join("SKILL.md"), "# TS Skill\n").expect("SKILL.md should be written");
+    fs::write(skill.join("action.ts"), "export async function run() {}\n")
+        .expect("action.ts should be written");
+
+    let cwd_arg = skill.to_string_lossy().to_string();
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&check, "typescript check");
+
+    for expected in [
+        "status: unsupported-typescript",
+        "action.ts: present",
+        "action.ts is not supported",
+        "compile to action.mjs",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "TypeScript check missing {expected:?}\n{stdout}"
         );
     }
     assert!(!stdout.contains("--js"));

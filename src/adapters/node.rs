@@ -3,8 +3,34 @@ use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::adapters::{ActionRunOutput, ActionRunRequest};
+use crate::adapters::{ActionRunOutput, ActionRunRequest, DiscoveredDependency, RuntimeDiscovery};
 use crate::schemas::Schemas;
+
+pub fn discover_runtime() -> RuntimeDiscovery {
+    RuntimeDiscovery {
+        executable: discover_node(),
+        packages: Vec::new(),
+    }
+}
+
+fn discover_node() -> DiscoveredDependency {
+    let output = Command::new("node").arg("--version").output();
+    match output {
+        Ok(output) if output.status.success() => {
+            let detected = command_text(&output);
+            DiscoveredDependency {
+                name: "node".to_string(),
+                detected: non_empty(detected),
+                available: true,
+            }
+        }
+        _ => DiscoveredDependency {
+            name: "node".to_string(),
+            detected: None,
+            available: false,
+        },
+    }
+}
 
 pub fn extract_schemas(capsule_dir: &Path, action_path: &Path) -> Result<Schemas, String> {
     let action_path = action_path
@@ -323,6 +349,22 @@ fn apply_process_env(command: &mut Command) {
         if let Ok(value) = std::env::var(key) {
             command.env(key, value);
         }
+    }
+}
+
+fn command_text(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !stdout.is_empty() {
+        return stdout;
+    }
+    String::from_utf8_lossy(&output.stderr).trim().to_string()
+}
+
+fn non_empty(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
     }
 }
 

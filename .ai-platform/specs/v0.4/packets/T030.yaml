@@ -1,0 +1,89 @@
+task_id: T030
+schema_version: "1.0"
+packet_id: "v0.4-T030"
+feature_id: "v0.4"
+title: Add Manifest Runtime Requirements Contract
+status: Draft
+priority: P0
+source_spec: ".ai-platform/specs/v0.4/spec.md"
+source_plan: ".ai-platform/specs/v0.4/plan.md"
+source_tasks: ".ai-platform/specs/v0.4/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.4/spec.md"
+  plan: ".ai-platform/specs/v0.4/plan.md"
+  tasks: ".ai-platform/specs/v0.4/tasks.md"
+  checklist: ".ai-platform/specs/v0.4/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.4/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T030
+  title: Add Manifest Runtime Requirements Contract
+  status: Draft
+  feature_id: v0.4
+goal: Generate or resolve minimal runtime requirements for Python stable and JS Alpha capsules.
+requirement_mapping:
+  - FR-002
+  - FR-007
+  - NFR-003
+dependencies:
+  - T029
+blocks:
+  - T031
+allowed_files:
+  - src/manifest.rs
+  - src/config.rs
+  - src/adapters/mod.rs
+  - tests/manifest.rs
+  - tests/pack.rs
+  - docs/ssot.md
+conflicts_with:
+  - T029
+  - T031
+must_not_change:
+  - src/runtime.rs
+  - src/mcp.rs
+  - templates/python/action.py
+  - templates/js/action.mjs
+codebase_context:
+  - "Manifest currently records runtime.adapter, runtime.entrypoint and runtime.timeout."
+  - "v0.4 requirements are diagnostic metadata, not install instructions."
+  - ".skr includes the generated Manifest and must remain dependency-free."
+execution_constraints:
+  - "Do not add package manager or install behavior."
+  - "Do not break v0.3 Manifest consumers unless fields are additive."
+  - "Keep requirements generated from adapter defaults unless existing config patterns naturally support override."
+tdd_plan:
+  red: "Add Manifest and pack assertions for runtime requirements on Python and JS capsules."
+  green: "Add additive runtime requirements generation."
+  refactor: "Keep requirement structs minimal and serializable."
+validation_loop:
+  failure_policy: "Fix only Manifest/config/pack-related failures. Stop if runtime behavior changes are required."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test manifest --test pack"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T030/summary.md"
+  test_results: ".ai-platform/evidence/T030/test-results.md"
+  diff: ".ai-platform/evidence/T030/diff.patch"
+acceptance_criteria:
+  - "Python and JS alpha Manifest tests pass."
+  - "Existing v0.3 Manifest fields remain compatible."
+  - "Pack tests prove requirements travel with .skr."
+definition_of_done:
+  - "Target tests pass."
+  - "Full cargo test passes."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T030"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+stop_conditions:
+  - "Work requires runtime probing."
+  - "Requirements start modeling lockfiles, virtualenvs, package managers or vendored dependencies."
