@@ -1,0 +1,98 @@
+task_id: T026
+schema_version: "1.0"
+packet_id: "v0.3-T026"
+feature_id: "v0.3"
+title: Implement Adapter-aware doctor Or validate
+status: Blocked
+priority: P1
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T026
+  title: Implement Adapter-aware doctor Or validate
+  status: Blocked
+  feature_id: v0.3
+goal: Add a non-executing diagnostics entrypoint for capsule structure, Manifest freshness and adapter-specific recovery steps.
+requirement_mapping:
+  - FR-008
+  - FR-009
+  - FR-010
+  - NFR-001
+  - NFR-002
+  - NFR-004
+dependencies:
+  - T020
+blocks:
+  - T028
+allowed_files:
+  - src/cli.rs
+  - src/consumer.rs
+  - src/manifest.rs
+  - src/inspect.rs
+  - src/doctor.rs
+  - src/main.rs
+  - tests/consumer_guards.rs
+  - tests/instruction_only.rs
+  - tests/cli.rs
+conflicts_with:
+  - T020
+  - T022
+  - T024
+must_not_change:
+  - src/adapters/node.rs
+  - src/adapters/python.rs
+  - src/runtime.rs
+  - README.md
+codebase_context:
+  - "Diagnostics must not execute business action code."
+  - "Consumer Mode must not import source for metadata."
+  - "Language flags belong to init only."
+execution_constraints:
+  - "Choose either doctor or validate as the command name and keep help text consistent."
+  - "Do not run action modules."
+  - "Do not suggest language flags for Consumer Mode commands."
+tdd_plan:
+  red: "Add failing CLI/diagnostics tests."
+  green: "Implement minimal diagnostic command."
+  refactor: "Share stale Manifest recovery helpers only after tests pass."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test consumer_guards --test instruction_only --test cli"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T026/summary.md"
+  test_results: ".ai-platform/evidence/T026/test-results.md"
+  diff: ".ai-platform/evidence/T026/diff.patch"
+acceptance_criteria:
+  - "Diagnostics check required files, Manifest presence/freshness, source hash status and examples presence."
+  - "Diagnostics report action.ts as unsupported and suggest compiling to action.mjs."
+  - "Diagnostics do not import action for metadata in Consumer Mode."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T026"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Diagnostics tests cover Python, JS alpha, instruction-only and stale Manifest scenarios."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

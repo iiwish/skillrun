@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::adapters::python::{self, ActionRunRequest};
+use crate::adapters::{self, ActionRunRequest};
 use crate::consumer;
 use crate::errors;
 use crate::permissions;
@@ -77,9 +77,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
 fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
     let manifest = load_manifest(&capsule_dir, mode)?;
     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
-    if adapter != "python" {
-        return Err(format!("unsupported runtime adapter: {adapter}"));
-    }
+    adapters::ensure_runtime_adapter(adapter)?;
 
     let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
     let timeout = string_at(&manifest.value, &["runtime", "timeout"])
@@ -103,16 +101,19 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     });
     write_json(&paths.context_json, &context)?;
 
-    let adapter_output = match python::run_action(&ActionRunRequest {
-        capsule_dir: &capsule_dir,
-        entrypoint,
-        context_json: &paths.context_json,
-        input_json: &paths.input_json,
-        output_json: &paths.output_json,
-        artifact_dir: &paths.artifact_dir,
-        env: &declared_env,
-        timeout,
-    }) {
+    let adapter_output = match adapters::run_action(
+        adapter,
+        &ActionRunRequest {
+            capsule_dir: &capsule_dir,
+            entrypoint,
+            context_json: &paths.context_json,
+            input_json: &paths.input_json,
+            output_json: &paths.output_json,
+            artifact_dir: &paths.artifact_dir,
+            env: &declared_env,
+            timeout,
+        },
+    ) {
         Ok(output) => output,
         Err(error) => {
             fs::write(&paths.stdout_log, []).map_err(|write_error| {

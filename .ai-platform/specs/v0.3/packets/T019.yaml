@@ -1,0 +1,94 @@
+task_id: T019
+schema_version: "1.0"
+packet_id: "v0.3-T019"
+feature_id: "v0.3"
+title: Add Python Path Characterization Tests
+status: Accepted
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T019
+  title: Add Python Path Characterization Tests
+  status: Accepted
+  feature_id: v0.3
+goal: Capture current Python capsule behavior before adapter refactor.
+requirement_mapping:
+  - FR-001
+  - FR-002
+  - NFR-003
+  - NFR-004
+dependencies:
+  - T018
+blocks:
+  - T020
+allowed_files:
+  - tests/manifest.rs
+  - tests/runtime.rs
+  - tests/e2e_matrix.rs
+  - tests/consumer_guards.rs
+conflicts_with:
+  - T020
+  - T024
+must_not_change:
+  - src/adapters/python.rs
+  - src/manifest.rs
+  - src/runtime.rs
+  - src/cli.rs
+  - README.md
+codebase_context:
+  - "Current Python adapter lives in src/adapters/python.rs."
+  - "Manifest generation currently requires action.py and calls python::extract_schemas."
+  - "Runtime currently accepts only runtime.adapter = python."
+  - "This task is a safety-net task; do not introduce JS implementation."
+execution_constraints:
+  - "Preserve user changes and inspect git status before editing."
+  - "Add or strengthen tests only in allowed files."
+  - "Do not weaken existing assertions."
+  - "Do not mark downstream tasks ready."
+tdd_plan:
+  red: "RED exception allowed because this is characterization coverage of existing behavior."
+  green: "Add tests that pass against current Python behavior and fail under obvious adapter regressions."
+  refactor: "No production refactor in this task."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test manifest --test runtime --test e2e_matrix --test consumer_guards"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T019/summary.md"
+  test_results: ".ai-platform/evidence/T019/test-results.md"
+  diff: ".ai-platform/evidence/T019/diff.patch"
+acceptance_criteria:
+  - "Tests pass against current Python behavior."
+  - "Tests do not introduce JS implementation."
+  - "Tests document current unsupported-adapter behavior before adapter dispatch."
+  - "No existing test assertion is weakened."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T019"
+  next_status_after_execution: Accepted
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Relevant tests are committed in the task diff."
+  - "Evidence records command output and locked behavior."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

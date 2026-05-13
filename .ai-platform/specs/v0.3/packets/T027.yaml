@@ -1,0 +1,88 @@
+task_id: T027
+schema_version: "1.0"
+packet_id: "v0.3-T027"
+feature_id: "v0.3"
+title: Update README And TypeScript Boundary Docs
+status: Blocked
+priority: P1
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T027
+  title: Update README And TypeScript Boundary Docs
+  status: Blocked
+  feature_id: v0.3
+goal: Explain Python stable path, --py alias, JS alpha path, TypeScript boundary and language-flag placement without weakening SkillRun's core narrative.
+requirement_mapping:
+  - FR-009
+  - NFR-001
+  - NFR-002
+dependencies:
+  - T021
+blocks:
+  - T028
+allowed_files:
+  - README.md
+  - docs/ssot.md
+  - docs/business-examples.md
+  - .ai-platform/specs/v0.3/issue-drafts.md
+conflicts_with:
+  - T028
+must_not_change:
+  - src/cli.rs
+  - src/init.rs
+  - src/runtime.rs
+  - tests/init.rs
+codebase_context:
+  - "README must keep --python as the main Quickstart."
+  - "--py is an alias/reference detail, not the main path."
+  - "Current README must not claim JS is available until implementation lands."
+execution_constraints:
+  - "Do not overclaim security, dependency management or TypeScript support."
+  - "Do not describe .skr as a secure install format or runtime image."
+  - "Keep docs consistent with v0.3 spec and SSOT language."
+tdd_plan:
+  red: "RED/GREEN does not apply to documentation-only changes."
+  green: "Use narrative consistency, scope boundary and diff hygiene checks."
+  refactor: "Keep headings stable for future agents."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "git diff --check"
+  - "python D:\\data\\ai-rd-skill\\ai-delivery-governor\\scripts\\validate_delivery_artifacts.py --root D:\\data\\skillrunv2"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T027/summary.md"
+  test_results: ".ai-platform/evidence/T027/test-results.md"
+  diff: ".ai-platform/evidence/T027/diff.patch"
+acceptance_criteria:
+  - "A reader can explain why SkillRun is not FastMCP after the first screen."
+  - "A reader can explain why JS alpha is not full TS support."
+  - "A reader can explain why init needs a language flag but runtime commands do not."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T027"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Documentation checks pass."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

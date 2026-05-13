@@ -1,0 +1,98 @@
+task_id: T028
+schema_version: "1.0"
+packet_id: "v0.3-T028"
+feature_id: "v0.3"
+title: Prepare v0.3 Release Matrix And Report
+status: Blocked
+priority: P1
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T028
+  title: Prepare v0.3 Release Matrix And Report
+  status: Blocked
+  feature_id: v0.3
+goal: Prepare release-facing evidence that v0.3 delivered adapter boundary, JS alpha and author quality loop without expanding out-of-scope claims.
+requirement_mapping:
+  - FR-002
+  - FR-007
+  - FR-009
+  - NFR-001
+  - NFR-002
+  - NFR-004
+dependencies:
+  - T024
+  - T025
+  - T026
+  - T027
+blocks: []
+allowed_files:
+  - README.md
+  - RELEASE_NOTES.md
+  - .ai-platform/docs/release-report.md
+  - .ai-platform/specs/v0.3/tasks.md
+  - .ai-platform/specs/v0.3/analysis.md
+  - tests/e2e_matrix.rs
+conflicts_with:
+  - all_v0.3_implementation_tasks
+must_not_change:
+  - src/adapters/node.rs
+  - src/runtime.rs
+  - src/manifest.rs
+  - src/mcp.rs
+codebase_context:
+  - "Release report is the release-facing governance ledger."
+  - "No task may be marked Accepted without user acceptance."
+  - "v0.3 must remain honest about JS alpha, TypeScript out-of-scope and .skr limitations."
+execution_constraints:
+  - "Do not create remote tag, push or package publication unless user explicitly asks."
+  - "Do not describe JS alpha as full TypeScript support."
+  - "Do not describe .skr as dependency bundle, runtime image or secure install format."
+tdd_plan:
+  red: "RED/GREEN applies only if release matrix tests need code changes."
+  green: "Use full validation and report review evidence."
+  refactor: "Keep release report concise and traceable."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test"
+  - "cargo run -- --version"
+  - "python D:\\data\\ai-rd-skill\\ai-delivery-governor\\scripts\\validate_delivery_artifacts.py --root D:\\data\\skillrunv2"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T028/summary.md"
+  test_results: ".ai-platform/evidence/T028/test-results.md"
+  diff: ".ai-platform/evidence/T028/diff.patch"
+acceptance_criteria:
+  - "Python release matrix remains green."
+  - "JS alpha release matrix is green where Node is available."
+  - "Release notes state action.mjs alpha and TypeScript out-of-scope boundaries."
+  - ".skr remains described as source + Manifest archive only."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T028"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Full validation passes."
+  - "Release report is ready for user review."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

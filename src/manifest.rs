@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::adapters::python;
+use crate::adapters;
 use crate::config::{self, ManifestPermissions, RuntimeConfig};
 use crate::hashing;
 use crate::schemas::Schemas;
@@ -87,19 +87,21 @@ struct ErrorInfo {
 pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     let capsule_dir = options.cwd.clone();
     let skill_path = capsule_dir.join("SKILL.md");
-    let action_path = capsule_dir.join("action.py");
     let config_path = capsule_dir.join("skillrun.config.json");
 
     require_file(&skill_path, "missing SKILL.md")?;
+    let config = config::load_config(&config_path)?;
+    let action_entrypoint = config.runtime.entrypoint.clone();
+    let adapter = config.runtime.adapter.clone();
+    let action_path = capsule_dir.join(&action_entrypoint);
     if !action_path.is_file() {
         return Err(format!(
-            "missing action.py: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit action.py before running `skillrun manifest`.",
-            action_path.display()
+            "missing {action_entrypoint}: {}. SkillRun does not infer actions from Markdown, scripts, references, assets, or examples; add an explicit {action_entrypoint} before running `skillrun manifest`.",
+            action_path.display(),
         ));
     }
 
-    let schemas = python::extract_schemas(&capsule_dir, &action_path)?;
-    let config = config::load_config(&config_path)?;
+    let schemas = adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?;
     let skill_hash = hashing::sha256_file(&skill_path)?;
     let action_hash = hashing::sha256_file(&action_path)?;
     let config_source = if config_path.exists() {
@@ -126,7 +128,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
                 sha256: skill_hash.clone(),
             },
             action: SourceInfo {
-                path: "action.py".to_string(),
+                path: action_entrypoint,
                 sha256: action_hash,
             },
             config: config_source,

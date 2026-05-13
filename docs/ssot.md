@@ -44,7 +44,7 @@ SkillRun 不替代 Skill，也不重新定义所有 Skill。
 | Action | Capsule 内被明确绑定的执行入口 | 是 |
 | Manifest | 从 Skill、Action、schema、examples、permissions 编译出的运行 IR | 否 |
 
-普通 Skill 仍然可以只是 instruction-only。只有作者显式加入 `action.py`、schema、examples 和可生成 Manifest 的边界后，它才成为 SkillRun Capsule。
+普通 Skill 仍然可以只是 instruction-only。只有作者显式加入 `action.py` / `action.mjs`、schema、examples 和可生成 Manifest 的边界后，它才成为 SkillRun Capsule。
 
 SkillRun 必须遵守三条兼容规则：
 
@@ -190,7 +190,7 @@ Author Mode 面向本地开发者，优化 Time-to-First-Value。
 
 允许：
 
-- 通过 convention 发现 `SKILL.md` 和 `action.py` / `action.js`。
+- 通过 convention 发现 `SKILL.md` 和 `action.py` / `action.mjs`。
 - 通过受控 adapter metadata 子进程提取本地代码 schema。
 - 自动生成 `.skillrun/manifest.generated.yaml`。
 - 快速运行 `skillrun test`、`skillrun inspect`、`skillrun serve --mcp`。
@@ -262,20 +262,33 @@ Convention defaults
 
 SkillRun Core 不内置所有语言。
 
-v0.1 MVP 只交付 Rust Core + Python Action blessed path。Node path 是第一个扩展目标，必须在 Rust Core、Manifest、IPC、pack 和 MCP 暴露路径被 Python Action slice 验证后再进入实现。
+v0.1/v0.2 只交付 Rust Core + Python Action blessed path。Node/JS path 是第一个扩展目标，必须在 Rust Core、Manifest、IPC、pack 和 MCP 暴露路径被 Python Action slice 验证后再进入实现。
+
+v0.3 可以把 JS Action Alpha 作为第一个 adapter generalization，但边界必须很窄：稳定作者路径是 canonical ESM `action.mjs`，不是完整 TypeScript 工具链。
+
+CLI 语言语义必须分阶段：
+
+- `init` 是模板选择，必须显式传 `--python` / `--py` / `--js`。
+- `--py` 只是 `--python` 的短别名，生成相同 Python capsule。
+- `skillrun init refund` 不设置隐式默认语言。
+- `manifest` 是 Author Mode 编译，先看 `skillrun.config.json`，再用唯一 action 文件 convention。
+- `test`、`run`、`serve --mcp`、`pack` 是 Consumer Mode 路径，只读 Manifest，不接受语言选择 flag。
 
 长期 blessed paths：
 
 | 文件 | Adapter |
 | --- | --- |
 | `action.py` | Python adapter |
-| `action.js` / `action.mjs` | Node adapter，post-MVP |
+| `action.mjs` | Node adapter，v0.3 JS Action Alpha |
+| `action.ts` | 不作为 v0.3 稳定 runtime 入口；作者可自行编译到 `action.mjs` |
 
 探测规则必须浅、确定、可解释：
 
-- 找到 `action.py`：使用 Python adapter。
-- MVP 阶段找到 `action.js` 或 `action.mjs`：提示 Node adapter 尚未启用。
-- post-MVP 找到 `action.js` 或 `action.mjs`：使用 Node adapter。
+- `skillrun.config.json` 显式声明 `runtime.adapter` / `runtime.entrypoint` 时优先使用 config。
+- 无 config runtime override 时，找到唯一 `action.py`：使用 Python adapter。
+- 无 config runtime override 时，v0.2 阶段找到唯一 `action.mjs`：提示 Node adapter 尚未启用。
+- 无 config runtime override 时，v0.3 JS Action Alpha 启用后找到唯一 `action.mjs`：使用 Node adapter。
+- 找到 `action.ts`：不直接运行；提示作者先编译到 `action.mjs`，或等待后续 TypeScript support 设计。
 - 多个候选文件：报 ambiguous，不猜。
 - 其他语言：post-MVP 要求 `skillrun.config.json` 显式指定 command，或暂不支持。
 
@@ -380,7 +393,7 @@ export async function run(input, ctx) {
 - 静态解析 AST：脆弱，不可靠。
 - 动态加载 metadata：真实可行，但必须限制场景。
 
-SkillRun 采用 adapter metadata phase：Rust Core 启动对应语言的 metadata 子进程，读取 `action.py` 或未来的 `action.js`，把 schema 和 metadata 写回 Manifest 生成流程。具体 argv 是 Rust Core 的实现细节，不作为 v0.1 稳定用户接口。
+SkillRun 采用 adapter metadata phase：Rust Core 启动对应语言的 metadata 子进程，读取 `action.py` 或未来的 `action.mjs`，把 schema 和 metadata 写回 Manifest 生成流程。具体 argv 是 Rust Core 的实现细节，不作为 v0.1 稳定用户接口。
 
 规则：
 

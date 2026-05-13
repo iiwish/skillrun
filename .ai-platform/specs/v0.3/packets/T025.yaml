@@ -1,0 +1,93 @@
+task_id: T025
+schema_version: "1.0"
+packet_id: "v0.3-T025"
+feature_id: "v0.3"
+title: Extend MCP And Pack Compatibility To JS Alpha
+status: Blocked
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T025
+  title: Extend MCP And Pack Compatibility To JS Alpha
+  status: Blocked
+  feature_id: v0.3
+goal: Show that JS alpha capsules use the same Manifest-derived MCP and .skr package surfaces as Python capsules.
+requirement_mapping:
+  - FR-007
+  - FR-006
+  - NFR-001
+  - NFR-003
+  - NFR-004
+dependencies:
+  - T024
+blocks:
+  - T028
+allowed_files:
+  - tests/mcp_server.rs
+  - tests/fixtures/mcp_stdio.rs
+  - tests/pack.rs
+  - tests/e2e_matrix.rs
+  - src/mcp.rs
+  - src/pack.rs
+conflicts_with:
+  - T023
+  - T024
+must_not_change:
+  - src/adapters/node.rs
+  - src/manifest.rs
+  - src/runtime.rs
+  - README.md
+codebase_context:
+  - "MCP tools and resources must remain Manifest-derived."
+  - ".skr packages are source + Manifest archives and must not vendor dependencies."
+  - "MCP tool calls should reuse runtime dispatch."
+execution_constraints:
+  - "Do not add HTTP/SSE/Streamable HTTP transport."
+  - "Do not add package registry, install flow or dependency vendoring."
+  - "Do not duplicate Python/JS MCP surfaces."
+tdd_plan:
+  red: "Add failing JS MCP/pack tests."
+  green: "Make existing MCP/pack code language-neutral where necessary."
+  refactor: "Avoid duplicating Python/JS MCP assertions."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test mcp_server --test pack --test e2e_matrix"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T025/summary.md"
+  test_results: ".ai-platform/evidence/T025/test-results.md"
+  diff: ".ai-platform/evidence/T025/diff.patch"
+acceptance_criteria:
+  - "MCP tool schema comes from Manifest for JS alpha."
+  - "MCP tool call reuses runtime dispatch and produces run evidence."
+  - ".skr contains source and Manifest, excludes run history, and does not vendor dependencies."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T025"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "MCP and pack tests pass for Python and JS alpha."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

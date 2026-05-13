@@ -1,0 +1,99 @@
+task_id: T021
+schema_version: "1.0"
+packet_id: "v0.3-T021"
+feature_id: "v0.3"
+title: Add Explicit Init Language Flags, --py Alias, And JS Templates
+status: Ready
+priority: P0
+source_spec: ".ai-platform/specs/v0.3/spec.md"
+source_plan: ".ai-platform/specs/v0.3/plan.md"
+source_tasks: ".ai-platform/specs/v0.3/tasks.md"
+created: 2026-05-13
+governance_inputs:
+  constitution: ".ai-platform/memory/constitution.md"
+  spec: ".ai-platform/specs/v0.3/spec.md"
+  plan: ".ai-platform/specs/v0.3/plan.md"
+  tasks: ".ai-platform/specs/v0.3/tasks.md"
+  checklist: ".ai-platform/specs/v0.3/checklists/requirements.md"
+  analysis: ".ai-platform/specs/v0.3/analysis.md"
+adapter: codex
+work_unit:
+  task_id: T021
+  title: Add Explicit Init Language Flags, --py Alias, And JS Templates
+  status: Ready
+  feature_id: v0.3
+goal: Add explicit init language selection, the --py alias, and the JS alpha capsule skeleton without implementing Node runtime execution.
+requirement_mapping:
+  - FR-003
+  - FR-004
+  - FR-009
+  - FR-010
+  - NFR-001
+  - NFR-002
+dependencies:
+  - T020
+blocks:
+  - T022
+  - T024
+  - T027
+allowed_files:
+  - src/cli.rs
+  - src/init.rs
+  - templates/js/SKILL.md
+  - templates/js/action.mjs
+  - templates/js/examples/default.input.json
+  - templates/js/skillrun.config.json
+  - tests/init.rs
+  - tests/cli.rs
+conflicts_with:
+  - T020
+  - T024
+must_not_change:
+  - src/adapters/node.rs
+  - src/runtime.rs
+  - src/manifest.rs
+  - README.md
+codebase_context:
+  - "init.rs currently generates Python templates from templates/python."
+  - "cli.rs currently requires --python for init."
+  - "--py must be an alias for --python, not a new adapter."
+execution_constraints:
+  - "Do not implement Node metadata or runtime."
+  - "Do not add package manager files."
+  - "Do not add language flags to test, run, serve or pack."
+tdd_plan:
+  red: "Add failing tests for init --py, missing language flag, conflicting flags, and init --js output."
+  green: "Implement parser alias and JS templates."
+  refactor: "Keep language selection explicit and simple."
+validation_loop:
+  failure_policy: "Read failure output, fix only current-task scope, stop after repeated unexplained failure."
+  commands_source: validation_commands
+validation_commands:
+  - "cargo test --test init --test cli"
+  - "cargo test"
+review_contract:
+  spec_compliance_review: required
+  engineering_quality_review: required
+  qa_acceptance_review: required
+  user_acceptance_required: true
+evidence_contract:
+  summary: ".ai-platform/evidence/T021/summary.md"
+  test_results: ".ai-platform/evidence/T021/test-results.md"
+  diff: ".ai-platform/evidence/T021/diff.patch"
+acceptance_criteria:
+  - "skillrun init refund --js creates JS alpha files."
+  - "skillrun init refund --py creates the same capsule as --python."
+  - "skillrun init refund without a language flag fails with a clear recovery hint."
+  - "--js and Python flags are mutually exclusive."
+handoff:
+  evidence_dir: ".ai-platform/evidence/T021"
+  next_status_after_execution: Needs_Review
+  commit_policy: "Commit only after review passes and user requests git handoff."
+definition_of_done:
+  - "Init and CLI tests pass."
+  - "Task remains Needs_Review until maintainer review and user acceptance."
+stop_conditions:
+  - "Required dependency task is not accepted."
+  - "Work requires files outside allowed_files."
+  - "Validation failure suggests spec or task scope mismatch."
+  - "Implementation would expand out-of-scope TypeScript, package manager, sandbox, registry or HTTP transport behavior."

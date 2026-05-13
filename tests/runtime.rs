@@ -99,6 +99,28 @@ fn is_64_hex(value: &str) -> bool {
 }
 
 #[test]
+fn runtime_rejects_non_python_adapter_before_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("runtime-unsupported-adapter");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+    let manifest = manifest.replace("adapter: python", "adapter: node");
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert_contains(&stderr, "unsupported runtime adapter: node");
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "unsupported adapter should fail before creating run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn test_command_uses_default_example_and_writes_run_record() {
     let (output_root, capsule) = generated_capsule("runtime-test-command");
     let cwd_arg = capsule.to_string_lossy().to_string();
