@@ -432,7 +432,7 @@ Evidence required:
 
 ### T036: Prepare v0.4 Release Docs And Validation Matrix
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T033, T034, T035
 Blocks: None
@@ -490,5 +490,5 @@ Evidence required:
 
 ## User Review Gate
 
-- Approval: Pending.
-- Reviewer notes: T029, T030, T031, T032, T033, T034 and T035 were reviewed and accepted on 2026-05-13. T036 remains `Draft`.
+- Approval: Granted for T036.
+- Reviewer notes: T029, T030, T031, T032, T033, T034, T035 and T036 were reviewed and accepted on 2026-05-13. v0.4 is ready for explicit release handoff decisions.

@@ -22,9 +22,11 @@ cargo clippy --all-targets -- -D warnings
 ```bash
 cargo test --test cli
 cargo test --test manifest
+cargo test --test consumer_guards
 cargo test --test runtime
 cargo test --test mcp_server
 cargo test --test pack
+cargo test --test e2e_matrix
 ```
 
 ## Release Validation
@@ -36,6 +38,18 @@ release candidate 至少需要：
 - `cargo test`
 - README 中列出的核心 `cargo run -- ...` 命令抽样验证
 - release notes 和 release policy 检查
+
+v0.4 release candidate 还需要确认 Portable Consumer Checks 矩阵：
+
+| 场景 | 建议验证 |
+| --- | --- |
+| `check` 命令与 Consumer Mode guard | `cargo test --test cli --test consumer_guards --test instruction_only` |
+| runtime dependency discovery | `cargo test --test consumer_guards --test manifest` |
+| runtime `DependencyError` envelope | `cargo test --test runtime --test errors` |
+| MCP dependency failure survival | `cargo test --test mcp_server` |
+| unpacked `.skr` inspect/check | `cargo test --test pack --test e2e_matrix` |
+
+这些测试只证明 SkillRun 能诊断依赖和保持错误结构稳定；不代表 SkillRun 会安装依赖、vendor dependency、创建 sandbox 或提供 runtime image。
 
 ## 测试设计原则
 

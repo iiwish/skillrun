@@ -52,13 +52,13 @@ Keep T032 scoped to adapter-default requirements and minimal detected/required c
 
 ## Gate Status
 
-- Spec status: Ready_For_User_Review.
-- Plan status: Ready_For_User_Review.
-- Work graph status: Ready_For_User_Review.
-- Task status: all Draft.
-- Execution packets: not created yet.
-- Execute gate: blocked until user confirms v0.4 scope and task breakdown.
+- Spec status: confirmed for v0.4 execution.
+- Plan status: confirmed for v0.4 execution.
+- Work graph status: confirmed for v0.4 execution.
+- Task status: T029-T035 accepted; T036 in release-documentation review.
+- Execution packets: T029-T036 created.
+- Execute gate: open only for T036 documentation/reporting changes; implementation files remain out of scope.
 
 ## Recommendation
 
-Proceed to user review. After approval, create execution packets for T029 through T036 and move only the first unblocked task to Ready.
+Complete T036 review before any v0.4 version bump, tag, remote push or package publication. Keep the release narrative focused on Portable Consumer Checks.

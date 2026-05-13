@@ -1,0 +1,502 @@
+﻿diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index 2777a31..19945b9 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -1,116 +1,109 @@
+-# SkillRun v0.3 Release Report
++# SkillRun v0.4 Release Report
+ 
+-Version: v0.3.0
+-Status: Released_Local
++Version: v0.4.0
++Status: Ready_For_Release_Decision
+ Last updated: 2026-05-13
+-Review gate: T028 evidence accepted; local release handoff requested by maintainer
++Review gate: T029-T036 evidence accepted; release handoff decisions remain pending
+ 
+ ## Scope
+ 
+-This report records the v0.3 release candidate evidence for SkillRun after the v0.2.0 local release handoff.
++This report records the v0.4 integration evidence for SkillRun after the v0.3.0 local release handoff.
+ 
+ The release story is deliberately narrow:
+ 
+-> Keep Python stable, prove the adapter boundary, and ship JS Action Alpha without claiming full TypeScript or dependency-management support.
++> A Skill Capsule can be inspected and dependency-checked after distribution, even when the current machine cannot run it.
+ 
+-v0.3 is not a general Node framework, TypeScript runtime, package manager, registry, sandbox, or new MCP transport release.
++v0.4 is not an HTTP transport, installer, package manager, registry, sandbox, signed package or runtime-image release.
+ 
+ ## Governance Summary
+ 
+-- v0.3 spec: `.ai-platform/specs/v0.3/spec.md`
+-- v0.3 plan: `.ai-platform/specs/v0.3/plan.md`
+-- v0.3 work graph: `.ai-platform/specs/v0.3/tasks.md`
+-- v0.3 checklist: `.ai-platform/specs/v0.3/checklists/requirements.md`
+-- v0.3 analysis: `.ai-platform/specs/v0.3/analysis.md`
++- v0.4 spec: `.ai-platform/specs/v0.4/spec.md`
++- v0.4 plan: `.ai-platform/specs/v0.4/plan.md`
++- v0.4 work graph: `.ai-platform/specs/v0.4/tasks.md`
++- v0.4 checklist: `.ai-platform/specs/v0.4/checklists/requirements.md`
++- v0.4 analysis: `.ai-platform/specs/v0.4/analysis.md`
+ - Release notes draft: `RELEASE_NOTES.md`
+-- Release report status: `Released_Local`
+-- Local release tag: `v0.3.0`
++- Release report status: `Ready_For_Release_Decision`
++- Local release tag: not created by this task
+ - Remote push and package publication: not performed by this handoff
+ 
+-## Accepted v0.3 Tasks
++## Accepted v0.4 Tasks
+ 
+-- T019: Python regression safety net accepted. Evidence: `.ai-platform/evidence/T019/`.
+-- T020: Adapter boundary refactor accepted. Evidence: `.ai-platform/evidence/T020/`.
+-- T021: JS alpha init and metadata path accepted. Evidence: `.ai-platform/evidence/T021/`.
+-- T022: JS runtime path accepted. Evidence: `.ai-platform/evidence/T022/`.
+-- T023: Consumer Mode guards accepted. Evidence: `.ai-platform/evidence/T023/`.
+-- T024: JS alpha local command matrix accepted. Evidence: `.ai-platform/evidence/T024/`.
+-- T025: JS alpha MCP and pack compatibility accepted. Evidence: `.ai-platform/evidence/T025/`.
+-- T026: Adapter-aware doctor accepted. Evidence: `.ai-platform/evidence/T026/`.
+-- T027: README and TypeScript boundary docs accepted. Evidence: `.ai-platform/evidence/T027/`.
++- T029: DependencyError contract accepted. Evidence: `.ai-platform/evidence/T029/`.
++- T030: Manifest runtime requirements accepted. Evidence: `.ai-platform/evidence/T030/`.
++- T031: Readiness engine and `skillrun check` accepted. Evidence: `.ai-platform/evidence/T031/`.
++- T032: Python and Node runtime discovery accepted. Evidence: `.ai-platform/evidence/T032/`.
++- T033: Runtime dependency failures mapped to `DependencyError` accepted. Evidence: `.ai-platform/evidence/T033/`.
++- T034: MCP server survival on `DependencyError` accepted. Evidence: `.ai-platform/evidence/T034/`.
++- T035: Portable `.skr` check matrix accepted. Evidence: `.ai-platform/evidence/T035/`.
+ 
+-T028 prepared the release matrix and report and was accepted on 2026-05-13. Version bump, tag creation, remote push and package publication remain separate release handoff decisions.
++T036 prepared release-facing documentation and validation evidence and was accepted on 2026-05-13.
+ 
+ ## Release Candidate Capabilities
+ 
+-- Rust CLI/Core remains the SkillRun implementation boundary.
+-- Python `action.py` remains the stable blessed action adapter path.
+-- `skillrun init <name> --python` remains the README main Quickstart path.
+-- `skillrun init <name> --py` is a short alias for the same Python template.
+-- `skillrun init <name> --js` generates a JS alpha capsule using canonical ESM `action.mjs`.
+-- Manifest generation routes through an adapter boundary and records `runtime.adapter`, `runtime.entrypoint`, source hashes, schemas, examples and permissions.
+-- JS metadata extraction reads explicit `inputSchema` and `outputSchema` exports from `action.mjs`.
+-- JS runtime execution supports optional `preflight(input, ctx)` and sync or async `run(input, ctx)`.
+-- Runtime envelopes, run records, artifact containment, permission checks and structured error behavior remain shared across Python and JS alpha.
+-- Consumer Mode validates static Manifest source hashes before `test`, `run`, `serve --mcp` and `pack`.
+-- `skillrun serve --mcp` remains Manifest-derived and language-neutral.
+-- `.skr` packaging remains source + Manifest archive generation.
+-- `skillrun doctor` reports adapter-aware capsule structure, Manifest freshness, schema/example status and recovery guidance without running business action code.
++- `skillrun check --cwd <capsule>` statically diagnoses capsule readiness.
++- `inspect` displays the Manifest contract; `check` diagnoses host readiness; `doctor` remains the human-friendly diagnostic view.
++- Manifest runtime requirements record adapter-default Python and Node requirements.
++- Python readiness checks report Python executable and Pydantic v2 status.
++- Node readiness checks report Node executable status and do not introduce npm/package-manager checks.
++- Missing Python, Node or Pydantic produces structured `DependencyError` instead of leaking raw spawn/import failures.
++- `test`, `run` and MCP `tools/call` preserve structured dependency failure semantics.
++- MCP stdio server remains alive after one tool call hits a dependency failure.
++- `.skr` archives remain source + Manifest archives, but unpacked capsules can run `inspect` and `check`.
++- Consumer Mode diagnostics do not import `action.py` or `action.mjs` for metadata.
+ 
+ ## Release Matrix
+ 
+-| Capability area | Evidence path | T028 status |
++| Capability area | Evidence path | Status |
+ | --- | --- | --- |
+-| Python baseline | `cargo test`; `tests/e2e_matrix.rs::a001_to_a013_release_matrix_has_fresh_command_evidence` | Passed |
+-| MCP stdio baseline | `cargo test`; `tests/e2e_matrix.rs::a014_mcp_stdio_release_matrix_exercises_full_client_flow` | Passed |
+-| JS alpha local command path | `cargo test`; `tests/e2e_matrix.rs::js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run` | Passed |
+-| `--py` alias | `cargo test`; `tests/e2e_matrix.rs::py_alias_manifest_smoke_uses_python_adapter_identity` | Passed |
+-| JS MCP surfaces | `cargo test`; `tests/mcp_server.rs` JS dry-run and stdio tests | Passed |
+-| JS `.skr` packaging | `cargo test`; `tests/pack.rs::pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_run_history` | Passed |
+-| Adapter-aware diagnostics | `cargo test`; `tests/consumer_guards.rs` doctor coverage | Passed |
+-| Governance evidence | Delivery artifact validator | Passed |
++| Error contract | `cargo test --test errors --test cli --test consumer_guards`; `.ai-platform/evidence/T029/` | Passed |
++| Manifest runtime requirements | `cargo test --test manifest --test pack`; `.ai-platform/evidence/T030/` | Passed |
++| Readiness engine and `check` | `cargo test --test cli --test consumer_guards --test instruction_only`; `.ai-platform/evidence/T031/` | Passed |
++| Python and Node runtime discovery | `cargo test --test consumer_guards --test manifest`; `.ai-platform/evidence/T032/` | Passed |
++| Runtime `DependencyError` envelope | `cargo test --test runtime --test errors`; `.ai-platform/evidence/T033/` | Passed |
++| MCP dependency survival | `cargo test --test mcp_server`; `.ai-platform/evidence/T034/` | Passed |
++| Portable `.skr` diagnosis | `cargo test --test pack --test e2e_matrix`; `.ai-platform/evidence/T035/` | Passed |
++| Full regression | `cargo test`; `cargo clippy --all-targets -- -D warnings`; `git diff --check` | Passed in T035/T036 validation |
+ 
+ ## Validation Summary
+ 
+-Release-candidate validation completed on 2026-05-13:
++Release-documentation validation completed on 2026-05-13:
+ 
++- `git diff --check`: passed.
+ - `cargo test`: passed.
+-- `cargo run -- --version`: passed.
+-- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2`: passed.
++- `cargo clippy --all-targets -- -D warnings`: passed.
+ 
+-Current local binary version output:
++Current local binary version output still reflects the last version handoff until a release bump is explicitly approved:
+ 
+ ```text
+ skillrun 0.3.0
+ ```
+ 
+-The SemVer bump and local tag are part of the post-T028 release handoff. Remote tag push and package publication still require explicit maintainer approval.
++Version bump, tag creation, remote push and package publication remain separate release handoff decisions.
+ 
+ ## Known Limitations
+ 
+-- v0.3 supports JS Action Alpha only through canonical ESM `action.mjs`.
+-- `action.ts` is not a runtime entrypoint. TypeScript authors must compile to `action.mjs` outside SkillRun.
+-- SkillRun does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
+-- JS schemas must be explicit JSON Schema exports; no TypeScript type, JSDoc, Zod, TypeBox, example or package metadata inference is provided.
+-- Runtime commands remain Manifest-only and do not accept language flags.
+-- MCP transport remains stdio only. HTTP, SSE, Streamable HTTP, auth and hosted server modes are out of scope.
++- v0.4 diagnoses dependencies but does not install Python, Node, Pydantic, npm packages, virtualenvs or runtime images.
+ - `.skr` is not signed, not a registry package, not a dependency bundle, and not a reproducible runtime image.
+-- Dependency installation and runtime environment recreation remain the user's responsibility.
+-- SkillRun is not an OS sandbox. Running a third-party action still means executing third-party code.
+-- Consumer Mode avoids dynamic metadata import, but it does not prevent the action process itself from using local machine capabilities once executed.
++- SkillRun is not an OS sandbox. Running third-party actions still means executing third-party code.
++- Consumer Mode avoids dynamic metadata import, but executing an action still executes third-party code.
++- MCP transport remains stdio only. HTTP, SSE, Streamable HTTP, auth and hosted server modes are out of scope.
++- JS support remains JS Action Alpha through canonical ESM `action.mjs`.
++- `action.ts`, TypeScript runtime execution, `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices and package-manager install flows remain out of scope.
++- Runtime commands remain Manifest-only and do not accept language flags.
+ 
+ ## Release Decision Checklist
+ 
+-- [x] T019-T027 accepted.
+-- [x] T028 release matrix and report prepared.
+-- [x] Maintainer reviews T028 diff and evidence.
+-- [x] Maintainer accepts v0.3 release candidate.
+-- [x] Decide whether to bump Cargo/package version from `0.2.0` to `0.3.0`.
+-- [x] Create local release tag after explicit approval.
++- [x] T029-T035 accepted.
++- [x] T036 release docs prepared.
++- [x] Maintainer reviews T036 diff and evidence.
++- [ ] Maintainer accepts v0.4 release candidate.
++- [ ] Decide whether to bump Cargo/package version from `0.3.0` to `0.4.0`.
++- [ ] Create local release tag after explicit approval.
+ - [ ] Push tag to remote, if desired.
+ - [ ] Publish package/artifact, if desired.
+ 
+ ## User Review Gate
+ 
+-- Approval: Granted for T028 on 2026-05-13.
+-- Reviewer notes: v0.3 release candidate evidence is accepted and the local release tag is created. Remote publication and package release have not been performed.
++- Approval: Granted for T036 on 2026-05-13.
++- Reviewer notes: v0.4 implementation and documentation evidence through T036 is accepted. Version bump, local tag, remote push and package publication remain separate explicit decisions.
+diff --git a/.ai-platform/specs/v0.4/analysis.md b/.ai-platform/specs/v0.4/analysis.md
+index f6c0e63..7b79d27 100644
+--- a/.ai-platform/specs/v0.4/analysis.md
++++ b/.ai-platform/specs/v0.4/analysis.md
+@@ -52,13 +52,13 @@ Keep T032 scoped to adapter-default requirements and minimal detected/required c
+ 
+ ## Gate Status
+ 
+-- Spec status: Ready_For_User_Review.
+-- Plan status: Ready_For_User_Review.
+-- Work graph status: Ready_For_User_Review.
+-- Task status: all Draft.
+-- Execution packets: not created yet.
+-- Execute gate: blocked until user confirms v0.4 scope and task breakdown.
++- Spec status: confirmed for v0.4 execution.
++- Plan status: confirmed for v0.4 execution.
++- Work graph status: confirmed for v0.4 execution.
++- Task status: T029-T035 accepted; T036 in release-documentation review.
++- Execution packets: T029-T036 created.
++- Execute gate: open only for T036 documentation/reporting changes; implementation files remain out of scope.
+ 
+ ## Recommendation
+ 
+-Proceed to user review. After approval, create execution packets for T029 through T036 and move only the first unblocked task to Ready.
++Complete T036 review before any v0.4 version bump, tag, remote push or package publication. Keep the release narrative focused on Portable Consumer Checks.
+diff --git a/.ai-platform/specs/v0.4/tasks.md b/.ai-platform/specs/v0.4/tasks.md
+index 697d8e8..dfcdf49 100644
+--- a/.ai-platform/specs/v0.4/tasks.md
++++ b/.ai-platform/specs/v0.4/tasks.md
+@@ -432,7 +432,7 @@ Evidence required:
+ 
+ ### T036: Prepare v0.4 Release Docs And Validation Matrix
+ 
+-Status: Draft
++Status: Accepted
+ Priority: P1
+ Depends on: T033, T034, T035
+ Blocks: None
+@@ -490,5 +490,5 @@ Evidence required:
+ 
+ ## User Review Gate
+ 
+-- Approval: Pending.
+-- Reviewer notes: T029, T030, T031, T032, T033, T034 and T035 were reviewed and accepted on 2026-05-13. T036 remains `Draft`.
++- Approval: Granted for T036.
++- Reviewer notes: T029, T030, T031, T032, T033, T034, T035 and T036 were reviewed and accepted on 2026-05-13. v0.4 is ready for explicit release handoff decisions.
+diff --git a/README.md b/README.md
+index 38f8267..e4c817f 100644
+--- a/README.md
++++ b/README.md
+@@ -13,10 +13,10 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
+ 
+ ## Status
+ 
+-SkillRun v0.3.0 is the current local release handoff. The `v0.3.0` tag is local; no remote tag or public package has been published by this handoff.
++SkillRun v0.4 is the current integration milestone. The last local release handoff is still `v0.3.0`; v0.4 documentation and validation are being prepared on the integration branch before any tag, remote push, or package publication.
+ 
+-- Current implementation: v0.2 MCP stdio behavior plus v0.3 JS Action Alpha and adapter-aware diagnostics.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
++- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, and v0.4 Portable Consumer Checks.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+ - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
+@@ -71,6 +71,8 @@ Manifest-driven contract
+ 
+         |
+         +-- skillrun inspect
++        +-- skillrun check
++        +-- skillrun doctor
+         +-- skillrun test
+         +-- skillrun run --input examples/default.input.json
+         +-- skillrun serve --mcp             # MCP stdio server
+@@ -82,6 +84,8 @@ The generated Manifest is the runtime contract. Author mode can regenerate it fr
+ 
+ In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and resources are still derived from the Manifest.
+ 
++In v0.4, `skillrun check` is the automation-grade readiness command. It reads the Manifest, source hashes, entrypoint, examples, and runtime requirements to explain whether the current host can consume or run a capsule. It does not import `action.py` or `action.mjs`, and it does not install dependencies.
++
+ ## Release Candidate Workflow
+ 
+ ```bash
+@@ -91,6 +95,8 @@ cd refund
+ # edit action.py
+ skillrun manifest
+ skillrun inspect
++skillrun check
++skillrun doctor
+ skillrun test
+ skillrun run --input examples/default.input.json
+ skillrun serve --mcp
+@@ -99,7 +105,13 @@ skillrun pack
+ 
+ `--py` is only a short alias for `--python`. Keep `--python` as the main Quickstart because Python is the stable path.
+ 
+-Language flags belong to `init` only. `manifest`, `inspect`, `doctor`, `test`, `run`, `serve --mcp`, and `pack` read the capsule and its generated Manifest; they do not accept `--python`, `--py`, or `--js`.
++Language flags belong to `init` only. `manifest`, `inspect`, `check`, `doctor`, `test`, `run`, `serve --mcp`, and `pack` read the capsule and its generated Manifest; they do not accept `--python`, `--py`, or `--js`.
++
++`inspect`, `check`, and `doctor` have different jobs:
++
++- `inspect` shows the Manifest contract: SOP summary, schemas, permissions, adapter, entrypoint, examples, and source hashes.
++- `check` diagnoses current-host readiness from static capsule data and runtime probes.
++- `doctor` is the human-friendly diagnostic view aligned with the same Consumer Mode boundary.
+ 
+ The first hero example is `refund`: a refund decision capsule with policy limits, approval boundaries, typed inputs, structured `PolicyViolation` errors, and auditable run records.
+ 
+@@ -114,6 +126,7 @@ cd refund-js
+ # edit action.mjs
+ skillrun manifest
+ skillrun inspect
++skillrun check
+ skillrun doctor
+ skillrun test
+ skillrun run --input examples/default.input.json
+@@ -137,7 +150,7 @@ Learn this SkillRun Capsule before using it:
+ 2. Read skillrun.config.json and the generated Manifest, if present, to confirm adapter and entrypoint.
+ 3. Read action.py or action.mjs only as the action contract for this capsule; do not infer unsupported languages or package-manager behavior.
+ 4. Read examples/default.input.json to understand the expected input shape.
+-5. If you can access the workspace, run `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, and `skillrun test --cwd <capsule>`.
++5. If you can access the workspace, run `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, and `skillrun test --cwd <capsule>`.
+ 6. When calling the MCP tool, do not infer success from stdout. Use the output/error envelope, artifacts, and run record.
+ ```
+ 
+@@ -145,7 +158,7 @@ Use a real capsule folder when publishing a skill. This keeps the model from tre
+ 
+ ## What Works Today
+ 
+-The repository currently contains the Rust CLI, `init --python` and `init --py` Python capsule generator, `init --js` JS alpha capsule generator, Manifest generator, inspect renderer, doctor diagnostics, test/run path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
++The repository currently contains the Rust CLI, `init --python` and `init --py` Python capsule generator, `init --js` JS alpha capsule generator, Manifest generator, inspect renderer, dependency-aware `check`, doctor diagnostics, test/run path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
+ 
+ ```bash
+ cargo test
+@@ -154,6 +167,7 @@ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
++cargo run -- check --cwd tmp/e2e-init/refund
+ cargo run -- doctor --cwd tmp/e2e-init/refund
+ cargo run -- test --cwd tmp/e2e-init/refund
+ cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+@@ -169,11 +183,11 @@ skillrun 0.3.0
+ 
+ The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
+ 
+-The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image.
++The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image. After unpacking, a consumer can still run `inspect` and `check` to understand the capsule and diagnose missing Python, Node, or Pydantic dependencies without executing action source.
+ 
+ ## Release Candidate Limits
+ 
+-v0.3.0 is intentionally narrow:
++The current integration scope is intentionally narrow:
+ 
+ - MCP transport is stdio only.
+ - Each capsule exposes one primary Manifest-derived tool.
+@@ -181,6 +195,8 @@ v0.3.0 is intentionally narrow:
+ - JS `action.mjs` is alpha only and is not full TypeScript support.
+ - `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
+ - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
++- `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
++- Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
+ - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
+ - The `v0.3.0` tag is local in this handoff. Remote tag push and package publication are separate explicit decisions.
+ 
+@@ -190,10 +206,12 @@ SkillRun is honest about trust boundaries:
+ 
+ - `stdout` and `stderr` are logs only. Structured results must come from output or error envelopes.
+ - Consumer mode must not dynamically import untrusted source code to extract metadata.
++- `skillrun check` and `skillrun doctor` are Consumer Mode diagnostics; they do not import action source for metadata.
+ - Stale or missing Manifests fail closed.
+ - Declared environment variables and artifact paths are part of the runtime contract.
+ - SkillRun does not claim to be a full OS sandbox. Running a third-party action still means executing third-party code.
+ - `.skr` is not a secure install format, registry package, or dependency bundle.
++- Dependency readiness is not sandboxing, vendoring, or reproducible environment creation.
+ 
+ The goal is a small, hard boundary: no implicit execution of instruction-only skills, no stdout success fallback, and no source-code metadata import in consumer mode.
+ 
+diff --git a/RELEASE_NOTES.md b/RELEASE_NOTES.md
+index a796caa..cfccf2a 100644
+--- a/RELEASE_NOTES.md
++++ b/RELEASE_NOTES.md
+@@ -1,5 +1,64 @@
+ # SkillRun Release Notes
+ 
++## v0.4.0
++
++Status: Integration_Ready_For_Review
++Prepared on: 2026-05-13
++Previous local release handoff: v0.3.0
++Publication: no tag, remote push, package publication, registry entry, or artifact publication has been performed
++
++### Headline
++
++SkillRun adds Portable Consumer Checks: a distributed Skill Capsule can be inspected and dependency-checked from its Manifest without importing untrusted action source.
++
++### What Is Included
++
++- `skillrun check --cwd <capsule>` as the automation-grade readiness command.
++- Manifest runtime requirements for Python stable and JS Action Alpha capsules.
++- Python readiness checks for Python executable version and Pydantic v2.
++- Node readiness checks for Node executable version without npm/package-manager checks.
++- Structured `DependencyError` envelopes for missing or incompatible runtime dependencies.
++- MCP stdio survival when a tool call returns `DependencyError`.
++- `.skr` unpack coverage proving Python and JS capsules can run `inspect` and `check` after distribution.
++- Hostile-environment tests for missing Python, missing Node, missing Pydantic, stale Manifest precedence, Consumer Mode no-import behavior, runtime dependency envelopes, MCP survival, and unpacked `.skr` diagnosis.
++
++### Command Boundary
++
++| Command | Responsibility |
++| --- | --- |
++| `inspect` | Read and display the Manifest contract. It does not judge host runtime readiness. |
++| `check` | Diagnose capsule readiness from Manifest, source hashes, examples, entrypoint and runtime probes. |
++| `doctor` | Human-friendly diagnostic view aligned with the same non-executing Consumer Mode boundary. |
++
++### Release Matrix
++
++| Area | Evidence | Status |
++| --- | --- | --- |
++| Error contract | `cargo test --test errors --test cli --test consumer_guards` | Green in T029 validation |
++| Manifest requirements | `cargo test --test manifest --test pack` | Green in T030 validation |
++| `check` readiness engine | `cargo test --test cli --test consumer_guards --test instruction_only` | Green in T031 validation |
++| Runtime discovery | `cargo test --test consumer_guards --test manifest` | Green in T032 validation |
++| Runtime `DependencyError` | `cargo test --test runtime --test errors` | Green in T033 validation |
++| MCP dependency survival | `cargo test --test mcp_server` | Green in T034 validation |
++| Portable `.skr` checks | `cargo test --test pack --test e2e_matrix` | Green in T035 validation |
++| Full regression | `cargo test`; `cargo clippy --all-targets -- -D warnings` | Green in T035/T036 validation |
++
++### Boundaries
++
++- v0.4 diagnoses dependencies; it does not install Python, Node, Pydantic, npm packages, virtualenvs or runtime images.
++- `.skr` remains a source + Manifest archive. It is not signed, not a registry package, not a dependency bundle, and not a reproducible runtime image.
++- SkillRun is not an OS sandbox. Running third-party actions still means executing third-party code.
++- HTTP, SSE, Streamable HTTP, hosted server modes, auth and registry behavior remain out of scope.
++- JS support remains JS Action Alpha through canonical ESM `action.mjs`; `action.ts` and TypeScript runtime execution remain out of scope.
++
++### Validation
++
++- `cargo test --test pack --test e2e_matrix`
++- `cargo test`
++- `cargo clippy --all-targets -- -D warnings`
++- `git diff --check`
++- Delivery artifact validator
++
+ ## v0.3.0
+ 
+ Status: Released_Local
+diff --git a/docs/ssot.md b/docs/ssot.md
+index b0ab404..087b023 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -1,6 +1,6 @@
+ # SkillRun SSOT: SOP-backed Skill Capsule Runtime
+ 
+-**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 正在设计中；v0.1 未单独公开发布。
++**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已进入本地集成验证；v0.1 未单独公开发布。
+ **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。  
+ **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
+ 
+@@ -746,7 +746,7 @@ v0.3 CLI 语言边界：
+ - `skillrun init refund --js` 生成 JS Action Alpha capsule。
+ - `test`、`run`、`serve --mcp`、`pack` 和 `doctor` 不接受语言 flag；它们读取 Manifest 和文件状态。
+ 
+-v0.4 计划引入 `check` 作为严肃的 capsule readiness command：
++v0.4 引入 `check` 作为严肃的 capsule readiness command：
+ 
+ - `inspect` 回答“这个 capsule 的 Manifest 合同是什么”。
+ - `check` 回答“当前 host 能否消费或运行这个 capsule，不能运行时缺什么”。
+@@ -761,7 +761,7 @@ v0.4 计划引入 `check` 作为严肃的 capsule readiness command：
+ | `init` | 生成最小 Skill Capsule |
+ | `manifest` | Author Mode 下生成或刷新 Manifest |
+ | `inspect` | 展示 SOP、tool、schema、permissions、adapter、examples |
+-| `check` | v0.4 计划：从 Manifest 和 host 环境诊断 capsule readiness |
++| `check` | 从 Manifest 和 host 环境诊断 capsule readiness |
+ | `doctor` | 非执行诊断 capsule 文件、Manifest freshness、adapter recovery |
+ | `test` | 使用 examples 运行并校验 IPC/output/artifacts |
+ | `run` | 执行一次真实输入 |
+@@ -800,7 +800,7 @@ examples/
+ 
+ v0.3 `.skr` 是 source + Manifest archive，不是 dependency bundle、registry package、secure install format 或 reproducible runtime image。
+ 
+-v0.4 的 `.skr` 目标不是变成 runtime image，而是变成可被 Consumer Mode 静态诊断的 skill package。解包后的 capsule 至少应支持：
++v0.4 的 `.skr` 目标不是变成 runtime image，而是变成可被 Consumer Mode 静态诊断的 skill package。解包后的 capsule 已支持：
+ 
+ - `skillrun inspect --cwd <capsule>`：读取 Manifest contract。
+ - `skillrun check --cwd <capsule>`：读取 Manifest、source hashes、entrypoint、examples 和 runtime requirements，解释当前 host 缺什么。
+diff --git a/docs/testing.md b/docs/testing.md
+index 45fa1ac..3770635 100644
+--- a/docs/testing.md
++++ b/docs/testing.md
+@@ -22,9 +22,11 @@ cargo clippy --all-targets -- -D warnings
+ ```bash
+ cargo test --test cli
+ cargo test --test manifest
++cargo test --test consumer_guards
+ cargo test --test runtime
+ cargo test --test mcp_server
+ cargo test --test pack
++cargo test --test e2e_matrix
+ ```
+ 
+ ## Release Validation
+@@ -37,6 +39,18 @@ release candidate 至少需要：
+ - README 中列出的核心 `cargo run -- ...` 命令抽样验证
+ - release notes 和 release policy 检查
+ 
++v0.4 release candidate 还需要确认 Portable Consumer Checks 矩阵：
++
++| 场景 | 建议验证 |
++| --- | --- |
++| `check` 命令与 Consumer Mode guard | `cargo test --test cli --test consumer_guards --test instruction_only` |
++| runtime dependency discovery | `cargo test --test consumer_guards --test manifest` |
++| runtime `DependencyError` envelope | `cargo test --test runtime --test errors` |
++| MCP dependency failure survival | `cargo test --test mcp_server` |
++| unpacked `.skr` inspect/check | `cargo test --test pack --test e2e_matrix` |
++
++这些测试只证明 SkillRun 能诊断依赖和保持错误结构稳定；不代表 SkillRun 会安装依赖、vendor dependency、创建 sandbox 或提供 runtime image。
++
+ ## 测试设计原则
+ 
+ - 优先验证用户可观察行为，而不是内部实现细节。

@@ -1,5 +1,64 @@
 # SkillRun Release Notes
 
+## v0.4.0
+
+Status: Integration_Ready_For_Review
+Prepared on: 2026-05-13
+Previous local release handoff: v0.3.0
+Publication: no tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds Portable Consumer Checks: a distributed Skill Capsule can be inspected and dependency-checked from its Manifest without importing untrusted action source.
+
+### What Is Included
+
+- `skillrun check --cwd <capsule>` as the automation-grade readiness command.
+- Manifest runtime requirements for Python stable and JS Action Alpha capsules.
+- Python readiness checks for Python executable version and Pydantic v2.
+- Node readiness checks for Node executable version without npm/package-manager checks.
+- Structured `DependencyError` envelopes for missing or incompatible runtime dependencies.
+- MCP stdio survival when a tool call returns `DependencyError`.
+- `.skr` unpack coverage proving Python and JS capsules can run `inspect` and `check` after distribution.
+- Hostile-environment tests for missing Python, missing Node, missing Pydantic, stale Manifest precedence, Consumer Mode no-import behavior, runtime dependency envelopes, MCP survival, and unpacked `.skr` diagnosis.
+
+### Command Boundary
+
+| Command | Responsibility |
+| --- | --- |
+| `inspect` | Read and display the Manifest contract. It does not judge host runtime readiness. |
+| `check` | Diagnose capsule readiness from Manifest, source hashes, examples, entrypoint and runtime probes. |
+| `doctor` | Human-friendly diagnostic view aligned with the same non-executing Consumer Mode boundary. |
+
+### Release Matrix
+
+| Area | Evidence | Status |
+| --- | --- | --- |
+| Error contract | `cargo test --test errors --test cli --test consumer_guards` | Green in T029 validation |
+| Manifest requirements | `cargo test --test manifest --test pack` | Green in T030 validation |
+| `check` readiness engine | `cargo test --test cli --test consumer_guards --test instruction_only` | Green in T031 validation |
+| Runtime discovery | `cargo test --test consumer_guards --test manifest` | Green in T032 validation |
+| Runtime `DependencyError` | `cargo test --test runtime --test errors` | Green in T033 validation |
+| MCP dependency survival | `cargo test --test mcp_server` | Green in T034 validation |
+| Portable `.skr` checks | `cargo test --test pack --test e2e_matrix` | Green in T035 validation |
+| Full regression | `cargo test`; `cargo clippy --all-targets -- -D warnings` | Green in T035/T036 validation |
+
+### Boundaries
+
+- v0.4 diagnoses dependencies; it does not install Python, Node, Pydantic, npm packages, virtualenvs or runtime images.
+- `.skr` remains a source + Manifest archive. It is not signed, not a registry package, not a dependency bundle, and not a reproducible runtime image.
+- SkillRun is not an OS sandbox. Running third-party actions still means executing third-party code.
+- HTTP, SSE, Streamable HTTP, hosted server modes, auth and registry behavior remain out of scope.
+- JS support remains JS Action Alpha through canonical ESM `action.mjs`; `action.ts` and TypeScript runtime execution remain out of scope.
+
+### Validation
+
+- `cargo test --test pack --test e2e_matrix`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- Delivery artifact validator
+
 ## v0.3.0
 
 Status: Released_Local
