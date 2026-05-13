@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a focused SkillRun capability
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What SOP-backed capability or runtime contract gap does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the smallest useful change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Manifest
+        - Runtime
+        - Adapter
+        - MCP
+        - Packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Boundaries and non-goals
+      description: What should this not do?
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation idea
+      description: What tests or examples would prove this works?

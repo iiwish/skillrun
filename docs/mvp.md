@@ -442,7 +442,7 @@ MVP 不承诺：
 
 ## 11. 测试策略与业务示例
 
-MVP 测试设计以 `.ai-platform/docs/test-strategy.md` 为准。旧的 A001-A013 简表不再作为唯一测试设计，只保留为顶层 release gate；每个 A-case 必须下钻到 Unit、Contract、Integration、Negative/Security、E2E 和 Business Example 的具体测试。
+MVP 测试设计以 `docs/testing.md` 为准。旧的 A001-A013 简表不再作为唯一测试设计，只保留为顶层 release gate；每个 A-case 必须下钻到 Unit、Contract、Integration、Negative/Security、E2E 和 Business Example 的具体测试。
 
 ### 11.1 测试分层
 
@@ -584,7 +584,7 @@ MVP 成功不是 star 数，也不是功能数量。
 MVP 完成必须同时满足：
 
 - `docs/ssot.md` 与本文件对 v0.1 MVP scope 一致。
-- `.ai-platform/docs/test-strategy.md` 中 A001 到 A013 全部通过，并有 fresh command evidence。
+- `docs/testing.md` 中 release validation 通过，并有 fresh command evidence。
 - 默认 `refund` capsule 可以被初始化、测试、运行、MCP 暴露和打包。
 - Consumer Mode 不从源码重新提取 metadata。
 - `ProtocolViolation`、`ValidationError`、`PolicyViolation` 至少各有一个可复现测试。

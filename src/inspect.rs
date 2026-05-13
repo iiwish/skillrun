@@ -35,23 +35,23 @@ fn render_runnable(cwd: &Path, manifest_path: &Path, manifest: &Value) -> Result
         .file_name()
         .and_then(|value| value.to_str())
         .unwrap_or("skill");
-    let name = string_at(&manifest, &["skill", "name"]).unwrap_or(fallback_name);
-    let sop_hash = string_at(&manifest, &["sources", "skill", "sha256"])
-        .or_else(|| string_at(&manifest, &["skill", "skill_hash"]))
+    let name = string_at(manifest, &["skill", "name"]).unwrap_or(fallback_name);
+    let sop_hash = string_at(manifest, &["sources", "skill", "sha256"])
+        .or_else(|| string_at(manifest, &["skill", "skill_hash"]))
         .unwrap_or("unknown");
-    let action_hash = string_at(&manifest, &["sources", "action", "sha256"]).unwrap_or("unknown");
-    let input_schema = presence(value_at(&manifest, &["schemas", "input"]));
-    let output_schema = presence(value_at(&manifest, &["schemas", "output"]));
-    let adapter = string_at(&manifest, &["runtime", "adapter"]).unwrap_or("unknown");
-    let entrypoint = string_at(&manifest, &["runtime", "entrypoint"]).unwrap_or("action.py");
-    let timeout = string_at(&manifest, &["runtime", "timeout"]).unwrap_or("unknown");
-    let file_reads = strings_at(&manifest, &["permissions", "files", "read"]);
-    let file_writes = strings_at(&manifest, &["permissions", "files", "write"]);
-    let network = strings_at(&manifest, &["permissions", "network", "outbound"]);
-    let env_reads = strings_at(&manifest, &["permissions", "env", "read"]);
-    let examples = examples(&manifest);
-    let tool_name = string_at(&manifest, &["tool", "name"]).unwrap_or(name);
-    let tool_description = string_at(&manifest, &["tool", "description"]).unwrap_or("unknown");
+    let action_hash = string_at(manifest, &["sources", "action", "sha256"]).unwrap_or("unknown");
+    let input_schema = presence(value_at(manifest, &["schemas", "input"]));
+    let output_schema = presence(value_at(manifest, &["schemas", "output"]));
+    let adapter = string_at(manifest, &["runtime", "adapter"]).unwrap_or("unknown");
+    let entrypoint = string_at(manifest, &["runtime", "entrypoint"]).unwrap_or("action.py");
+    let timeout = string_at(manifest, &["runtime", "timeout"]).unwrap_or("unknown");
+    let file_reads = strings_at(manifest, &["permissions", "files", "read"]);
+    let file_writes = strings_at(manifest, &["permissions", "files", "write"]);
+    let network = strings_at(manifest, &["permissions", "network", "outbound"]);
+    let env_reads = strings_at(manifest, &["permissions", "env", "read"]);
+    let examples = examples(manifest);
+    let tool_name = string_at(manifest, &["tool", "name"]).unwrap_or(name);
+    let tool_description = string_at(manifest, &["tool", "description"]).unwrap_or("unknown");
     let preflight = preflight_status(cwd, entrypoint);
 
     Ok(format!(

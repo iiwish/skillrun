@@ -179,10 +179,16 @@ SkillRun 的业务证明刻意保持收敛：
 
 ## 文档
 
+- [文档入口](docs/README.md)
 - [MVP 合同](docs/mvp.md)
 - [架构 SSOT](docs/ssot.md)
 - [经典业务示例](docs/business-examples.md)
-- [测试策略](.ai-platform/docs/test-strategy.md)
+- [测试策略](docs/testing.md)
+- [发布策略](docs/release-policy.md)
+- [分支保护建议](docs/branch-protection.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全政策](SECURITY.md)
+- [行为准则](CODE_OF_CONDUCT.md)
 
 项目治理文档默认使用中文，方便后续 agent 维护已确认的产品合同。
 

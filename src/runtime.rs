@@ -75,7 +75,7 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
 }
 
 fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
-    let manifest = load_manifest(&capsule_dir, mode)?;
+    let manifest = load_manifest(capsule_dir, mode)?;
     let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
     if adapter != "python" {
         return Err(format!("unsupported runtime adapter: {adapter}"));
@@ -86,7 +86,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
         .and_then(parse_timeout)
         .unwrap_or_else(|| Duration::from_secs(30));
     let run_id = new_run_id();
-    let paths = create_run_paths(&capsule_dir, &run_id)?;
+    let paths = create_run_paths(capsule_dir, &run_id)?;
     let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
     let declared_env = permissions::declared_env_values(&manifest.value);
     let started_at = Utc::now();
@@ -104,7 +104,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     write_json(&paths.context_json, &context)?;
 
     let adapter_output = match python::run_action(&ActionRunRequest {
-        capsule_dir: &capsule_dir,
+        capsule_dir,
         entrypoint,
         context_json: &paths.context_json,
         input_json: &paths.input_json,
@@ -134,7 +134,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
                     success: false,
                     started_at,
                     duration_started_at: started,
-                    capsule_dir: &capsule_dir,
+                    capsule_dir,
                     manifest: &manifest,
                     paths: &paths,
                 },
@@ -155,7 +155,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
             success,
             started_at,
             duration_started_at: started,
-            capsule_dir: &capsule_dir,
+            capsule_dir,
             manifest: &manifest,
             paths: &paths,
         },
