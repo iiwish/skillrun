@@ -266,7 +266,7 @@ Agents receive recoverable structured dependency failures instead of brittle int
 
 ### T033: Convert Runtime Dependency Failures To DependencyError
 
-Status: Draft
+Status: Accepted
 Priority: P0
 Depends on: T032
 Blocks: T034, T036
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029, T030, T031 and T032 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029, T030, T031, T032 and T033 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.

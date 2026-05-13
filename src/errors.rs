@@ -19,6 +19,15 @@ pub fn permission_denied(message: impl Into<String>) -> Value {
     envelope(PERMISSION_DENIED, message, false, None)
 }
 
+pub fn dependency_error(message: impl Into<String>) -> Value {
+    envelope(
+        DEPENDENCY_ERROR,
+        message,
+        true,
+        Some("Ask the user to install or select the missing runtime dependency before retrying."),
+    )
+}
+
 pub fn envelope(
     code: &str,
     message: impl Into<String>,
