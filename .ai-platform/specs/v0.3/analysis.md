@@ -127,7 +127,7 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T024 only.
+Ready for execution: T025 only.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
@@ -137,10 +137,11 @@ Reason:
 - T021 has been accepted.
 - T022 has been accepted.
 - T023 has been accepted.
-- T024 has no unfinished dependencies and may start.
-- T025-T028 remain blocked by their declared dependencies.
+- T024 has been accepted.
+- T025 has no unfinished dependencies and may start.
+- T026-T028 remain blocked by their declared dependencies.
 
 Ready for user review: No.
 
 Recommended next step:
-Start T024: add JS alpha end-to-end command matrix for init, manifest, inspect, test and run.
+Start T025: extend MCP and `.skr` package compatibility to JS alpha.

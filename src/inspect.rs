@@ -68,6 +68,7 @@ schemas:
   input schema: {input_schema}
   output schema: {output_schema}
 runtime:
+  runtime contract: Manifest adapter and entrypoint
   adapter: {adapter}
   entrypoint: {entrypoint}
   timeout: {timeout}
@@ -205,8 +206,20 @@ fn examples(manifest: &Value) -> String {
 fn preflight_status(cwd: &Path, entrypoint: &str) -> String {
     let action_path = cwd.join(entrypoint);
     match fs::read_to_string(&action_path) {
-        Ok(text) if text.contains("def preflight") => "present".to_string(),
+        Ok(text) if has_preflight(&text, entrypoint) => "present".to_string(),
         Ok(_) => "absent".to_string(),
         Err(_) => format!("source missing ({})", action_path.display()),
     }
+}
+
+fn has_preflight(source: &str, entrypoint: &str) -> bool {
+    if entrypoint.ends_with(".py") {
+        return source.contains("def preflight");
+    }
+    if entrypoint.ends_with(".mjs") || entrypoint.ends_with(".js") {
+        return source.contains("export function preflight")
+            || source.contains("export async function preflight")
+            || source.contains("export const preflight");
+    }
+    source.contains("preflight")
 }

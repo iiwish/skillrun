@@ -1,0 +1,267 @@
+﻿diff --git a/src/inspect.rs b/src/inspect.rs
+index df904bf..de06aa0 100644
+--- a/src/inspect.rs
++++ b/src/inspect.rs
+@@ -68,6 +68,7 @@ schemas:
+   input schema: {input_schema}
+   output schema: {output_schema}
+ runtime:
++  runtime contract: Manifest adapter and entrypoint
+   adapter: {adapter}
+   entrypoint: {entrypoint}
+   timeout: {timeout}
+@@ -205,8 +206,20 @@ fn examples(manifest: &Value) -> String {
+ fn preflight_status(cwd: &Path, entrypoint: &str) -> String {
+     let action_path = cwd.join(entrypoint);
+     match fs::read_to_string(&action_path) {
+-        Ok(text) if text.contains("def preflight") => "present".to_string(),
++        Ok(text) if has_preflight(&text, entrypoint) => "present".to_string(),
+         Ok(_) => "absent".to_string(),
+         Err(_) => format!("source missing ({})", action_path.display()),
+     }
+ }
++
++fn has_preflight(source: &str, entrypoint: &str) -> bool {
++    if entrypoint.ends_with(".py") {
++        return source.contains("def preflight");
++    }
++    if entrypoint.ends_with(".mjs") || entrypoint.ends_with(".js") {
++        return source.contains("export function preflight")
++            || source.contains("export async function preflight")
++            || source.contains("export const preflight");
++    }
++    source.contains("preflight")
++}
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index d4b703b..1990ed9 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -79,12 +79,25 @@ fn init_capsule(output_root: &Path, name: &str) -> PathBuf {
+     output_root.join(name)
+ }
+ 
++fn init_capsule_with_flag(output_root: &Path, name: &str, flag: &str) -> PathBuf {
++    let output_arg = output_root.to_string_lossy().to_string();
++    let init = run_skillrun(&["init", name, flag, "--output", &output_arg]);
++    assert_success(&init, "init");
++    output_root.join(name)
++}
++
+ fn manifest(capsule: &Path) {
+     let cwd = capsule.to_string_lossy().to_string();
+     let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
+     assert_success(&manifest, "manifest");
+ }
+ 
++fn append_to(path: &Path, text: &str) {
++    let mut current = fs::read_to_string(path).expect("file should be readable");
++    current.push_str(text);
++    fs::write(path, current).expect("file should be writable");
++}
++
+ fn unpack_archive(path: &Path, target: &Path) {
+     let file = fs::File::open(path).expect("archive should be readable");
+     let decoder = GzDecoder::new(file);
+@@ -450,3 +463,95 @@ fn a014_mcp_stdio_release_matrix_exercises_full_client_flow() {
+     drop(client);
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
++    let output_root = temp_dir("e2e-js-alpha");
++    let capsule = init_capsule_with_flag(&output_root, "refund", "--js");
++    let cwd = capsule.to_string_lossy().to_string();
++
++    for required in [
++        "SKILL.md",
++        "action.mjs",
++        "examples/default.input.json",
++        "skillrun.config.json",
++    ] {
++        assert!(
++            capsule.join(required).is_file(),
++            "JS init missing {required}"
++        );
++    }
++    assert!(!capsule.join("action.py").exists());
++    assert!(!capsule.join("package.json").exists());
++
++    manifest(&capsule);
++    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
++    let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
++    for expected in [
++        "adapter: node",
++        "entrypoint: action.mjs",
++        "path: action.mjs",
++    ] {
++        assert!(
++            manifest_text.contains(expected),
++            "JS manifest missing {expected}"
++        );
++    }
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
++    let inspect_stdout = assert_success(&inspect, "JS inspect");
++    for expected in [
++        "status: runnable",
++        "runtime contract: Manifest adapter and entrypoint",
++        "adapter: node",
++        "entrypoint: action.mjs",
++        "preflight: present",
++    ] {
++        assert!(
++            inspect_stdout.contains(expected),
++            "JS inspect missing {expected}"
++        );
++    }
++
++    let test = run_skillrun(&["test", "--cwd", &cwd]);
++    let test_envelope = success_envelope(&test, "JS test");
++    assert_eq!(test_envelope["output"]["decision"], "approved");
++
++    let run = run_skillrun(&[
++        "run",
++        "--cwd",
++        &cwd,
++        "--input",
++        "examples/default.input.json",
++    ]);
++    let run_envelope = success_envelope(&run, "JS run");
++    assert_eq!(run_envelope["output"]["decision"], "approved");
++
++    append_to(
++        &capsule.join("action.mjs"),
++        "\n// stale after JS command matrix\n",
++    );
++    let stale = run_skillrun(&["test", "--cwd", &cwd]);
++    let stale_stderr = assert_failure(&stale, "stale JS test");
++    assert!(stale_stderr.contains("stale Manifest"));
++    assert!(stale_stderr.contains("action.mjs"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn py_alias_manifest_smoke_uses_python_adapter_identity() {
++    let output_root = temp_dir("e2e-py-alias");
++    let capsule = init_capsule_with_flag(&output_root, "refund", "--py");
++    assert!(capsule.join("action.py").is_file());
++    assert!(!capsule.join("action.mjs").exists());
++
++    manifest(&capsule);
++    let manifest_text =
++        fs::read_to_string(capsule.join(".skillrun").join("manifest.generated.yaml"))
++            .expect("manifest should be readable");
++    assert!(manifest_text.contains("adapter: python"));
++    assert!(manifest_text.contains("entrypoint: action.py"));
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/inspect.rs b/tests/inspect.rs
+index b0d73cc..c3f1ec2 100644
+--- a/tests/inspect.rs
++++ b/tests/inspect.rs
+@@ -52,6 +52,29 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+ 
++fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstderr: {}",
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
+ #[test]
+ fn inspect_runnable_capsule_summarizes_manifest_contract() {
+     let (output_root, capsule) = generated_capsule("inspect-runnable");
+@@ -74,6 +97,7 @@ fn inspect_runnable_capsule_summarizes_manifest_contract() {
+         "action hash:",
+         "input schema: present",
+         "output schema: present",
++        "runtime contract: Manifest adapter and entrypoint",
+         "adapter: python",
+         "entrypoint: action.py",
+         ".skillrun/runs/**",
+@@ -87,6 +111,35 @@ fn inspect_runnable_capsule_summarizes_manifest_contract() {
+     fs::remove_dir_all(output_root).ok();
+ }
+ 
++#[test]
++fn inspect_js_capsule_summarizes_manifest_adapter_and_entrypoint() {
++    let (output_root, capsule) = generated_js_capsule("inspect-js-runnable");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++
++    assert!(
++        inspect.status.success(),
++        "inspect should succeed\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
++
++    for expected in [
++        "SkillRun Inspect",
++        "status: runnable",
++        "runtime contract: Manifest adapter and entrypoint",
++        "adapter: node",
++        "entrypoint: action.mjs",
++        "preflight: present",
++        "MCP tool: refund",
++    ] {
++        assert_contains(&stdout, expected);
++    }
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn inspect_instruction_only_skill_stays_non_runnable() {
+     let output_root = temp_dir("inspect-instruction-only");
+@@ -150,3 +203,28 @@ fn inspect_does_not_import_or_execute_action_source() {
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn inspect_js_capsule_does_not_import_or_execute_action_source() {
++    let (output_root, capsule) = generated_js_capsule("inspect-js-no-import");
++    fs::write(
++        capsule.join("action.mjs"),
++        "throw new Error('inspect imported action source');\n",
++    )
++    .expect("action should be replaced after manifest generation");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let inspect = run_skillrun(&["inspect", "--cwd", &cwd_arg]);
++
++    assert!(
++        inspect.status.success(),
++        "inspect should read the Manifest without importing action.mjs\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++    let stdout = String::from_utf8(inspect.stdout).expect("inspect output should be utf-8");
++    assert_contains(&stdout, "status: invalid-runnable");
++    assert_contains(&stdout, "stale Manifest");
++    assert_contains(&stdout, "action.mjs");
++
++    fs::remove_dir_all(output_root).ok();
++}

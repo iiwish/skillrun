@@ -79,10 +79,23 @@ fn init_capsule(output_root: &Path, name: &str) -> PathBuf {
     output_root.join(name)
 }
 
+fn init_capsule_with_flag(output_root: &Path, name: &str, flag: &str) -> PathBuf {
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", name, flag, "--output", &output_arg]);
+    assert_success(&init, "init");
+    output_root.join(name)
+}
+
 fn manifest(capsule: &Path) {
     let cwd = capsule.to_string_lossy().to_string();
     let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
     assert_success(&manifest, "manifest");
+}
+
+fn append_to(path: &Path, text: &str) {
+    let mut current = fs::read_to_string(path).expect("file should be readable");
+    current.push_str(text);
+    fs::write(path, current).expect("file should be writable");
 }
 
 fn unpack_archive(path: &Path, target: &Path) {
@@ -448,5 +461,97 @@ fn a014_mcp_stdio_release_matrix_exercises_full_client_flow() {
     client.expect_no_stdout_line("completed MCP release flow");
 
     drop(client);
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
+    let output_root = temp_dir("e2e-js-alpha");
+    let capsule = init_capsule_with_flag(&output_root, "refund", "--js");
+    let cwd = capsule.to_string_lossy().to_string();
+
+    for required in [
+        "SKILL.md",
+        "action.mjs",
+        "examples/default.input.json",
+        "skillrun.config.json",
+    ] {
+        assert!(
+            capsule.join(required).is_file(),
+            "JS init missing {required}"
+        );
+    }
+    assert!(!capsule.join("action.py").exists());
+    assert!(!capsule.join("package.json").exists());
+
+    manifest(&capsule);
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+    for expected in [
+        "adapter: node",
+        "entrypoint: action.mjs",
+        "path: action.mjs",
+    ] {
+        assert!(
+            manifest_text.contains(expected),
+            "JS manifest missing {expected}"
+        );
+    }
+
+    let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
+    let inspect_stdout = assert_success(&inspect, "JS inspect");
+    for expected in [
+        "status: runnable",
+        "runtime contract: Manifest adapter and entrypoint",
+        "adapter: node",
+        "entrypoint: action.mjs",
+        "preflight: present",
+    ] {
+        assert!(
+            inspect_stdout.contains(expected),
+            "JS inspect missing {expected}"
+        );
+    }
+
+    let test = run_skillrun(&["test", "--cwd", &cwd]);
+    let test_envelope = success_envelope(&test, "JS test");
+    assert_eq!(test_envelope["output"]["decision"], "approved");
+
+    let run = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/default.input.json",
+    ]);
+    let run_envelope = success_envelope(&run, "JS run");
+    assert_eq!(run_envelope["output"]["decision"], "approved");
+
+    append_to(
+        &capsule.join("action.mjs"),
+        "\n// stale after JS command matrix\n",
+    );
+    let stale = run_skillrun(&["test", "--cwd", &cwd]);
+    let stale_stderr = assert_failure(&stale, "stale JS test");
+    assert!(stale_stderr.contains("stale Manifest"));
+    assert!(stale_stderr.contains("action.mjs"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn py_alias_manifest_smoke_uses_python_adapter_identity() {
+    let output_root = temp_dir("e2e-py-alias");
+    let capsule = init_capsule_with_flag(&output_root, "refund", "--py");
+    assert!(capsule.join("action.py").is_file());
+    assert!(!capsule.join("action.mjs").exists());
+
+    manifest(&capsule);
+    let manifest_text =
+        fs::read_to_string(capsule.join(".skillrun").join("manifest.generated.yaml"))
+            .expect("manifest should be readable");
+    assert!(manifest_text.contains("adapter: python"));
+    assert!(manifest_text.contains("entrypoint: action.py"));
+
     fs::remove_dir_all(output_root).ok();
 }

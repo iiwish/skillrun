@@ -340,7 +340,7 @@ Evidence required:
 
 ### T024: Add JS Alpha End-to-end Command Matrix
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T021, T022, T023
 Blocks: T025, T028
@@ -396,7 +396,7 @@ Evidence required:
 
 ### T025: Extend MCP And Pack Compatibility To JS Alpha
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T024
 Blocks: T028
