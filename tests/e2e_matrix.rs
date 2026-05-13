@@ -527,6 +527,29 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
     let run_envelope = success_envelope(&run, "JS run");
     assert_eq!(run_envelope["output"]["decision"], "approved");
 
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
+    let serve_stdout = assert_success(&serve, "JS serve dry-run");
+    let contract: Value =
+        serde_json::from_str(&serve_stdout).expect("JS MCP dry-run should be JSON");
+    assert_eq!(contract["tools"][0]["name"], "refund");
+    assert_eq!(
+        contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        contract["tools"][0]["output_schema"]["properties"]["decision"]["enum"][1],
+        "needs_approval"
+    );
+    assert_eq!(contract["resources"][0]["path"], "SKILL.md");
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+    let pack_stdout = assert_success(&pack, "JS pack");
+    assert!(pack_stdout.contains("does not vendor dependencies"));
+    assert!(
+        capsule.join("dist").join("refund-0.2.0.skr").is_file(),
+        "JS pack should create .skr archive"
+    );
+
     append_to(
         &capsule.join("action.mjs"),
         "\n// stale after JS command matrix\n",

@@ -396,7 +396,7 @@ Evidence required:
 
 ### T025: Extend MCP And Pack Compatibility To JS Alpha
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T024
 Blocks: T028

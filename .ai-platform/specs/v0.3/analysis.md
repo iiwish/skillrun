@@ -127,7 +127,7 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T025 only.
+Ready for execution: T026.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
@@ -138,10 +138,11 @@ Reason:
 - T022 has been accepted.
 - T023 has been accepted.
 - T024 has been accepted.
-- T025 has no unfinished dependencies and may start.
-- T026-T028 remain blocked by their declared dependencies.
+- T025 has been accepted.
+- T026 dependencies are satisfied and it may start.
+- T027-T028 remain blocked by their declared dependencies/status gates.
 
 Ready for user review: No.
 
 Recommended next step:
-Start T025: extend MCP and `.skr` package compatibility to JS alpha.
+Start T026: implement adapter-aware diagnostics.

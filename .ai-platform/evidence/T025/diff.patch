@@ -1,0 +1,411 @@
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index 1990ed9..ff5d48d 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -527,6 +527,29 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
+     let run_envelope = success_envelope(&run, "JS run");
+     assert_eq!(run_envelope["output"]["decision"], "approved");
+
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
++    let serve_stdout = assert_success(&serve, "JS serve dry-run");
++    let contract: Value =
++        serde_json::from_str(&serve_stdout).expect("JS MCP dry-run should be JSON");
++    assert_eq!(contract["tools"][0]["name"], "refund");
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
++        "integer"
++    );
++    assert_eq!(
++        contract["tools"][0]["output_schema"]["properties"]["decision"]["enum"][1],
++        "needs_approval"
++    );
++    assert_eq!(contract["resources"][0]["path"], "SKILL.md");
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
++    let pack_stdout = assert_success(&pack, "JS pack");
++    assert!(pack_stdout.contains("does not vendor dependencies"));
++    assert!(
++        capsule.join("dist").join("refund-0.2.0.skr").is_file(),
++        "JS pack should create .skr archive"
++    );
++
+     append_to(
+         &capsule.join("action.mjs"),
+         "\n// stale after JS command matrix\n",
+diff --git a/tests/mcp_server.rs b/tests/mcp_server.rs
+index e946273..d14ddce 100644
+--- a/tests/mcp_server.rs
++++ b/tests/mcp_server.rs
+@@ -24,11 +24,11 @@ fn temp_dir(label: &str) -> PathBuf {
+     std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
+ }
+
+-fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
++fn init_capsule_with_flag(label: &str, flag: &str) -> (PathBuf, PathBuf) {
+     let output_root = temp_dir(label);
+     let output_arg = output_root.to_string_lossy().to_string();
+
+-    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
++    let init = run_skillrun(&["init", "refund", flag, "--output", &output_arg]);
+     assert!(
+         init.status.success(),
+         "init should succeed\nstderr: {}",
+@@ -39,6 +39,10 @@ fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+
++fn init_capsule(label: &str) -> (PathBuf, PathBuf) {
++    init_capsule_with_flag(label, "--python")
++}
++
+ fn write_manifest(capsule: &Path) {
+     let cwd_arg = capsule.to_string_lossy().to_string();
+     let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+@@ -55,6 +59,12 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+
++fn generated_capsule_with_flag(label: &str, flag: &str) -> (PathBuf, PathBuf) {
++    let (output_root, capsule) = init_capsule_with_flag(label, flag);
++    write_manifest(&capsule);
++    (output_root, capsule)
++}
++
+ fn assert_success_json(output: &std::process::Output) -> Value {
+     assert!(
+         output.status.success(),
+@@ -66,6 +76,10 @@ fn assert_success_json(output: &std::process::Output) -> Value {
+     serde_json::from_str(&stdout).expect("stdout should be JSON")
+ }
+
++fn is_64_hex(value: &str) -> bool {
++    value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
++}
++
+ #[test]
+ fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
+     let (output_root, capsule) = generated_capsule("mcp-dry-run");
+@@ -103,6 +117,47 @@ fn mcp_dry_run_maps_manifest_tool_schema_and_skill_resource() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn mcp_dry_run_maps_js_manifest_tool_schema_and_skill_resource() {
++    let (output_root, capsule) = generated_capsule_with_flag("mcp-js-dry-run", "--js");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    let contract = assert_success_json(&serve);
++
++    assert_eq!(contract["mcp"]["dry_run"], true);
++    assert_eq!(contract["mcp"]["transport"], "stdio");
++    assert_eq!(contract["tools"][0]["name"], "refund");
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["order_id"]["type"],
++        "string"
++    );
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["amount"]["type"],
++        "integer"
++    );
++    assert_eq!(
++        contract["tools"][0]["input_schema"]["properties"]["reason"]["enum"][2],
++        "wrong_item"
++    );
++    assert_eq!(
++        contract["tools"][0]["output_schema"]["properties"]["decision"]["enum"][1],
++        "needs_approval"
++    );
++    assert_eq!(
++        contract["tools"][0]["result_contract"],
++        "SkillRun output/error envelope"
++    );
++    assert_eq!(contract["resources"][0]["path"], "SKILL.md");
++    assert_eq!(contract["resources"][0]["mime_type"], "text/markdown");
++    let resource_text = contract["resources"][0]["text"]
++        .as_str()
++        .expect("resource text should be a string");
++    assert!(resource_text.to_ascii_lowercase().contains("refund"));
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn mcp_stdio_initializes_with_2025_11_25_protocol() {
+     let (output_root, capsule) = generated_capsule("mcp-stdio-init");
+@@ -229,6 +284,94 @@ fn mcp_stdio_lists_and_calls_manifest_tool() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn mcp_stdio_lists_and_calls_js_manifest_tool() {
++    let (output_root, capsule) = generated_capsule_with_flag("mcp-js-stdio-tools", "--js");
++    let mut client = ScriptedMcpClient::spawn(&capsule);
++    client.initialize();
++    client.initialized();
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 2,
++        "method": "tools/list",
++        "params": {}
++    }));
++    let tools = client.read_response("JS tools/list response");
++    assert_eq!(tools["id"], 2);
++    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
++    assert_eq!(
++        tools["result"]["tools"][0]["inputSchema"]["properties"]["amount"]["type"],
++        "integer"
++    );
++    assert_eq!(
++        tools["result"]["tools"][0]["outputSchema"]["properties"]["decision"]["enum"][1],
++        "needs_approval"
++    );
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 3,
++        "method": "tools/call",
++        "params": {
++            "name": "refund",
++            "arguments": {
++                "order_id": "order_js_1001",
++                "amount": 120,
++                "reason": "damaged",
++                "customer_tier": "standard"
++            }
++        }
++    }));
++    let call = client.read_response("JS tools/call response");
++    assert_eq!(call["id"], 3);
++    assert_eq!(call["result"]["isError"], false);
++    assert_eq!(call["result"]["content"][0]["type"], "text");
++    assert!(call["result"]["content"][0]["text"]
++        .as_str()
++        .unwrap_or_default()
++        .contains("approved"));
++    let run_record = fs::read_dir(capsule.join(".skillrun").join("runs"))
++        .expect("runs directory should be readable")
++        .filter_map(Result::ok)
++        .map(|entry| entry.path().join("record.json"))
++        .find(|path| path.is_file())
++        .expect("tools/call should create a SkillRun run record");
++    let record: Value = serde_json::from_str(
++        &fs::read_to_string(run_record).expect("run record should be readable"),
++    )
++    .expect("run record should parse");
++    assert_eq!(record["mode"], "mcp");
++    assert_eq!(record["status"], "succeeded");
++    assert!(is_64_hex(record["action_sha256"].as_str().unwrap()));
++
++    client.send(json!({
++        "jsonrpc": "2.0",
++        "id": 4,
++        "method": "tools/call",
++        "params": {
++            "name": "refund",
++            "arguments": {
++                "order_id": "order_js_1002",
++                "amount": 1200,
++                "reason": "damaged",
++                "customer_tier": "standard"
++            }
++        }
++    }));
++    let error_call = client.read_response("JS tools/call error response");
++    assert_eq!(error_call["id"], 4);
++    assert_eq!(error_call["result"]["isError"], true);
++    let error_text = error_call["result"]["content"][0]["text"]
++        .as_str()
++        .unwrap_or_default();
++    assert!(error_text.contains("PolicyViolation"));
++    assert!(error_text.contains("manager approval"));
++
++    drop(client);
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn mcp_stdio_lists_and_reads_manifest_resources() {
+     let (output_root, capsule) = generated_capsule("mcp-stdio-resources");
+@@ -357,6 +500,37 @@ fn mcp_dry_run_does_not_import_action_for_metadata() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn mcp_dry_run_does_not_import_js_action_for_metadata() {
++    let (output_root, capsule) = init_capsule_with_flag("mcp-js-no-import", "--js");
++    let marker = output_root.join("js-import-marker.txt");
++    let marker_literal = serde_json::to_string(&marker.to_string_lossy().to_string())
++        .expect("marker should serialize");
++    let action_path = capsule.join("action.mjs");
++    let action = fs::read_to_string(&action_path).expect("action should be readable");
++    let action = format!(
++        "import fs from \"node:fs\";\nfs.writeFileSync({marker_literal}, \"imported\", \"utf8\");\n{action}"
++    );
++    fs::write(&action_path, action).expect("action should be updated");
++
++    write_manifest(&capsule);
++    assert!(
++        marker.is_file(),
++        "manifest metadata extraction imports action.mjs in Author Mode"
++    );
++    fs::remove_file(&marker).expect("marker should be removed before serve");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
++    assert_success_json(&serve);
++    assert!(
++        !marker.exists(),
++        "serve --mcp --dry-run must not import action.mjs for metadata"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn mcp_dry_run_fails_closed_when_manifest_is_stale() {
+     let (output_root, capsule) = generated_capsule("mcp-stale");
+diff --git a/tests/pack.rs b/tests/pack.rs
+index 6649f1f..0bfdb14 100644
+--- a/tests/pack.rs
++++ b/tests/pack.rs
+@@ -20,11 +20,11 @@ fn temp_dir(label: &str) -> PathBuf {
+     std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
+ }
+
+-fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
++fn init_capsule_with_flag(label: &str, name: &str, flag: &str) -> (PathBuf, PathBuf) {
+     let output_root = temp_dir(label);
+     let output_arg = output_root.to_string_lossy().to_string();
+
+-    let init = run_skillrun(&["init", name, "--python", "--output", &output_arg]);
++    let init = run_skillrun(&["init", name, flag, "--output", &output_arg]);
+     assert!(
+         init.status.success(),
+         "init should succeed\nstderr: {}",
+@@ -35,6 +35,10 @@ fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+
++fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
++    init_capsule_with_flag(label, name, "--python")
++}
++
+ fn write_manifest(capsule: &Path) {
+     let cwd_arg = capsule.to_string_lossy().to_string();
+     let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+@@ -51,6 +55,12 @@ fn generated_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+
++fn generated_capsule_with_flag(label: &str, name: &str, flag: &str) -> (PathBuf, PathBuf) {
++    let (output_root, capsule) = init_capsule_with_flag(label, name, flag);
++    write_manifest(&capsule);
++    (output_root, capsule)
++}
++
+ fn archive_entries(path: &Path) -> Vec<String> {
+     let file = fs::File::open(path).expect("archive should be readable");
+     let decoder = GzDecoder::new(file);
+@@ -144,6 +154,100 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_run_history() {
++    let (output_root, capsule) = generated_capsule_with_flag("pack-js-content", "refund", "--js");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    fs::write(
++        capsule.join("package.json"),
++        r#"{"dependencies":{"left-pad":"1.3.0"}}"#,
++    )
++    .expect("package metadata should be writable");
++    fs::create_dir_all(capsule.join("node_modules").join("left-pad"))
++        .expect("node_modules fixture should be created");
++    fs::write(
++        capsule
++            .join("node_modules")
++            .join("left-pad")
++            .join("index.js"),
++        "module.exports = function leftPad() {};",
++    )
++    .expect("vendored dependency fixture should be writable");
++
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    assert!(
++        run.status.success(),
++        "test should create JS run history\nstderr: {}",
++        String::from_utf8_lossy(&run.stderr)
++    );
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
++    assert!(
++        pack.status.success(),
++        "pack should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&pack.stdout),
++        String::from_utf8_lossy(&pack.stderr)
++    );
++    let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
++    assert!(stdout.contains("created"));
++    assert!(stdout.contains("refund-0.2.0.skr"));
++    assert!(stdout.contains("does not vendor dependencies"));
++
++    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
++    assert!(archive_path.is_file(), "archive should exist");
++
++    let entries = archive_entries(&archive_path);
++    for required in [
++        ".skillrun/manifest.generated.yaml",
++        "SKILL.md",
++        "action.mjs",
++        "examples/default.input.json",
++        "skillrun.config.json",
++    ] {
++        assert!(
++            entries.iter().any(|entry| entry == required),
++            "archive should include {required:?}; got {entries:?}"
++        );
++    }
++    for forbidden in ["action.py", "package.json"] {
++        assert!(
++            entries.iter().all(|entry| entry != forbidden),
++            "archive must not include {forbidden:?}: {entries:?}"
++        );
++    }
++    assert!(
++        entries
++            .iter()
++            .all(|entry| !entry.starts_with("node_modules/")),
++        "archive must not vendor dependencies: {entries:?}"
++    );
++    assert!(
++        entries
++            .iter()
++            .all(|entry| !entry.starts_with(".skillrun/runs/")),
++        "archive must exclude run history: {entries:?}"
++    );
++    assert!(
++        entries.iter().all(|entry| !entry.starts_with("dist/")),
++        "archive must exclude generated dist output: {entries:?}"
++    );
++
++    let unpacked_capsule = output_root.join("unpacked-js-refund");
++    fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
++    unpack_archive(&archive_path, &unpacked_capsule);
++    let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
++    let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
++    assert!(
++        inspect.status.success(),
++        "unpacked JS capsule should inspect\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&inspect.stdout),
++        String::from_utf8_lossy(&inspect.stderr)
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn pack_uses_capsule_name_for_archive_filename() {
+     let (output_root, capsule) = generated_capsule("pack-name", "triage");

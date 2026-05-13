@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T025"
 feature_id: "v0.3"
 title: Extend MCP And Pack Compatibility To JS Alpha
-status: Ready
+status: Accepted
 priority: P0
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T025
   title: Extend MCP And Pack Compatibility To JS Alpha
-  status: Ready
+  status: Accepted
   feature_id: v0.3
 goal: Show that JS alpha capsules use the same Manifest-derived MCP and .skr package surfaces as Python capsules.
 requirement_mapping:
@@ -81,7 +81,7 @@ acceptance_criteria:
   - ".skr contains source and Manifest, excludes run history, and does not vendor dependencies."
 handoff:
   evidence_dir: ".ai-platform/evidence/T025"
-  next_status_after_execution: Needs_Review
+  next_status_after_execution: Accepted
   commit_policy: "Commit only after review passes and user requests git handoff."
 definition_of_done:
   - "MCP and pack tests pass for Python and JS alpha."

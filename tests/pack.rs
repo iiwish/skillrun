@@ -20,11 +20,11 @@ fn temp_dir(label: &str) -> PathBuf {
     std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
 }
 
-fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
+fn init_capsule_with_flag(label: &str, name: &str, flag: &str) -> (PathBuf, PathBuf) {
     let output_root = temp_dir(label);
     let output_arg = output_root.to_string_lossy().to_string();
 
-    let init = run_skillrun(&["init", name, "--python", "--output", &output_arg]);
+    let init = run_skillrun(&["init", name, flag, "--output", &output_arg]);
     assert!(
         init.status.success(),
         "init should succeed\nstderr: {}",
@@ -33,6 +33,10 @@ fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
 
     let capsule = output_root.join(name);
     (output_root, capsule)
+}
+
+fn init_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
+    init_capsule_with_flag(label, name, "--python")
 }
 
 fn write_manifest(capsule: &Path) {
@@ -47,6 +51,12 @@ fn write_manifest(capsule: &Path) {
 
 fn generated_capsule(label: &str, name: &str) -> (PathBuf, PathBuf) {
     let (output_root, capsule) = init_capsule(label, name);
+    write_manifest(&capsule);
+    (output_root, capsule)
+}
+
+fn generated_capsule_with_flag(label: &str, name: &str, flag: &str) -> (PathBuf, PathBuf) {
+    let (output_root, capsule) = init_capsule_with_flag(label, name, flag);
     write_manifest(&capsule);
     (output_root, capsule)
 }
@@ -137,6 +147,100 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
     assert!(
         inspect.status.success(),
         "unpacked capsule should inspect\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&inspect.stdout),
+        String::from_utf8_lossy(&inspect.stderr)
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_run_history() {
+    let (output_root, capsule) = generated_capsule_with_flag("pack-js-content", "refund", "--js");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    fs::write(
+        capsule.join("package.json"),
+        r#"{"dependencies":{"left-pad":"1.3.0"}}"#,
+    )
+    .expect("package metadata should be writable");
+    fs::create_dir_all(capsule.join("node_modules").join("left-pad"))
+        .expect("node_modules fixture should be created");
+    fs::write(
+        capsule
+            .join("node_modules")
+            .join("left-pad")
+            .join("index.js"),
+        "module.exports = function leftPad() {};",
+    )
+    .expect("vendored dependency fixture should be writable");
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    assert!(
+        run.status.success(),
+        "test should create JS run history\nstderr: {}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+    assert!(
+        pack.status.success(),
+        "pack should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&pack.stdout),
+        String::from_utf8_lossy(&pack.stderr)
+    );
+    let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+    assert!(stdout.contains("created"));
+    assert!(stdout.contains("refund-0.2.0.skr"));
+    assert!(stdout.contains("does not vendor dependencies"));
+
+    let archive_path = capsule.join("dist").join("refund-0.2.0.skr");
+    assert!(archive_path.is_file(), "archive should exist");
+
+    let entries = archive_entries(&archive_path);
+    for required in [
+        ".skillrun/manifest.generated.yaml",
+        "SKILL.md",
+        "action.mjs",
+        "examples/default.input.json",
+        "skillrun.config.json",
+    ] {
+        assert!(
+            entries.iter().any(|entry| entry == required),
+            "archive should include {required:?}; got {entries:?}"
+        );
+    }
+    for forbidden in ["action.py", "package.json"] {
+        assert!(
+            entries.iter().all(|entry| entry != forbidden),
+            "archive must not include {forbidden:?}: {entries:?}"
+        );
+    }
+    assert!(
+        entries
+            .iter()
+            .all(|entry| !entry.starts_with("node_modules/")),
+        "archive must not vendor dependencies: {entries:?}"
+    );
+    assert!(
+        entries
+            .iter()
+            .all(|entry| !entry.starts_with(".skillrun/runs/")),
+        "archive must exclude run history: {entries:?}"
+    );
+    assert!(
+        entries.iter().all(|entry| !entry.starts_with("dist/")),
+        "archive must exclude generated dist output: {entries:?}"
+    );
+
+    let unpacked_capsule = output_root.join("unpacked-js-refund");
+    fs::create_dir_all(&unpacked_capsule).expect("unpack target should be created");
+    unpack_archive(&archive_path, &unpacked_capsule);
+    let inspect_cwd = unpacked_capsule.to_string_lossy().to_string();
+    let inspect = run_skillrun(&["inspect", "--cwd", &inspect_cwd]);
+    assert!(
+        inspect.status.success(),
+        "unpacked JS capsule should inspect\nstdout: {}\nstderr: {}",
         String::from_utf8_lossy(&inspect.stdout),
         String::from_utf8_lossy(&inspect.stderr)
     );
