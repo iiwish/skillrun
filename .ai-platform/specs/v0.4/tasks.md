@@ -379,7 +379,7 @@ Distributed capsules remain portable enough to understand, without pretending to
 
 ### T035: Add Portable `.skr` Check Matrix
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T031
 Blocks: T036
@@ -491,4 +491,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Pending.
-- Reviewer notes: T029, T030, T031, T032, T033 and T034 were reviewed and accepted on 2026-05-13. Remaining tasks stay `Draft`.
+- Reviewer notes: T029, T030, T031, T032, T033, T034 and T035 were reviewed and accepted on 2026-05-13. T036 remains `Draft`.
