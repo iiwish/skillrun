@@ -42,6 +42,49 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let output_arg = output_root.to_string_lossy().to_string();
+
+    let init = run_skillrun(&["init", "refund", "--js", "--output", &output_arg]);
+    assert!(
+        init.status.success(),
+        "init should succeed\nstderr: {}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    (output_root, capsule)
+}
+
+fn replace_js_action_run(capsule: &Path, run_function: &str) {
+    let action_path = capsule.join("action.mjs");
+    let action = fs::read_to_string(&action_path).expect("action should be readable");
+    let start = action
+        .find("export async function run(input, ctx) {")
+        .expect("run function should exist");
+    let action = format!("{}{}", &action[..start], run_function);
+    fs::write(&action_path, action).expect("action should be updated");
+}
+
+fn replace_js_action_preflight(capsule: &Path, preflight_function: &str) {
+    let action_path = capsule.join("action.mjs");
+    let action = fs::read_to_string(&action_path).expect("action should be readable");
+    let action = action.replace(
+        "export function preflight(input, ctx) {\n  if (input.amount > 500 && !input.manager_approval_id) {\n    throw new Error(\"manager approval is required for refunds above 500\");\n  }\n}\n",
+        preflight_function,
+    );
+    fs::write(&action_path, action).expect("action should be updated");
+}
+
 fn read_json(path: &Path) -> Value {
     let text = fs::read_to_string(path).expect("json file should be readable");
     serde_json::from_str(&text).expect("json file should parse")
@@ -108,6 +151,30 @@ fn invalid_input_returns_validation_error_envelope() {
 }
 
 #[test]
+fn js_invalid_input_returns_validation_error_envelope() {
+    let (output_root, capsule) = generated_js_capsule("error-js-validation");
+    let invalid_input = capsule.join("examples").join("invalid.input.json");
+    fs::write(
+        &invalid_input,
+        r#"{
+  "order_id": "",
+  "amount": 0,
+  "reason": "unknown",
+  "customer_tier": "standard"
+}"#,
+    )
+    .expect("invalid input should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let input_arg = invalid_input.to_string_lossy().to_string();
+    let run = run_skillrun(&["run", "--cwd", &cwd_arg, "--input", &input_arg]);
+    let envelope = assert_error_envelope(&run, "ValidationError");
+    assert_eq!(envelope["error"]["recoverable"], true);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn preflight_rejection_returns_policy_violation_with_hint() {
     let (output_root, capsule) = generated_capsule("error-policy");
     let policy_input = capsule.join("examples").join("policy.input.json");
@@ -137,6 +204,59 @@ fn preflight_rejection_returns_policy_violation_with_hint() {
 }
 
 #[test]
+fn js_preflight_rejection_returns_policy_violation_with_hint() {
+    let (output_root, capsule) = generated_js_capsule("error-js-policy-preflight");
+    let policy_input = capsule.join("examples").join("policy.input.json");
+    fs::write(
+        &policy_input,
+        r#"{
+  "order_id": "order_9001",
+  "amount": 900,
+  "reason": "damaged",
+  "customer_tier": "standard"
+}"#,
+    )
+    .expect("policy input should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let input_arg = policy_input.to_string_lossy().to_string();
+    let run = run_skillrun(&["run", "--cwd", &cwd_arg, "--input", &input_arg]);
+    let envelope = assert_error_envelope(&run, "PolicyViolation");
+
+    assert_eq!(envelope["error"]["recoverable"], true);
+    assert!(envelope["error"]["llm_hint"]
+        .as_str()
+        .unwrap()
+        .contains("approval"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_business_rejection_returns_policy_violation_with_hint() {
+    let (output_root, capsule) = generated_js_capsule("error-js-policy-run");
+    replace_js_action_preflight(&capsule, "export function preflight(input, ctx) {}\n");
+    replace_js_action_run(
+        &capsule,
+        "export async function run(input, ctx) {\n  const error = new Error(\"manager approval is required\");\n  error.code = \"PolicyViolation\";\n  error.llm_hint = \"Ask for manager approval before retrying.\";\n  throw error;\n}\n",
+    );
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(manifest.status.success());
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let envelope = assert_error_envelope(&run, "PolicyViolation");
+    assert_eq!(envelope["error"]["recoverable"], true);
+    assert!(envelope["error"]["llm_hint"]
+        .as_str()
+        .unwrap()
+        .contains("approval"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn missing_output_returns_protocol_violation_not_stdout_success() {
     let output_root = temp_dir("error-protocol");
     let output_arg = output_root.to_string_lossy().to_string();
@@ -153,6 +273,31 @@ fn missing_output_returns_protocol_violation_not_stdout_success() {
             "def run(input: Input, ctx) -> Output:\n    print(\"FAKE_OK_FROM_STDOUT\", flush=True)\n    os._exit(0)\n",
         );
     fs::write(&action_path, action).expect("action should be updated");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(manifest.status.success());
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    assert!(!stdout.contains("FAKE_OK_FROM_STDOUT"));
+    let envelope = assert_error_envelope(&run, "ProtocolViolation");
+
+    let run_id = envelope["run_id"].as_str().unwrap();
+    let stdout_log = fs::read_to_string(run_dir(&capsule, run_id).join("stdout.log"))
+        .expect("stdout log should be readable");
+    assert!(stdout_log.contains("FAKE_OK_FROM_STDOUT"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_malformed_output_returns_protocol_violation_not_stdout_success() {
+    let (output_root, capsule) = generated_js_capsule("error-js-protocol");
+    replace_js_action_run(
+        &capsule,
+        "export async function run(input, ctx) {\n  console.log(\"FAKE_OK_FROM_STDOUT\");\n}\n",
+    );
 
     let cwd_arg = capsule.to_string_lossy().to_string();
     let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
@@ -202,6 +347,33 @@ fn uncategorized_action_failure_returns_runtime_error() {
         .as_str()
         .unwrap()
         .contains("Traceback"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn js_uncategorized_action_failure_returns_runtime_error() {
+    let (output_root, capsule) = generated_js_capsule("error-js-runtime");
+    replace_js_action_run(
+        &capsule,
+        "export async function run(input, ctx) {\n  throw new Error(\"boom internal\");\n}\n",
+    );
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(manifest.status.success());
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let envelope = assert_error_envelope(&run, "RuntimeError");
+
+    let run_id = envelope["run_id"].as_str().unwrap();
+    let stderr_log = fs::read_to_string(run_dir(&capsule, run_id).join("stderr.log"))
+        .expect("stderr log should be readable");
+    assert!(stderr_log.contains("boom internal"));
+    assert!(!envelope["display"]["markdown"]
+        .as_str()
+        .unwrap()
+        .contains("boom internal\n    at"));
 
     fs::remove_dir_all(output_root).ok();
 }

@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T024"
 feature_id: "v0.3"
 title: Add JS Alpha End-to-end Command Matrix
-status: Blocked
+status: Ready
 priority: P0
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T024
   title: Add JS Alpha End-to-end Command Matrix
-  status: Blocked
+  status: Ready
   feature_id: v0.3
 goal: Prove the JS alpha capsule works through the complete local command chain.
 requirement_mapping:

@@ -37,6 +37,7 @@ pub fn extract_schemas(
 
 pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
     match adapter {
+        "node" => Ok(()),
         "python" => Ok(()),
         _ => Err(format!("unsupported runtime adapter: {adapter}")),
     }
@@ -47,6 +48,7 @@ pub fn run_action(
     request: &ActionRunRequest<'_>,
 ) -> Result<ActionRunOutput, String> {
     match adapter {
+        "node" => node::run_action(request),
         "python" => python::run_action(request),
         _ => Err(format!("unsupported runtime adapter: {adapter}")),
     }

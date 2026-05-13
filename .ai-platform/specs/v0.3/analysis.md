@@ -127,7 +127,7 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T023 only.
+Ready for execution: T024 only.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
@@ -136,10 +136,11 @@ Reason:
 - T020 has been accepted.
 - T021 has been accepted.
 - T022 has been accepted.
-- T023 has no unfinished dependencies and may start.
-- T024-T028 remain blocked by their declared dependencies.
+- T023 has been accepted.
+- T024 has no unfinished dependencies and may start.
+- T025-T028 remain blocked by their declared dependencies.
 
 Ready for user review: No.
 
 Recommended next step:
-Start T023: implement Node runtime adapter while preserving Python behavior and Rust-side artifact validation.
+Start T024: add JS alpha end-to-end command matrix for init, manifest, inspect, test and run.

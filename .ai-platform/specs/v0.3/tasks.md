@@ -279,7 +279,7 @@ The same Skill Capsule commands work for JS alpha without creating a separate pr
 
 ### T023: Implement Node Runtime Adapter
 
-Status: Ready
+Status: Accepted
 Priority: P0
 Depends on: T020, T022
 Blocks: T024, T025
@@ -340,7 +340,7 @@ Evidence required:
 
 ### T024: Add JS Alpha End-to-end Command Matrix
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T021, T022, T023
 Blocks: T025, T028
