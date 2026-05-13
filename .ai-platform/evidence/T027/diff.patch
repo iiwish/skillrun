@@ -1,0 +1,271 @@
+diff --git a/README.md b/README.md
+index 603b6e9..15a70ae 100644
+--- a/README.md
++++ b/README.md
+@@ -13,13 +13,13 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
+
+ ## Status
+
+-SkillRun v0.2.0 is ready for user review as the first public release candidate. No tag or public package has been published yet.
++SkillRun v0.3 is being prepared on top of the v0.2.0 public release candidate. No tag or public package has been published yet.
+
+-- Current implementation: v0.2 release-candidate behavior through a real MCP stdio server, `.skr` packaging, and release-level validation.
+-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
++- Current implementation: v0.2 release-candidate behavior plus v0.3 JS Action Alpha and adapter-aware diagnostics on the integration branch.
++- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+ - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+-- Python `action.py` is the first action adapter target. It is the user action language, not the SkillRun implementation language.
++- Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
+
+ ## Why SkillRun
+
+@@ -50,7 +50,8 @@ If you only need to expose a Python function as an MCP tool, a lighter tool such
+ ```text
+ refund/
+   SKILL.md
+-  action.py
++  action.py                  # Python stable path
++  # action.mjs               # JS alpha path
+   examples/
+     default.input.json
+   skillrun.config.json
+@@ -96,11 +97,37 @@ skillrun serve --mcp
+ skillrun pack
+ ```
+
++`--py` is only a short alias for `--python`. Keep `--python` as the main Quickstart because Python is the stable path.
++
++Language flags belong to `init` only. `manifest`, `inspect`, `doctor`, `test`, `run`, `serve --mcp`, and `pack` read the capsule and its generated Manifest; they do not accept `--python`, `--py`, or `--js`.
++
+ The first hero example is `refund`: a refund decision capsule with policy limits, approval boundaries, typed inputs, structured `PolicyViolation` errors, and auditable run records.
+
++## JS Action Alpha
++
++JS support in v0.3 is intentionally narrow:
++
++```bash
++skillrun init refund-js --js
++cd refund-js
++# edit SKILL.md
++# edit action.mjs
++skillrun manifest
++skillrun inspect
++skillrun doctor
++skillrun test
++skillrun run --input examples/default.input.json
++skillrun serve --mcp --dry-run
++skillrun pack
++```
++
++The JS alpha contract is canonical ESM `action.mjs` with explicit `inputSchema`, `outputSchema`, optional `preflight`, and `run` exports. SkillRun does not infer schemas from TypeScript types, JSDoc, Zod, TypeBox, examples, or package metadata in v0.3.
++
++`action.ts` is not a runtime entrypoint. Authors may compile TypeScript to `action.mjs` themselves, but SkillRun v0.3 does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
++
+ ## What Works Today
+
+-The repository currently contains the Rust CLI, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
++The repository currently contains the Rust CLI, `init --python` and `init --py` Python capsule generator, `init --js` JS alpha capsule generator, Manifest generator, inspect renderer, doctor diagnostics, test/run path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
+
+ ```bash
+ cargo test
+@@ -109,6 +136,7 @@ cargo run -- --version
+ cargo run -- init refund --python --output tmp/e2e-init
+ cargo run -- manifest --cwd tmp/e2e-init/refund
+ cargo run -- inspect --cwd tmp/e2e-init/refund
++cargo run -- doctor --cwd tmp/e2e-init/refund
+ cargo run -- test --cwd tmp/e2e-init/refund
+ cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
+ cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
+@@ -131,7 +159,9 @@ v0.2.0 is intentionally narrow:
+
+ - MCP transport is stdio only.
+ - Each capsule exposes one primary Manifest-derived tool.
+-- Python `action.py` is the only blessed action adapter target.
++- Python `action.py` is the stable action adapter target.
++- JS `action.mjs` is alpha only and is not full TypeScript support.
++- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
+ - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
+ - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
+ - No tag or public release should be created until the release report is accepted by the maintainer.
+@@ -165,6 +195,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
+ | `T010` | `.skr` packaging |
+ | `T011` | End-to-end acceptance matrix and business examples |
+ | `v0.2` | Real MCP stdio server and public release candidate readiness |
++| `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
+
+ ## Classic Business Examples
+
+@@ -192,9 +223,10 @@ SkillRun is intentionally narrow. Contributions should preserve these project ru
+
+ - Use `SkillRun` for the project name and `skillrun` for the CLI, crate, commands, and code identifiers.
+ - Keep SkillRun core behavior in Rust.
+-- Treat Python as the first action adapter target only.
++- Treat Python as the stable action adapter target and JS `action.mjs` as a narrow alpha adapter path.
+ - Do not execute instruction-only skills implicitly.
+ - Do not infer structured success from stdout.
++- Do not expand JS alpha into full TypeScript support, package-manager ownership, dependency vendoring, registry behavior, or sandbox claims.
+ - Keep README and docs clear about what is implemented now versus planned.
+
+ Run the baseline checks before submitting changes:
+diff --git a/docs/business-examples.md b/docs/business-examples.md
+index 476a2b6..3a31caa 100644
+--- a/docs/business-examples.md
++++ b/docs/business-examples.md
+@@ -164,4 +164,4 @@ SkillRun 可以让 Action 产出结构化风险结论和 markdown/pdf artifact
+
+ - `refund` 必须实现为完整可运行 capsule。
+ - `support_triage`、`access_request_approval`、`vendor_risk_review` 只作为 README/docs 级示例。
+-- 这些示例不能引入 Node adapter、OpenAPI wrapper、HTTP server、schedule/workflow 或 marketplace scope。
++- 这些业务示例不能要求额外 runtime scope：除 v0.3 已定义的 JS Action Alpha (`action.mjs`) 之外，不引入 Node/TypeScript 工具链、OpenAPI wrapper、HTTP server、schedule/workflow 或 marketplace scope。
+diff --git a/docs/ssot.md b/docs/ssot.md
+index 915b56d..dc9901d 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -286,8 +286,7 @@ CLI 语言语义必须分阶段：
+
+ - `skillrun.config.json` 显式声明 `runtime.adapter` / `runtime.entrypoint` 时优先使用 config。
+ - 无 config runtime override 时，找到唯一 `action.py`：使用 Python adapter。
+-- 无 config runtime override 时，v0.2 阶段找到唯一 `action.mjs`：提示 Node adapter 尚未启用。
+-- 无 config runtime override 时，v0.3 JS Action Alpha 启用后找到唯一 `action.mjs`：使用 Node adapter。
++- 无 config runtime override 时，v0.3 JS Action Alpha 找到唯一 `action.mjs`：使用 Node adapter。
+ - 找到 `action.ts`：不直接运行；提示作者先编译到 `action.mjs`，或等待后续 TypeScript support 设计。
+ - 多个候选文件：报 ambiguous，不猜。
+ - 其他语言：post-MVP 要求 `skillrun.config.json` 显式指定 command，或暂不支持。
+@@ -335,39 +334,50 @@ def run(input: Input, ctx: Context) -> Output:
+     ...
+ ```
+
+-### 9.2 Node
++### 9.2 Node / JS Action Alpha
+
+-Node 使用 Zod 作为推荐 schema 来源。
++v0.3 的 Node 路径只承诺 JS Action Alpha：canonical ESM `action.mjs`。
+
+-示例：
++当前稳定作者契约不是 Zod、TypeBox、JSDoc 或 TypeScript type-to-schema，而是 action module 显式导出 JSON Schema：
+
+ ```js
+-import { z } from "zod";
+-import { artifact } from "@skillrun/sdk";
+-
+-export const input = z.object({
+-  order_id: z.string(),
+-  reason: z.enum(["damaged", "duplicate", "wrong_item"])
+-});
+-
+-export const output = z.object({
+-  status: z.string(),
+-  amount: z.number(),
+-  receipt: artifact().nullable()
+-});
+-
+-export async function preflight(input, ctx) {
+-  ctx.requireSkillHash();
++export const inputSchema = {
++  type: "object",
++  required: ["order_id", "reason"],
++  additionalProperties: false,
++  properties: {
++    order_id: { type: "string" },
++    reason: { type: "string", enum: ["damaged", "duplicate", "wrong_item"] }
++  }
++};
++
++export const outputSchema = {
++  type: "object",
++  required: ["decision", "reasoning_summary"],
++  additionalProperties: false,
++  properties: {
++    decision: { type: "string", enum: ["approved", "needs_approval", "rejected"] },
++    reasoning_summary: { type: "string" }
++  }
++};
++
++export function preflight(input, ctx) {
++  // optional policy boundary
+ }
+
+ export async function run(input, ctx) {
+-  ...
++  return {
++    decision: "approved",
++    reasoning_summary: "Decision is allowed by the SOP-backed policy."
++  };
+ }
+ ```
+
++`action.ts` 不作为 v0.3 runtime 入口。作者可以自行把 TypeScript 编译到 `action.mjs`，但 SkillRun v0.3 不接管 `ts-node`、`tsx`、source maps、CJS/ESM 兼容矩阵、package-manager install flow 或 dependency vendoring。
++
+ ### 9.3 Lightweight Config Schema
+
+-不想引入 Pydantic/Zod 时，允许在 `skillrun.config.json` 中声明极简 input/output：
++不想引入 Python Pydantic 或 JS 显式 JSON Schema 时，未来可以考虑在 `skillrun.config.json` 中声明极简 input/output：
+
+ ```json
+ {
+@@ -393,7 +403,7 @@ export async function run(input, ctx) {
+ - 静态解析 AST：脆弱，不可靠。
+ - 动态加载 metadata：真实可行，但必须限制场景。
+
+-SkillRun 采用 adapter metadata phase：Rust Core 启动对应语言的 metadata 子进程，读取 `action.py` 或未来的 `action.mjs`，把 schema 和 metadata 写回 Manifest 生成流程。具体 argv 是 Rust Core 的实现细节，不作为 v0.1 稳定用户接口。
++SkillRun 采用 adapter metadata phase：Rust Core 启动对应语言的 metadata 子进程，读取 `action.py` 或 v0.3 JS Alpha 的 `action.mjs`，把 schema 和 metadata 写回 Manifest 生成流程。具体 argv 是 Rust Core 的实现细节，不作为稳定用户接口。
+
+ 规则：
+
+@@ -722,12 +732,20 @@ v0.1 MVP 命令：
+ skillrun init refund --python
+ skillrun manifest
+ skillrun inspect
++skillrun doctor
+ skillrun test
+ skillrun run --input examples/default.input.json
+ skillrun serve --mcp
+ skillrun pack
+ ```
+
++v0.3 CLI 语言边界：
++
++- `skillrun init refund --python` 是 README 主 Quickstart。
++- `skillrun init refund --py` 等价于 `--python`，只作为短别名。
++- `skillrun init refund --js` 生成 JS Action Alpha capsule。
++- `test`、`run`、`serve --mcp`、`pack` 和 `doctor` 不接受语言 flag；它们读取 Manifest 和文件状态。
++
+ 命令职责：
+
+ | Command | 作用 |
+@@ -735,6 +753,7 @@ skillrun pack
+ | `init` | 生成最小 Skill Capsule |
+ | `manifest` | Author Mode 下生成或刷新 Manifest |
+ | `inspect` | 展示 SOP、tool、schema、permissions、adapter、examples |
++| `doctor` | 非执行诊断 capsule 文件、Manifest freshness、adapter recovery |
+ | `test` | 使用 examples 运行并校验 IPC/output/artifacts |
+ | `run` | 执行一次真实输入 |
+ | `serve --mcp` | 从 Manifest 暴露 MCP tool |
+@@ -764,20 +783,20 @@ dist/refund-0.1.0.skr
+
+ ```text
+ SKILL.md
+-action.py
++action.py 或 action.mjs
+ skillrun.config.json          # if exists
+ .skillrun/manifest.generated.yaml
+ examples/
+-README.md                     # optional generated summary
+ ```
+
+-v0 不打包完整 Python/Node 依赖环境。
++v0.3 `.skr` 是 source + Manifest archive，不是 dependency bundle、registry package、secure install format 或 reproducible runtime image。
+
+-依赖策略：
++依赖策略必须保守：
+
+-- Python Action capsule：允许包含 `requirements.txt` 或 capsule-local `pyproject.toml`。
+-- Node：允许包含 `package.json` 和 lockfile。
+-- Consumer 安装时由 adapter 检查依赖是否满足。
++- Python capsule 不承诺 vendoring Python dependencies。
++- JS alpha capsule 不把 `package.json`、lockfile 或 `node_modules/` 放进 `.skr`。
++- Consumer 运行前必须由本地环境或后续 adapter 诊断确认依赖满足。
++- `pack` 不包含 `.skillrun/runs/**`、`dist/**` 或本地 package-manager artifacts。
+
+ 未来再考虑：

@@ -127,7 +127,7 @@ Review notes:
 
 ## Execution Readiness
 
-Ready for execution: T027.
+Ready for execution: T028.
 
 Reason:
 - `plan.md` and `tasks.md` are approved.
@@ -140,10 +140,10 @@ Reason:
 - T024 has been accepted.
 - T025 has been accepted.
 - T026 has been accepted.
-- T027 dependencies are satisfied and it may start.
-- T028 remains blocked by T027.
+- T027 has been accepted.
+- T028 dependencies are satisfied and it may start.
 
 Ready for user review: No.
 
 Recommended next step:
-Start T027: update README and TypeScript boundary docs.
+Start T028: prepare v0.3 release matrix and report.

@@ -515,7 +515,7 @@ Evidence required:
 
 ### T027: Update README And TypeScript Boundary Docs
 
-Status: Draft
+Status: Accepted
 Priority: P1
 Depends on: T021
 Blocks: T028

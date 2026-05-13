@@ -13,13 +13,13 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.2.0 is ready for user review as the first public release candidate. No tag or public package has been published yet.
+SkillRun v0.3 is being prepared on top of the v0.2.0 public release candidate. No tag or public package has been published yet.
 
-- Current implementation: v0.2 release-candidate behavior through a real MCP stdio server, `.skr` packaging, and release-level validation.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+- Current implementation: v0.2 release-candidate behavior plus v0.3 JS Action Alpha and adapter-aware diagnostics on the integration branch.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
-- Python `action.py` is the first action adapter target. It is the user action language, not the SkillRun implementation language.
+- Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
 
 ## Why SkillRun
 
@@ -50,7 +50,8 @@ If you only need to expose a Python function as an MCP tool, a lighter tool such
 ```text
 refund/
   SKILL.md
-  action.py
+  action.py                  # Python stable path
+  # action.mjs               # JS alpha path
   examples/
     default.input.json
   skillrun.config.json
@@ -96,11 +97,37 @@ skillrun serve --mcp
 skillrun pack
 ```
 
+`--py` is only a short alias for `--python`. Keep `--python` as the main Quickstart because Python is the stable path.
+
+Language flags belong to `init` only. `manifest`, `inspect`, `doctor`, `test`, `run`, `serve --mcp`, and `pack` read the capsule and its generated Manifest; they do not accept `--python`, `--py`, or `--js`.
+
 The first hero example is `refund`: a refund decision capsule with policy limits, approval boundaries, typed inputs, structured `PolicyViolation` errors, and auditable run records.
+
+## JS Action Alpha
+
+JS support in v0.3 is intentionally narrow:
+
+```bash
+skillrun init refund-js --js
+cd refund-js
+# edit SKILL.md
+# edit action.mjs
+skillrun manifest
+skillrun inspect
+skillrun doctor
+skillrun test
+skillrun run --input examples/default.input.json
+skillrun serve --mcp --dry-run
+skillrun pack
+```
+
+The JS alpha contract is canonical ESM `action.mjs` with explicit `inputSchema`, `outputSchema`, optional `preflight`, and `run` exports. SkillRun does not infer schemas from TypeScript types, JSDoc, Zod, TypeBox, examples, or package metadata in v0.3.
+
+`action.ts` is not a runtime entrypoint. Authors may compile TypeScript to `action.mjs` themselves, but SkillRun v0.3 does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
 
 ## What Works Today
 
-The repository currently contains the Rust CLI, `init --python` capsule generator, Manifest generator, inspect renderer, test/run success path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
+The repository currently contains the Rust CLI, `init --python` and `init --py` Python capsule generator, `init --js` JS alpha capsule generator, Manifest generator, inspect renderer, doctor diagnostics, test/run path, MCP stdio server, MCP dry-run contract renderer, `.skr` package generation, and the B001 `refund` hero example:
 
 ```bash
 cargo test
@@ -109,6 +136,7 @@ cargo run -- --version
 cargo run -- init refund --python --output tmp/e2e-init
 cargo run -- manifest --cwd tmp/e2e-init/refund
 cargo run -- inspect --cwd tmp/e2e-init/refund
+cargo run -- doctor --cwd tmp/e2e-init/refund
 cargo run -- test --cwd tmp/e2e-init/refund
 cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
 cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
@@ -131,7 +159,9 @@ v0.2.0 is intentionally narrow:
 
 - MCP transport is stdio only.
 - Each capsule exposes one primary Manifest-derived tool.
-- Python `action.py` is the only blessed action adapter target.
+- Python `action.py` is the stable action adapter target.
+- JS `action.mjs` is alpha only and is not full TypeScript support.
+- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
 - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
 - No tag or public release should be created until the release report is accepted by the maintainer.
@@ -165,6 +195,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `T010` | `.skr` packaging |
 | `T011` | End-to-end acceptance matrix and business examples |
 | `v0.2` | Real MCP stdio server and public release candidate readiness |
+| `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
 
 ## Classic Business Examples
 
@@ -192,9 +223,10 @@ SkillRun is intentionally narrow. Contributions should preserve these project ru
 
 - Use `SkillRun` for the project name and `skillrun` for the CLI, crate, commands, and code identifiers.
 - Keep SkillRun core behavior in Rust.
-- Treat Python as the first action adapter target only.
+- Treat Python as the stable action adapter target and JS `action.mjs` as a narrow alpha adapter path.
 - Do not execute instruction-only skills implicitly.
 - Do not infer structured success from stdout.
+- Do not expand JS alpha into full TypeScript support, package-manager ownership, dependency vendoring, registry behavior, or sandbox claims.
 - Keep README and docs clear about what is implemented now versus planned.
 
 Run the baseline checks before submitting changes:

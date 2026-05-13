@@ -3,7 +3,7 @@ schema_version: "1.0"
 packet_id: "v0.3-T027"
 feature_id: "v0.3"
 title: Update README And TypeScript Boundary Docs
-status: Blocked
+status: Accepted
 priority: P1
 source_spec: ".ai-platform/specs/v0.3/spec.md"
 source_plan: ".ai-platform/specs/v0.3/plan.md"
@@ -20,7 +20,7 @@ adapter: codex
 work_unit:
   task_id: T027
   title: Update README And TypeScript Boundary Docs
-  status: Blocked
+  status: Accepted
   feature_id: v0.3
 goal: Explain Python stable path, --py alias, JS alpha path, TypeScript boundary and language-flag placement without weakening SkillRun's core narrative.
 requirement_mapping:
@@ -76,7 +76,7 @@ acceptance_criteria:
   - "A reader can explain why init needs a language flag but runtime commands do not."
 handoff:
   evidence_dir: ".ai-platform/evidence/T027"
-  next_status_after_execution: Needs_Review
+  next_status_after_execution: Accepted
   commit_policy: "Commit only after review passes and user requests git handoff."
 definition_of_done:
   - "Documentation checks pass."
