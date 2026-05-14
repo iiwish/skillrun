@@ -125,9 +125,9 @@ print(json.dumps({
         .arg(script)
         .arg(&action_path)
         .current_dir(capsule_dir)
-        .env_clear()
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    apply_process_env(&mut command);
 
     let timeout = metadata_timeout();
     let output = run_with_timeout(command, timeout).map_err(|error| {
@@ -276,8 +276,8 @@ except Exception as exc:
         .arg("-c")
         .arg(script)
         .arg(&action_path)
-        .current_dir(request.capsule_dir)
-        .env_clear();
+        .current_dir(request.capsule_dir);
+    apply_process_env(&mut command);
     for (key, value) in request.env {
         command.env(key, value);
     }
@@ -309,6 +309,25 @@ fn metadata_timeout() -> Duration {
         .and_then(|value| value.parse::<u64>().ok())
         .map(Duration::from_millis)
         .unwrap_or_else(|| Duration::from_secs(10))
+}
+
+fn apply_process_env(command: &mut Command) {
+    command.env_clear();
+    for key in [
+        "SystemRoot",
+        "WINDIR",
+        "COMSPEC",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "APPDATA",
+        "PATH",
+    ] {
+        if let Ok(value) = std::env::var(key) {
+            command.env(key, value);
+        }
+    }
 }
 
 fn command_text(output: &Output) -> String {

@@ -118,6 +118,21 @@ fn undeclared_env_is_not_injected_into_action_process() {
     fs::remove_dir_all(output_root).ok();
 }
 
+#[cfg(windows)]
+#[test]
+fn python_action_receives_windows_process_env_baseline() {
+    let (output_root, capsule) = init_capsule("permissions-windows-process-env");
+    patch_action_audit_note_from_env(&capsule, "SystemRoot");
+    write_manifest(&capsule);
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let envelope = assert_success_envelope(&run);
+    assert_ne!(envelope["output"]["audit_note"], "missing");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
 #[test]
 fn declared_env_is_injected_and_recorded() {
     let (output_root, capsule) = init_capsule("permissions-declared-env");
