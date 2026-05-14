@@ -186,6 +186,14 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
     copy_dir(&source, &capsule);
     let cwd = capsule.to_string_lossy().to_string();
 
+    let direct_missing_webhook =
+        run_skillrun(&["run", "--cwd", &cwd, "--input", "examples/send.input.json"]);
+    let direct_dependency_envelope = error_envelope(&direct_missing_webhook, "DependencyError");
+    assert!(direct_dependency_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("WECOM_WEBHOOK_URL"));
+
     let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
     assert_success(&manifest, "wecom manifest");
 

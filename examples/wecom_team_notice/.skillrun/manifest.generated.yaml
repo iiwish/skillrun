@@ -1,0 +1,139 @@
+manifest_version: 0.1.0
+generated_by: skillrun@0.4.0
+generated_at: 2026-05-14T02:31:41.613225700+00:00
+sources:
+  skill:
+    path: SKILL.md
+    sha256: e45e4d5a51e5c0e1ffea1e3f515361179fd3c643bda4af06da8aaba77ec2aaff
+  action:
+    path: action.py
+    sha256: a165af7f60b2fcd480830987cbf33c8b3bd166f32b6bf0da42a3f37311450c3b
+  config:
+    path: skillrun.config.json
+    sha256: b20f1031e9b854185c009e4b687191d03d8bedb6fea32a856a62a1ba967f064c
+skill:
+  name: wecom_team_notice
+  sop_summary: Generated from SKILL.md. Inspect support lands in T004.
+  skill_hash: e45e4d5a51e5c0e1ffea1e3f515361179fd3c643bda4af06da8aaba77ec2aaff
+tool:
+  name: wecom_team_notice
+  description: Execute the wecom_team_notice SkillRun capsule.
+schemas:
+  input:
+    properties:
+      approval_id:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Approval Id
+      audience:
+        enum:
+        - team
+        - project
+        - incident
+        - all_hands
+        title: Audience
+        type: string
+      dry_run:
+        default: true
+        title: Dry Run
+        type: boolean
+      mentioned_mobile_list:
+        items:
+          type: string
+        maxItems: 10
+        title: Mentioned Mobile List
+        type: array
+      summary:
+        maxLength: 1800
+        minLength: 1
+        title: Summary
+        type: string
+      title:
+        maxLength: 80
+        minLength: 1
+        title: Title
+        type: string
+      urgency:
+        default: normal
+        enum:
+        - normal
+        - high
+        - critical
+        title: Urgency
+        type: string
+    required:
+    - title
+    - summary
+    - audience
+    title: Input
+    type: object
+  output:
+    properties:
+      audit_note:
+        title: Audit Note
+        type: string
+      decision:
+        enum:
+        - preview
+        - sent
+        - blocked
+        title: Decision
+        type: string
+      message_preview:
+        title: Message Preview
+        type: string
+      wecom_response:
+        anyOf:
+        - additionalProperties: true
+          type: object
+        - type: 'null'
+        default: null
+        title: Wecom Response
+    required:
+    - decision
+    - message_preview
+    - audit_note
+    title: Output
+    type: object
+runtime:
+  adapter: python
+  entrypoint: action.py
+  timeout: 30s
+  requirements:
+    executable:
+      name: python
+      version: '>=3.10'
+    packages:
+    - name: pydantic
+      version: '>=2,<3'
+      required_for:
+      - metadata
+      - runtime
+permissions:
+  files:
+    read: []
+    write:
+    - .skillrun/runs/**
+  network:
+    outbound:
+    - qyapi.weixin.qq.com
+  env:
+    read:
+    - WECOM_WEBHOOK_URL
+ipc:
+  protocol_version: 0.1.0
+examples:
+- id: default
+  input: examples/default.input.json
+artifacts:
+  allowed_kinds:
+  - json
+  - markdown
+  - html
+  - pdf
+  - text
+  - file
+errors:
+  envelope: true
