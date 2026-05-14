@@ -1,9 +1,47 @@
-# SkillRun v0.4 Release Report
+# SkillRun Release Report
+
+## v0.4.1 Merge Readiness
+
+Version: v0.4.1
+Status: Ready_For_Main_Merge_Review
+Last updated: 2026-05-14
+Review gate: T041-T046 evidence accepted; merge, tag creation and publication remain pending explicit user command
+
+### Scope
+
+v0.4.1 is an example-led patch release candidate. It adds the official `wecom_team_notice` Skill Capsule and includes one narrow Python adapter fix discovered during real Windows webhook validation.
+
+The release story remains constrained:
+
+> Run a real local WeCom notification skill without turning SkillRun into a WeCom wrapper.
+
+### Accepted v0.4.1 Tasks
+
+- T041: WeCom capsule skeleton accepted. Evidence: `.ai-platform/evidence/T041/`.
+- T042: WeCom action implementation accepted. Evidence: `.ai-platform/evidence/T042/`.
+- T043: Business example test matrix accepted. Evidence: `.ai-platform/evidence/T043/`.
+- T044: v0.4.1 example documentation accepted. Evidence: `.ai-platform/evidence/T044/`.
+- T045: Manual real-send validation accepted. Evidence: `.ai-platform/evidence/T045/`.
+- T046: Release notes and merge-readiness docs accepted. Evidence: `.ai-platform/evidence/T046/`.
+
+### Validation Summary
+
+- Maintainer real send: `ok=true`, `decision=sent`, WeCom response `errcode=0`, with webhook URL omitted from evidence.
+- Python adapter fix: preserves baseline Windows process env while still injecting business env only when declared by Manifest permissions.
+- Full local validation passed: `cargo fmt --check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, and `git diff --check`.
+
+### Known Limits
+
+- This is not a WeCom adapter, OpenAPI-to-MCP bridge, WeCom CLI wrapper, bash adapter, hosted server, registry release or sandbox release.
+- Real webhook sending remains manual and opt-in; CI covers dry-run and structured error paths only.
+- The Python adapter process-env fix preserves host runtime viability; it does not expose arbitrary undeclared business secrets.
+
+## v0.4.0 Release Record
 
 Version: v0.4.0
-Status: Ready_For_Release_Decision
+Status: Released
 Last updated: 2026-05-13
-Review gate: T029-T036 evidence accepted; release handoff decisions remain pending
+Review gate: T029-T036 evidence accepted; tag and public release artifact publication completed by maintainer
 
 ## Scope
 
@@ -23,9 +61,9 @@ v0.4 is not an HTTP transport, installer, package manager, registry, sandbox, si
 - v0.4 checklist: `.ai-platform/specs/v0.4/checklists/requirements.md`
 - v0.4 analysis: `.ai-platform/specs/v0.4/analysis.md`
 - Release notes draft: `RELEASE_NOTES.md`
-- Release report status: `Ready_For_Release_Decision`
-- Local release tag: `v0.4.0` not created by this task
-- Remote push and package publication: not performed by this handoff
+- Release report status: `Released`
+- Local release tag: `v0.4.0` created after explicit approval
+- Remote push and GitHub release artifact publication: completed by maintainer
 
 ## Accepted v0.4 Tasks
 
@@ -79,7 +117,7 @@ Current local binary version output after the release bump:
 skillrun 0.4.0
 ```
 
-Tag creation, remote push and package publication remain separate release handoff decisions.
+Tag creation, remote push and GitHub release artifact publication were completed after release approval.
 
 ## Known Limitations
 
@@ -99,11 +137,11 @@ Tag creation, remote push and package publication remain separate release handof
 - [x] Maintainer reviews T036 diff and evidence.
 - [x] Maintainer accepts v0.4 release candidate.
 - [x] Bump Cargo/package version from `0.3.0` to `0.4.0`.
-- [ ] Create local release tag after explicit approval.
-- [ ] Push tag to remote, if desired.
-- [ ] Publish package/artifact, if desired.
+- [x] Create local release tag after explicit approval.
+- [x] Push tag to remote, if desired.
+- [x] Publish package/artifact, if desired.
 
 ## User Review Gate
 
 - Approval: Granted for T036 on 2026-05-13.
-- Reviewer notes: v0.4 implementation and documentation evidence through T036 is accepted. The package version has been bumped to `0.4.0`; local tag, remote push and package publication remain separate explicit decisions.
+- Reviewer notes: v0.4 implementation and documentation evidence through T036 is accepted. The package version was bumped to `0.4.0`; tag, remote push and public artifact publication were completed by the maintainer.

@@ -1,0 +1,9 @@
+{
+  "title": "Critical incident update",
+  "summary": "A critical incident update is ready to send to the response group.",
+  "audience": "incident",
+  "urgency": "critical",
+  "dry_run": true,
+  "approval_id": null,
+  "mentioned_mobile_list": []
+}

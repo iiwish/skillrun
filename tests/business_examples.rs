@@ -9,6 +9,7 @@ use tar::Archive;
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
         .args(args)
+        .env_remove("WECOM_WEBHOOK_URL")
         .output()
         .expect("skillrun binary should run")
 }
@@ -133,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.4.0.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -175,4 +176,104 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     assert!(readme.contains("FastMCP turns functions into MCP tools"));
     assert!(!readme.contains("tested MCP skill package"));
     assert!(!cargo_toml.contains("tested MCP skill package"));
+}
+
+#[test]
+fn wecom_team_notice_example_runs_locally_without_real_webhook() {
+    let output_root = temp_dir("business-wecom");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/wecom_team_notice");
+    let capsule = output_root.join("wecom_team_notice");
+    copy_dir(&source, &capsule);
+    let cwd = capsule.to_string_lossy().to_string();
+
+    let direct_missing_webhook =
+        run_skillrun(&["run", "--cwd", &cwd, "--input", "examples/send.input.json"]);
+    let direct_dependency_envelope = error_envelope(&direct_missing_webhook, "DependencyError");
+    assert!(direct_dependency_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("WECOM_WEBHOOK_URL"));
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
+    assert_success(&manifest, "wecom manifest");
+
+    let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
+    let inspect_stdout = assert_success(&inspect, "wecom inspect");
+    assert!(inspect_stdout.contains("MCP tool: wecom_team_notice"));
+    assert!(inspect_stdout.contains("WECOM_WEBHOOK_URL"));
+
+    let check = run_skillrun(&["check", "--cwd", &cwd]);
+    assert_success(&check, "wecom check");
+
+    let test = run_skillrun(&["test", "--cwd", &cwd]);
+    let test_stdout = assert_success(&test, "wecom test");
+    let test_envelope: Value = serde_json::from_str(&test_stdout).expect("test JSON");
+    assert_eq!(test_envelope["ok"], true);
+    assert_eq!(test_envelope["output"]["decision"], "preview");
+    assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
+
+    let dry_run = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/dry_run.input.json",
+    ]);
+    let dry_run_stdout = assert_success(&dry_run, "wecom dry-run");
+    let dry_run_envelope: Value = serde_json::from_str(&dry_run_stdout).expect("dry-run JSON");
+    assert_eq!(dry_run_envelope["output"]["decision"], "preview");
+
+    let approval = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/urgent_requires_approval.input.json",
+    ]);
+    let approval_envelope = error_envelope(&approval, "PolicyViolation");
+    assert_eq!(approval_envelope["error"]["recoverable"], true);
+
+    let secret = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/invalid_secret.input.json",
+    ]);
+    let secret_envelope = error_envelope(&secret, "PolicyViolation");
+    assert!(secret_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("secret marker"));
+
+    let missing_webhook =
+        run_skillrun(&["run", "--cwd", &cwd, "--input", "examples/send.input.json"]);
+    let dependency_envelope = error_envelope(&missing_webhook, "DependencyError");
+    assert!(dependency_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("WECOM_WEBHOOK_URL"));
+
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
+    let serve_stdout = assert_success(&serve, "wecom serve dry-run");
+    let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
+    assert_eq!(contract["tools"][0]["name"], "wecom_team_notice");
+    assert!(contract["resources"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("WeCom Team Notice"));
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+    assert_success(&pack, "wecom pack");
+    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.1.skr");
+    assert!(archive_path.is_file());
+    let unpacked = output_root.join("unpacked-wecom");
+    fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+    unpack_archive(&archive_path, &unpacked);
+    let unpacked_inspect = run_skillrun(&["inspect", "--cwd", &unpacked.to_string_lossy()]);
+    assert_success(&unpacked_inspect, "unpacked wecom inspect");
+    let unpacked_check = run_skillrun(&["check", "--cwd", &unpacked.to_string_lossy()]);
+    assert_success(&unpacked_check, "unpacked wecom check");
+
+    fs::remove_dir_all(output_root).ok();
 }

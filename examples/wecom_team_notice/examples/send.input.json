@@ -1,0 +1,9 @@
+{
+  "title": "Release handoff ready",
+  "summary": "SkillRun v0.4.1 example validation is ready for maintainer review. This message was sent through the wecom_team_notice Skill Capsule.",
+  "audience": "team",
+  "urgency": "normal",
+  "dry_run": false,
+  "approval_id": null,
+  "mentioned_mobile_list": []
+}
