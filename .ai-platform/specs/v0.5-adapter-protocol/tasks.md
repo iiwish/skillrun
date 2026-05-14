@@ -78,7 +78,7 @@ Acceptance:
 
 ### T051: Add Adapter Conformance Fixtures For Existing Adapters
 
-Status: Ready
+Status: Needs_Review
 Priority: P0
 Depends on: T050
 Blocks: T052, T053
