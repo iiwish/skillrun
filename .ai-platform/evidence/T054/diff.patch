@@ -1,0 +1,502 @@
+﻿diff --git a/.ai-platform/evidence/T054/summary.md b/.ai-platform/evidence/T054/summary.md
+new file mode 100644
+index 0000000..d8263d2
+--- /dev/null
++++ b/.ai-platform/evidence/T054/summary.md
+@@ -0,0 +1,55 @@
++# T054 Evidence Summary
++
++Task ID: T054
++Executor: Codex direct execute fallback
++Branch: codex/v0.5-integration
++Status: Needs_Review
++
++## Files Changed
++
++- `examples/command_hello/SKILL.md`
++- `examples/command_hello/action.py`
++- `examples/command_hello/examples/default.input.json`
++- `examples/command_hello/skillrun.config.json`
++- `docs/business-examples.md`
++- `docs/v0.5-adapter-protocol.md`
++- `tests/business_examples.rs`
++- `.ai-platform/specs/v0.5-adapter-protocol/tasks.md`
++- `.ai-platform/evidence/T054/summary.md`
++- `.ai-platform/evidence/T054/test-results.md`
++- `.ai-platform/evidence/T054/diff.patch`
++
++## Commands Run
++
++- `cargo test --test business_examples command_adapter_example -- --nocapture` - RED failed before implementation because `examples/command_hello` did not exist.
++- `cargo test --test business_examples command_adapter_example -- --nocapture` - GREEN passed after adding the example capsule.
++- `cargo test --test business_examples` - passed all business examples.
++- `cargo fmt` - applied formatting.
++- `cargo fmt --check` - passed.
++- `git diff --check` - passed.
++- `cargo test` - first run had one transient empty-output failure in an unrelated v0.4.2 business example; targeted rerun passed.
++- `cargo test --test business_examples v042_official_reference_capsules -- --nocapture` - passed targeted rerun of the transient failure.
++- `cargo test` - passed full suite on rerun.
++
++## Diff Summary
++
++- Added `examples/command_hello`, a Level 0 command adapter capsule using static schemas and standard SkillRun IPC.
++- The example action uses only Python stdlib as a portable command process; it does not use SkillRun Python SDK or Pydantic metadata extraction.
++- Added business example coverage for manifest, check, test, serve dry-run, pack and stdout-as-log behavior.
++- Updated v0.5 adapter protocol docs and business example catalog to describe the command adapter example boundary.
++
++## Spec Compliance Review
++
++Pass. T054 demonstrates command adapter Level 0 without adding a new language SDK, dependency installation, registry behavior or sandbox claims.
++
++## Bug / Quality Review
++
++Pass. The example writes a valid output envelope file, emits stdout only as a log, creates an in-bounds markdown artifact and passes pack/serve paths. Existing business examples and the full suite pass after rerun.
++
++## User Acceptance
++
++Pending. T054 is in `Needs_Review` until the user accepts this implementation slice.
++
++## Residual Risk
++
++The example command uses `python action.py` for portability in the existing test environment. The docs explicitly state this is not Python adapter support; it is a command process obeying the Level 0 IPC contract.
+diff --git a/.ai-platform/evidence/T054/test-results.md b/.ai-platform/evidence/T054/test-results.md
+new file mode 100644
+index 0000000..0cc663f
+--- /dev/null
++++ b/.ai-platform/evidence/T054/test-results.md
+@@ -0,0 +1,99 @@
++# T054 Test Results
++
++## RED
++
++Command:
++
++```text
++cargo test --test business_examples command_adapter_example -- --nocapture
++```
++
++Result: failed as expected.
++
++Key output:
++
++```text
++source directory should be readable: ... examples/command_hello ... NotFound
++```
++
++The failure proved the business example test was exercising a missing command adapter capsule.
++
++## GREEN
++
++Command:
++
++```text
++cargo test --test business_examples command_adapter_example -- --nocapture
++```
++
++Result: passed.
++
++Summary:
++
++```text
++1 passed
++```
++
++## Business Examples
++
++Command:
++
++```text
++cargo test --test business_examples
++```
++
++Result: passed.
++
++Summary:
++
++```text
++5 passed
++```
++
++## Formatting
++
++Command:
++
++```text
++cargo fmt --check
++```
++
++Result: passed.
++
++## Whitespace
++
++Command:
++
++```text
++git diff --check
++```
++
++Result: passed.
++
++## Full Suite
++
++Command:
++
++```text
++cargo test
++```
++
++First result: one transient empty-output failure in `v042_official_reference_capsules_run_without_registry_or_sandbox_claims`.
++
++Targeted rerun:
++
++```text
++cargo test --test business_examples v042_official_reference_capsules -- --nocapture
++```
++
++Result: passed.
++
++Final full-suite rerun:
++
++```text
++cargo test
++```
++
++Result: passed.
++
++Summary: full workspace test suite passed on rerun, including command adapter runtime, command example, Python/JS adapters, MCP, pack and release matrix paths.
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index fa54d40..2eb383d 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -263,7 +263,7 @@ Review:
+
+ ### T054: Add Command Adapter Example Capsule
+
+-Status: Ready
++Status: Needs_Review
+ Priority: P1
+ Depends on: T053
+ Blocks: T055
+@@ -280,10 +280,35 @@ Allowed files:
+ - `docs/v0.5-adapter-protocol.md`
+ - `tests/business_examples.rs`
+
++Test targets:
++- `tests/business_examples.rs`
++
++Deliverables:
++- A small runnable `examples/command_hello` command-adapter capsule.
++- Static input/output schemas in `skillrun.config.json`.
++- Business example coverage for manifest, check, test, serve dry-run and pack.
++- Docs that frame the example as Level 0 command adapter, not a new blessed language adapter.
++
++Acceptance criteria:
++- `command_hello` can generate a Manifest with `runtime.adapter: command`.
++- `command_hello` can run through `skillrun test` and return a valid envelope.
++- stdout/stderr are logs and not the result channel.
++- The example does not require package installation, vendored dependencies, registry behavior or sandbox claims.
++
++Definition of Done:
++- `cargo test --test business_examples` passes.
++- `cargo test` passes.
++- Delivery evidence captures RED/GREEN results and residual risk.
++
+ Validation commands:
+ - `cargo test --test business_examples`
+ - `cargo test`
+
++TDD plan:
++- RED: Add a business example test for the missing `command_hello` capsule.
++- GREEN: Add the smallest command adapter capsule and docs references needed for the test to pass.
++- REFACTOR: Keep the example SDK-free and avoid runtime changes.
++
+ Packet path:
+ - `.ai-platform/specs/v0.5-adapter-protocol/packets/T054.yaml`
+
+@@ -294,6 +319,10 @@ Readiness:
+ - Dependencies satisfied by accepted T053 command adapter runtime.
+ - Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T054.yaml`.
+
++Review:
++- Implementation evidence recorded at `.ai-platform/evidence/T054/summary.md`.
++- Awaiting user acceptance before marking Accepted.
++
+ ### T055: Prepare v0.5.0 Release Readiness
+
+ Status: Draft
+diff --git a/docs/business-examples.md b/docs/business-examples.md
+index ae48d01..dc5245f 100644
+--- a/docs/business-examples.md
++++ b/docs/business-examples.md
+@@ -309,3 +309,36 @@ SkillRun 不接受任意 shell 字符串，而是把诊断动作枚举进 schema
+ - 使用 allowlist，而不是危险命令黑名单。
+ - 不支持任意 shell、管道、重定向或命令串联。
+ - 展示如何把 terminal-shaped capability 收敛成 SOP-backed skill。
++
++---
++
++## 11. B009: Command Hello
++
++**状态**：v0.5.0 Level 0 command adapter reference capsule。
++
++### 业务问题
++
++社区作者不应该为了接入 Ruby、PHP、Go、Bash wrapper 或内部二进制，就等待 SkillRun Core 增加一种“官方语言支持”。他们需要的是一个最小、稳定、可测试的进程合同。
++
++### SkillRun 价值
++
++`command_hello` 展示 `runtime.adapter = "command"` 的最小路径：Manifest 里声明 argv command，schema 来自 `skillrun.config.json`，Core 创建 IPC 文件和 artifact 目录，action 进程只负责读取 env path 并写标准 output envelope。
++
++### Capsule 输入
++
++- `name`
++
++### Capsule 输出
++
++- `adapter`: `command`
++- `message`
++- `input_name`
++- `context_mode`
++- artifact: markdown greeting receipt
++
++### 证明点
++
++- Command adapter 是协议能力，不是新的 Python SDK。
++- stdout/stderr 只进入 run log，不能作为结果通道。
++- Consumer Mode 只信任 Manifest 和静态 schema，不 import action source 提取 metadata。
++- `.skr` 仍然不 vendor dependencies；宿主机需要有声明的 command executable。
+diff --git a/docs/v0.5-adapter-protocol.md b/docs/v0.5-adapter-protocol.md
+index 2129bb7..f605bf0 100644
+--- a/docs/v0.5-adapter-protocol.md
++++ b/docs/v0.5-adapter-protocol.md
+@@ -231,7 +231,14 @@ v0.5.0 的核心是协议边界，不是语言生态大扩张。
+ - 实现 Level 0 command adapter。
+ - 允许显式 command + static schema 的最小语言无关路径。
+ - Consumer Mode 仍只读 Manifest，不猜测源码。
+-- 用至少一个非 Python/Node 示例证明能力，但不将该语言标为 blessed adapter。
++- 用至少一个不依赖 SkillRun SDK 的 command 示例证明能力，但不将该命令背后的语言标为 blessed adapter。
++
++### Slice 5: Command Adapter Example
++
++- `examples/command_hello` 使用 `runtime.adapter = "command"`。
++- schema 来自 `skillrun.config.json`，不是 action source metadata。
++- action 只遵守 IPC/env/output envelope 合同，不调用 SkillRun SDK。
++- stdout/stderr 只作为日志，不能作为结果通道。
+
+ ## Open Questions
+
+diff --git a/examples/command_hello/SKILL.md b/examples/command_hello/SKILL.md
+new file mode 100644
+index 0000000..9024469
+--- /dev/null
++++ b/examples/command_hello/SKILL.md
+@@ -0,0 +1,28 @@
++# Command Hello
++
++## Purpose
++
++This SkillRun capsule demonstrates the Level 0 command adapter.
++It is intentionally small: SkillRun Core starts an explicit argv command, creates
++standard IPC files, and validates the output envelope written by the command.
++
++## SOP
++
++1. Accept a single `name` value and produce a short greeting.
++2. Treat stdout and stderr as logs only. Do not put the result on stdout.
++3. Write the result envelope to the path in `SKILLRUN_OUTPUT_JSON`.
++4. Write artifacts only inside the directory in `SKILLRUN_ARTIFACT_DIR`.
++5. Do not use network access, package managers or dynamic dependency installs.
++
++## Recovery Guidance
++
++If the command adapter fails with `DependencyError`, ask the user to install or
++select the declared command executable. If it fails with `ProtocolViolation`,
++inspect the run logs and ensure the command writes a valid SkillRun envelope.
++
++## Boundary
++
++This is not a new Python adapter and does not use the SkillRun Python SDK. The
++`python action.py` command is just a portable executable command for the example.
++Any language or binary can use the same Level 0 contract when it reads the IPC
++paths and writes the standard output envelope.
+diff --git a/examples/command_hello/action.py b/examples/command_hello/action.py
+new file mode 100644
+index 0000000..77a6294
+--- /dev/null
++++ b/examples/command_hello/action.py
+@@ -0,0 +1,52 @@
++import json
++import os
++from pathlib import Path
++
++
++def read_json_env(name):
++    return json.loads(Path(os.environ[name]).read_text(encoding="utf-8"))
++
++
++def main():
++    input_payload = read_json_env("SKILLRUN_INPUT_JSON")
++    context = read_json_env("SKILLRUN_CONTEXT_JSON")
++    output_path = Path(os.environ["SKILLRUN_OUTPUT_JSON"])
++    artifact_dir = Path(os.environ["SKILLRUN_ARTIFACT_DIR"])
++
++    name = input_payload["name"]
++    print(f"command adapter log: preparing greeting for {name}")
++
++    receipt_name = "command-hello-receipt.md"
++    artifact_dir.mkdir(parents=True, exist_ok=True)
++    (artifact_dir / receipt_name).write_text(
++        f"# Command Hello Receipt\n\n"
++        f"- input name: {name}\n"
++        f"- mode: {context['mode']}\n"
++        f"- adapter: command\n",
++        encoding="utf-8",
++    )
++
++    envelope = {
++        "ok": True,
++        "output": {
++            "adapter": "command",
++            "message": f"hello {name} from command adapter",
++            "input_name": name,
++            "context_mode": context["mode"],
++        },
++        "artifacts": [
++            {
++                "kind": "markdown",
++                "path": receipt_name,
++                "description": "Command adapter greeting receipt",
++            }
++        ],
++        "display": {
++            "markdown": f"hello {name} from command adapter",
++        },
++    }
++    output_path.write_text(json.dumps(envelope, ensure_ascii=False, indent=2), encoding="utf-8")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/examples/command_hello/examples/default.input.json b/examples/command_hello/examples/default.input.json
+new file mode 100644
+index 0000000..3809185
+--- /dev/null
++++ b/examples/command_hello/examples/default.input.json
+@@ -0,0 +1,3 @@
++{
++  "name": "Ada"
++}
+diff --git a/examples/command_hello/skillrun.config.json b/examples/command_hello/skillrun.config.json
+new file mode 100644
+index 0000000..9578012
+--- /dev/null
++++ b/examples/command_hello/skillrun.config.json
+@@ -0,0 +1,50 @@
++{
++  "runtime": {
++    "adapter": "command",
++    "command": ["python", "action.py"],
++    "timeout": "10s"
++  },
++  "permissions": {
++    "files": {
++      "read": [".skillrun/runs/**"],
++      "write": [".skillrun/runs/**"]
++    },
++    "network": {
++      "outbound": []
++    },
++    "env": {
++      "read": []
++    }
++  },
++  "input_schema": {
++    "type": "object",
++    "required": ["name"],
++    "additionalProperties": false,
++    "properties": {
++      "name": {
++        "type": "string",
++        "minLength": 1
++      }
++    }
++  },
++  "output_schema": {
++    "type": "object",
++    "required": ["adapter", "message", "input_name", "context_mode"],
++    "additionalProperties": false,
++    "properties": {
++      "adapter": {
++        "type": "string",
++        "const": "command"
++      },
++      "message": {
++        "type": "string"
++      },
++      "input_name": {
++        "type": "string"
++      },
++      "context_mode": {
++        "type": "string"
++      }
++    }
++  }
++}
+diff --git a/tests/business_examples.rs b/tests/business_examples.rs
+index e40a3b0..1c1f88c 100644
+--- a/tests/business_examples.rs
++++ b/tests/business_examples.rs
+@@ -382,3 +382,53 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
+
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn command_adapter_example_capsule_proves_level_zero_ipc() {
++    let output_root = temp_dir("business-command-adapter");
++    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/command_hello");
++    let capsule = output_root.join("command_hello");
++    copy_dir(&source, &capsule);
++    let cwd = capsule.to_string_lossy().to_string();
++
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
++    assert_success(&manifest, "command adapter manifest");
++    let manifest_yaml =
++        fs::read_to_string(capsule.join(".skillrun/manifest.generated.yaml")).unwrap();
++    assert!(manifest_yaml.contains("adapter: command"));
++    assert!(manifest_yaml.contains("protocol_version: adapter.v1"));
++    assert!(manifest_yaml.contains("- python"));
++    assert!(manifest_yaml.contains("- action.py"));
++
++    let check = run_skillrun(&["check", "--cwd", &cwd]);
++    assert_success(&check, "command adapter check");
++
++    let test = run_skillrun(&["test", "--cwd", &cwd]);
++    let test_stdout = assert_success(&test, "command adapter test");
++    assert!(!test_stdout.contains("command adapter log"));
++    let test_envelope: Value = serde_json::from_str(&test_stdout).expect("test JSON");
++    assert_eq!(test_envelope["ok"], true);
++    assert_eq!(test_envelope["output"]["adapter"], "command");
++    assert_eq!(
++        test_envelope["output"]["message"],
++        "hello Ada from command adapter"
++    );
++    assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
++    let run_dir = PathBuf::from(test_envelope["run_dir"].as_str().unwrap());
++    let stdout_log = fs::read_to_string(run_dir.join("stdout.log")).expect("stdout log readable");
++    assert!(stdout_log.contains("command adapter log"));
++
++    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
++    let serve_stdout = assert_success(&serve, "command adapter serve dry-run");
++    let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
++    assert_eq!(contract["tools"][0]["name"], "command_hello");
++
++    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
++    assert_success(&pack, "command adapter pack");
++    assert!(capsule
++        .join("dist")
++        .join("command_hello-0.4.2.skr")
++        .is_file());
++
++    fs::remove_dir_all(output_root).ok();
++}

@@ -309,3 +309,36 @@ SkillRun 不接受任意 shell 字符串，而是把诊断动作枚举进 schema
 - 使用 allowlist，而不是危险命令黑名单。
 - 不支持任意 shell、管道、重定向或命令串联。
 - 展示如何把 terminal-shaped capability 收敛成 SOP-backed skill。
+
+---
+
+## 11. B009: Command Hello
+
+**状态**：v0.5.0 Level 0 command adapter reference capsule。
+
+### 业务问题
+
+社区作者不应该为了接入 Ruby、PHP、Go、Bash wrapper 或内部二进制，就等待 SkillRun Core 增加一种“官方语言支持”。他们需要的是一个最小、稳定、可测试的进程合同。
+
+### SkillRun 价值
+
+`command_hello` 展示 `runtime.adapter = "command"` 的最小路径：Manifest 里声明 argv command，schema 来自 `skillrun.config.json`，Core 创建 IPC 文件和 artifact 目录，action 进程只负责读取 env path 并写标准 output envelope。
+
+### Capsule 输入
+
+- `name`
+
+### Capsule 输出
+
+- `adapter`: `command`
+- `message`
+- `input_name`
+- `context_mode`
+- artifact: markdown greeting receipt
+
+### 证明点
+
+- Command adapter 是协议能力，不是新的 Python SDK。
+- stdout/stderr 只进入 run log，不能作为结果通道。
+- Consumer Mode 只信任 Manifest 和静态 schema，不 import action source 提取 metadata。
+- `.skr` 仍然不 vendor dependencies；宿主机需要有声明的 command executable。

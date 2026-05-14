@@ -1,0 +1,50 @@
+{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "10s"
+  },
+  "permissions": {
+    "files": {
+      "read": [".skillrun/runs/**"],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": []
+    },
+    "env": {
+      "read": []
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["adapter", "message", "input_name", "context_mode"],
+    "additionalProperties": false,
+    "properties": {
+      "adapter": {
+        "type": "string",
+        "const": "command"
+      },
+      "message": {
+        "type": "string"
+      },
+      "input_name": {
+        "type": "string"
+      },
+      "context_mode": {
+        "type": "string"
+      }
+    }
+  }
+}

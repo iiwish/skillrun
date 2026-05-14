@@ -263,7 +263,7 @@ Review:
 
 ### T054: Add Command Adapter Example Capsule
 
-Status: Ready
+Status: Needs_Review
 Priority: P1
 Depends on: T053
 Blocks: T055
@@ -280,9 +280,34 @@ Allowed files:
 - `docs/v0.5-adapter-protocol.md`
 - `tests/business_examples.rs`
 
+Test targets:
+- `tests/business_examples.rs`
+
+Deliverables:
+- A small runnable `examples/command_hello` command-adapter capsule.
+- Static input/output schemas in `skillrun.config.json`.
+- Business example coverage for manifest, check, test, serve dry-run and pack.
+- Docs that frame the example as Level 0 command adapter, not a new blessed language adapter.
+
+Acceptance criteria:
+- `command_hello` can generate a Manifest with `runtime.adapter: command`.
+- `command_hello` can run through `skillrun test` and return a valid envelope.
+- stdout/stderr are logs and not the result channel.
+- The example does not require package installation, vendored dependencies, registry behavior or sandbox claims.
+
+Definition of Done:
+- `cargo test --test business_examples` passes.
+- `cargo test` passes.
+- Delivery evidence captures RED/GREEN results and residual risk.
+
 Validation commands:
 - `cargo test --test business_examples`
 - `cargo test`
+
+TDD plan:
+- RED: Add a business example test for the missing `command_hello` capsule.
+- GREEN: Add the smallest command adapter capsule and docs references needed for the test to pass.
+- REFACTOR: Keep the example SDK-free and avoid runtime changes.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T054.yaml`
@@ -293,6 +318,10 @@ Evidence required:
 Readiness:
 - Dependencies satisfied by accepted T053 command adapter runtime.
 - Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T054.yaml`.
+
+Review:
+- Implementation evidence recorded at `.ai-platform/evidence/T054/summary.md`.
+- Awaiting user acceptance before marking Accepted.
 
 ### T055: Prepare v0.5.0 Release Readiness
 
