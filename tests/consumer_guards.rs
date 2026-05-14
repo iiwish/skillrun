@@ -628,3 +628,74 @@ fn check_does_not_import_js_action_for_metadata() {
 
     fs::remove_dir_all(output_root).ok();
 }
+
+#[test]
+fn check_reports_command_adapter_missing_executable_without_importing_action_source() {
+    let output_root = temp_dir("check-command-missing-executable");
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
+    let marker = output_root.join("command-import-marker.txt");
+    fs::write(
+        capsule.join("action.rb"),
+        format!(
+            "File.write({}, 'imported')\n",
+            serde_json::to_string(&marker.to_string_lossy().to_string()).unwrap()
+        ),
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["skillrun-missing-command-executable", "action.rb"]
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should support command adapter\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    assert!(
+        !marker.exists(),
+        "manifest must not import command action source"
+    );
+
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&check, "command adapter missing executable check");
+    assert!(stdout.contains("status: dependency-error"));
+    assert!(stdout.contains(
+        "executable: skillrun-missing-command-executable required: present detected: missing status: missing"
+    ));
+    assert!(
+        !marker.exists(),
+        "check must not import command action source"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}

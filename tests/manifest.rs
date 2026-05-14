@@ -418,6 +418,129 @@ fn manifest_fails_when_action_is_missing() {
 }
 
 #[test]
+fn manifest_generates_command_adapter_with_static_schemas_and_argv() {
+    let output_root = temp_dir("manifest-command-adapter");
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
+    fs::write(
+        capsule.join("action.rb"),
+        "puts 'not imported by manifest'\n",
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["ruby", "action.rb"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(
+        manifest.status.success(),
+        "manifest should support command adapter static schema\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let manifest_yaml = manifest_yaml(&capsule);
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "adapter"]),
+        "command"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "protocol_version"]),
+        "adapter.v1"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "command", "0"]),
+        "ruby"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "command", "1"]),
+        "action.rb"
+    );
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["schemas", "input", "properties", "name", "type"]
+        ),
+        "string"
+    );
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["schemas", "output", "properties", "message", "type"]
+        ),
+        "string"
+    );
+    assert_source_hash(
+        &fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable"),
+        "action.rb",
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_rejects_command_adapter_shell_string() {
+    let output_root = temp_dir("manifest-command-shell-string");
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(&capsule).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
+    fs::write(capsule.join("action.rb"), "puts 'hello'\n").expect("action should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": "ruby action.rb"
+  },
+  "input_schema": { "type": "object" },
+  "output_schema": { "type": "object" }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("runtime.command must be an array of strings"));
+    assert!(stderr.contains("shell strings are not supported"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn manifest_metadata_extraction_times_out() {
     let output_root = temp_dir("manifest-timeout");
     let capsule = output_root.join("slow_action");

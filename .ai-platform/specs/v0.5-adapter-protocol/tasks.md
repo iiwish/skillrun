@@ -136,7 +136,7 @@ Acceptance:
 
 ### T052: Support Static Schema And Command Runtime Manifest Generation
 
-Status: Ready
+Status: Needs_Review
 Priority: P0
 Depends on: T051
 Blocks: T053

@@ -1,0 +1,532 @@
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index 5c244db..5ab842c 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -136,7 +136,7 @@ Acceptance:
+ 
+ ### T052: Support Static Schema And Command Runtime Manifest Generation
+ 
+-Status: Ready
++Status: Needs_Review
+ Priority: P0
+ Depends on: T051
+ Blocks: T053
+diff --git a/src/config.rs b/src/config.rs
+index f8c4ca2..9a79036 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -2,16 +2,24 @@ use serde::Serialize;
+ use std::fs;
+ use std::path::Path;
+ 
++use crate::schemas::Schemas;
++
+ #[derive(Debug, Serialize)]
+ pub struct CapsuleConfig {
+     pub runtime: RuntimeConfig,
+     pub permissions: ManifestPermissions,
++    #[serde(skip_serializing)]
++    pub schemas: Option<Schemas>,
+ }
+ 
+ #[derive(Debug, Serialize)]
+ pub struct RuntimeConfig {
+     pub adapter: String,
+     pub entrypoint: String,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub command: Option<Vec<String>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub protocol_version: Option<String>,
+     pub timeout: String,
+     pub requirements: RuntimeRequirements,
+ }
+@@ -63,6 +71,7 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
+         return Ok(CapsuleConfig {
+             runtime: default_runtime_config(),
+             permissions: default_permissions(),
++            schemas: None,
+         });
+     }
+ 
+@@ -79,22 +88,56 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
+         .unwrap_or("python")
+         .to_string();
+ 
++    let timeout = runtime
++        .get("timeout")
++        .and_then(serde_json::Value::as_str)
++        .unwrap_or("30s")
++        .to_string();
++
++    let (runtime, schemas) = if adapter == "command" {
++        let command = parse_command(runtime.get("command"))?;
++        let entrypoint = runtime
++            .get("entrypoint")
++            .and_then(serde_json::Value::as_str)
++            .map(str::to_string)
++            .unwrap_or_else(|| command_entrypoint(&command));
++        let executable = command
++            .first()
++            .expect("parse_command should reject empty command")
++            .clone();
++        (
++            RuntimeConfig {
++                adapter,
++                entrypoint,
++                command: Some(command),
++                protocol_version: Some("adapter.v1".to_string()),
++                timeout,
++                requirements: runtime_requirements_for_command(&executable),
++            },
++            Some(parse_static_schemas(&json)?),
++        )
++    } else {
++        (
++            RuntimeConfig {
++                entrypoint: runtime
++                    .get("entrypoint")
++                    .and_then(serde_json::Value::as_str)
++                    .unwrap_or("action.py")
++                    .to_string(),
++                command: None,
++                protocol_version: None,
++                timeout,
++                requirements: runtime_requirements_for_adapter(&adapter),
++                adapter,
++            },
++            None,
++        )
++    };
++
+     Ok(CapsuleConfig {
+-        runtime: RuntimeConfig {
+-            entrypoint: runtime
+-                .get("entrypoint")
+-                .and_then(serde_json::Value::as_str)
+-                .unwrap_or("action.py")
+-                .to_string(),
+-            timeout: runtime
+-                .get("timeout")
+-                .and_then(serde_json::Value::as_str)
+-                .unwrap_or("30s")
+-                .to_string(),
+-            requirements: runtime_requirements_for_adapter(&adapter),
+-            adapter,
+-        },
++        runtime,
+         permissions: parse_permissions(json.get("permissions"))?,
++        schemas,
+     })
+ }
+ 
+@@ -170,6 +213,8 @@ fn default_runtime_config() -> RuntimeConfig {
+     RuntimeConfig {
+         adapter: "python".to_string(),
+         entrypoint: "action.py".to_string(),
++        command: None,
++        protocol_version: None,
+         timeout: "30s".to_string(),
+         requirements: runtime_requirements_for_adapter("python"),
+     }
+@@ -195,6 +240,13 @@ pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
+                 required_for: vec!["metadata".to_string(), "runtime".to_string()],
+             }],
+         },
++        "command" => RuntimeRequirements {
++            executable: ExecutableRequirement {
++                name: "command".to_string(),
++                version: "present".to_string(),
++            },
++            packages: Vec::new(),
++        },
+         other => RuntimeRequirements {
+             executable: ExecutableRequirement {
+                 name: other.to_string(),
+@@ -204,3 +256,71 @@ pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
+         },
+     }
+ }
++
++pub fn runtime_requirements_for_command(executable: &str) -> RuntimeRequirements {
++    RuntimeRequirements {
++        executable: ExecutableRequirement {
++            name: executable.to_string(),
++            version: "present".to_string(),
++        },
++        packages: Vec::new(),
++    }
++}
++
++fn parse_command(value: Option<&serde_json::Value>) -> Result<Vec<String>, String> {
++    let Some(value) = value else {
++        return Err("runtime.command is required when runtime.adapter is command".to_string());
++    };
++    if value.is_string() {
++        return Err(
++            "runtime.command must be an array of strings; shell strings are not supported"
++                .to_string(),
++        );
++    }
++    let values = value
++        .as_array()
++        .ok_or_else(|| "runtime.command must be an array of strings".to_string())?;
++    if values.is_empty() {
++        return Err("runtime.command must not be empty".to_string());
++    }
++    values
++        .iter()
++        .map(|item| {
++            item.as_str()
++                .filter(|part| !part.trim().is_empty())
++                .map(str::to_string)
++                .ok_or_else(|| "runtime.command must contain only non-empty strings".to_string())
++        })
++        .collect()
++}
++
++fn command_entrypoint(command: &[String]) -> String {
++    command
++        .iter()
++        .skip(1)
++        .find(|part| !part.starts_with('-'))
++        .cloned()
++        .unwrap_or_else(|| command[0].clone())
++}
++
++fn parse_static_schemas(json: &serde_json::Value) -> Result<Schemas, String> {
++    let input = json
++        .get("input_schema")
++        .cloned()
++        .ok_or_else(|| "input_schema is required when runtime.adapter is command".to_string())?;
++    let output = json
++        .get("output_schema")
++        .cloned()
++        .ok_or_else(|| "output_schema is required when runtime.adapter is command".to_string())?;
++    ensure_schema_object(&input, "input_schema")?;
++    ensure_schema_object(&output, "output_schema")?;
++    Ok(Schemas { input, output })
++}
++
++fn ensure_schema_object(value: &serde_json::Value, name: &str) -> Result<(), String> {
++    if value.as_object().is_some() {
++        Ok(())
++    } else {
++        Err(format!("{name} must be a JSON Schema object"))
++    }
++}
+diff --git a/src/manifest.rs b/src/manifest.rs
+index 32de5bc..5804db9 100644
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -102,7 +102,11 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
+         ));
+     }
+ 
+-    let schemas = adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?;
++    let schemas = if let Some(schemas) = config.schemas {
++        schemas
++    } else {
++        adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?
++    };
+     let skill_hash = hashing::sha256_file(&skill_path)?;
+     let action_hash = hashing::sha256_file(&action_path)?;
+     let config_source = if config_path.exists() {
+@@ -197,6 +201,7 @@ fn resolve_capsule_config(
+     Ok(config::CapsuleConfig {
+         runtime: convention_runtime(capsule_dir)?,
+         permissions: config::default_permissions(),
++        schemas: None,
+     })
+ }
+ 
+@@ -220,6 +225,8 @@ fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
+         [(entrypoint, adapter)] => Ok(RuntimeConfig {
+             adapter: (*adapter).to_string(),
+             entrypoint: (*entrypoint).to_string(),
++            command: None,
++            protocol_version: None,
+             timeout: "30s".to_string(),
+             requirements: config::runtime_requirements_for_adapter(adapter),
+         }),
+diff --git a/src/readiness.rs b/src/readiness.rs
+index fe61603..3e1cc53 100644
+--- a/src/readiness.rs
++++ b/src/readiness.rs
+@@ -1,6 +1,7 @@
+ use serde_yaml::Value;
+ use std::fs;
+ use std::path::{Path, PathBuf};
++use std::process::Command;
+ 
+ use crate::adapters;
+ use crate::hashing;
+@@ -373,6 +374,10 @@ fn dependency_checks(
+         return Vec::new();
+     }
+ 
++    if adapter == "command" {
++        return command_dependency_checks(requirements);
++    }
++
+     let Some(discovery) = adapters::discover_runtime(adapter) else {
+         return Vec::new();
+     };
+@@ -409,6 +414,45 @@ fn dependency_checks(
+     checks
+ }
+ 
++fn command_dependency_checks(requirements: &RequirementsView) -> Vec<HostDependencyCheck> {
++    let Some(required) = requirements.executable.as_ref() else {
++        return Vec::new();
++    };
++
++    let detected = detect_command_executable(&required.name);
++    let status = if detected.is_some() {
++        "satisfied"
++    } else {
++        "missing"
++    };
++
++    vec![HostDependencyCheck {
++        kind: "executable",
++        name: required.name.clone(),
++        required: required.version.clone(),
++        detected,
++        status,
++    }]
++}
++
++fn detect_command_executable(name: &str) -> Option<String> {
++    let output = Command::new(name).arg("--version").output().ok()?;
++    if !output.status.success() {
++        return Some("present".to_string());
++    }
++    let text = if output.stdout.is_empty() {
++        String::from_utf8_lossy(&output.stderr).to_string()
++    } else {
++        String::from_utf8_lossy(&output.stdout).to_string()
++    };
++    let detected = text.lines().next().unwrap_or("present").trim();
++    if detected.is_empty() {
++        Some("present".to_string())
++    } else {
++        Some(detected.to_string())
++    }
++}
++
+ fn host_dependency_check(
+     kind: &'static str,
+     name: &str,
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index 62247b2..fa4f82e 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -628,3 +628,74 @@ fn check_does_not_import_js_action_for_metadata() {
+ 
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn check_reports_command_adapter_missing_executable_without_importing_action_source() {
++    let output_root = temp_dir("check-command-missing-executable");
++    let capsule = output_root.join("command_hello");
++    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
++    let marker = output_root.join("command-import-marker.txt");
++    fs::write(
++        capsule.join("action.rb"),
++        format!(
++            "File.write({}, 'imported')\n",
++            serde_json::to_string(&marker.to_string_lossy().to_string()).unwrap()
++        ),
++    )
++    .expect("action should be written");
++    fs::write(
++        capsule.join("examples").join("default.input.json"),
++        r#"{"name":"Ada"}"#,
++    )
++    .expect("example should be written");
++    fs::write(
++        capsule.join("skillrun.config.json"),
++        r#"{
++  "runtime": {
++    "adapter": "command",
++    "command": ["skillrun-missing-command-executable", "action.rb"]
++  },
++  "input_schema": {
++    "type": "object",
++    "required": ["name"],
++    "properties": {
++      "name": { "type": "string" }
++    }
++  },
++  "output_schema": {
++    "type": "object",
++    "required": ["message"],
++    "properties": {
++      "message": { "type": "string" }
++    }
++  }
++}"#,
++    )
++    .expect("config should be written");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should support command adapter\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    assert!(
++        !marker.exists(),
++        "manifest must not import command action source"
++    );
++
++    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
++    let stdout = assert_failure_stdout(&check, "command adapter missing executable check");
++    assert!(stdout.contains("status: dependency-error"));
++    assert!(stdout.contains(
++        "executable: skillrun-missing-command-executable required: present detected: missing status: missing"
++    ));
++    assert!(
++        !marker.exists(),
++        "check must not import command action source"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index cae968e..0b041cc 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -417,6 +417,129 @@ fn manifest_fails_when_action_is_missing() {
+     fs::remove_dir_all(output_root).ok();
+ }
+ 
++#[test]
++fn manifest_generates_command_adapter_with_static_schemas_and_argv() {
++    let output_root = temp_dir("manifest-command-adapter");
++    let capsule = output_root.join("command_hello");
++    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
++    fs::write(
++        capsule.join("action.rb"),
++        "puts 'not imported by manifest'\n",
++    )
++    .expect("action should be written");
++    fs::write(
++        capsule.join("examples").join("default.input.json"),
++        r#"{"name":"Ada"}"#,
++    )
++    .expect("example should be written");
++    fs::write(
++        capsule.join("skillrun.config.json"),
++        r#"{
++  "runtime": {
++    "adapter": "command",
++    "command": ["ruby", "action.rb"],
++    "timeout": "30s"
++  },
++  "input_schema": {
++    "type": "object",
++    "required": ["name"],
++    "additionalProperties": false,
++    "properties": {
++      "name": { "type": "string" }
++    }
++  },
++  "output_schema": {
++    "type": "object",
++    "required": ["message"],
++    "additionalProperties": false,
++    "properties": {
++      "message": { "type": "string" }
++    }
++  }
++}"#,
++    )
++    .expect("config should be written");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(
++        manifest.status.success(),
++        "manifest should support command adapter static schema\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    let manifest_yaml = manifest_yaml(&capsule);
++    assert_eq!(
++        yaml_str_at(&manifest_yaml, &["runtime", "adapter"]),
++        "command"
++    );
++    assert_eq!(
++        yaml_str_at(&manifest_yaml, &["runtime", "protocol_version"]),
++        "adapter.v1"
++    );
++    assert_eq!(
++        yaml_str_at(&manifest_yaml, &["runtime", "command", "0"]),
++        "ruby"
++    );
++    assert_eq!(
++        yaml_str_at(&manifest_yaml, &["runtime", "command", "1"]),
++        "action.rb"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["schemas", "input", "properties", "name", "type"]
++        ),
++        "string"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest_yaml,
++            &["schemas", "output", "properties", "message", "type"]
++        ),
++        "string"
++    );
++    assert_source_hash(
++        &fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable"),
++        "action.rb",
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn manifest_rejects_command_adapter_shell_string() {
++    let output_root = temp_dir("manifest-command-shell-string");
++    let capsule = output_root.join("command_hello");
++    fs::create_dir_all(&capsule).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
++    fs::write(capsule.join("action.rb"), "puts 'hello'\n").expect("action should be written");
++    fs::write(
++        capsule.join("skillrun.config.json"),
++        r#"{
++  "runtime": {
++    "adapter": "command",
++    "command": "ruby action.rb"
++  },
++  "input_schema": { "type": "object" },
++  "output_schema": { "type": "object" }
++}"#,
++    )
++    .expect("config should be written");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++
++    assert!(!manifest.status.success());
++    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
++    assert!(stderr.contains("runtime.command must be an array of strings"));
++    assert!(stderr.contains("shell strings are not supported"));
++    assert!(!generated_manifest(&capsule).exists());
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn manifest_metadata_extraction_times_out() {
+     let output_root = temp_dir("manifest-timeout");
