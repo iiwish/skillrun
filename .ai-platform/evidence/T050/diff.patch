@@ -1,0 +1,632 @@
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/packets/T050.yaml b/.ai-platform/specs/v0.5-adapter-protocol/packets/T050.yaml
+new file mode 100644
+index 0000000..aa30e03
+--- /dev/null
++++ b/.ai-platform/specs/v0.5-adapter-protocol/packets/T050.yaml
+@@ -0,0 +1,93 @@
++schema_version: 1
++packet_id: T050-A001
++task_id: T050
++feature_id: v0.5-adapter-protocol
++mode: direct_execute_fallback
++governance_inputs:
++  constitution: .ai-platform/memory/constitution.md
++  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
++  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
++  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
++  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
++  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
++work_unit:
++  title: Publish Adapter Protocol Contract
++  goal: Create the public Adapter Protocol contract and update architecture docs so v0.5.0 has a stable language-neutral boundary before runtime implementation begins.
++  requirements:
++    - FR-050-001
++    - FR-050-002
++    - FR-050-003
++    - FR-050-004
++    - NFR-050-003
++  dependencies:
++    - v0.4.2 release baseline on main
++  blocks:
++    - T051
++    - T052
++codebase_context:
++  source_docs:
++    - docs/ssot.md
++    - docs/v0.5-adapter-protocol.md
++    - README.md
++    - README.zh-CN.md
++  existing_patterns:
++    - docs/README.md links release/design documentation.
++    - docs/ssot.md is the project-level SSOT and should not be rewritten wholesale.
++    - v0.4.2 docs distinguish Skill Capsule, Manifest, Consumer Mode and reference capsules.
++  boundaries:
++    - Adapter Protocol defines the southbound Core-to-adapter contract.
++    - Language Adapter is an implementation of that protocol.
++    - SDK is authoring convenience and must not become runtime authority.
++execution_constraints:
++  allowed_files:
++    - docs/adapter-protocol.md
++    - docs/v0.5-adapter-protocol.md
++    - docs/README.md
++    - docs/ssot.md
++    - README.md
++    - README.zh-CN.md
++    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
++    - .ai-platform/evidence/T050/**
++  forbidden_changes:
++    - Runtime implementation changes.
++    - Manifest schema changes.
++    - New language adapter implementation.
++    - Registry, package manager, dependency install or sandbox claims.
++    - Expanding v0.5 beyond Level 0 command adapter positioning.
++  delegation: direct execute fallback is acceptable because T050 is a bounded documentation task and no subagent execution was explicitly requested for this packet.
++tdd_plan:
++  red: No behavior test required for documentation-only T050; use diff/check validation and SSOT consistency review.
++  green: Add or refine protocol documentation until the docs clearly define lifecycle, IPC/envelope discipline, capability levels, Consumer Mode boundary and command-adapter non-goals.
++  refactor: Keep terminology consistent and remove duplicated or overbroad claims after validation.
++validation_loop:
++  commands:
++    - git diff --check
++    - cargo test --test business_examples
++    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T050
++  expected_signals:
++    - No whitespace errors.
++    - Existing business examples still pass.
++    - Delivery artifact validator reports no structural blocker for T050.
++  retry_budget: 2
++evidence_contract:
++  paths:
++    - .ai-platform/evidence/T050/summary.md
++    - .ai-platform/evidence/T050/test-results.md
++    - .ai-platform/evidence/T050/diff.patch
++  required_content:
++    - Changed files.
++    - Commands run and outcomes.
++    - Diff summary.
++    - Spec compliance review.
++    - Residual risk.
++review_contract:
++  spec_compliance: Verify FR-050-001 through FR-050-004 and NFR-050-003 are covered without scope drift.
++  bug_quality: Verify docs do not imply sandboxing, dependency installation, shell execution or new blessed language support.
++  qa_acceptance: User review required before marking T050 Accepted.
++handoff:
++  status_after_execution: Needs_Review
++  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
++stop_conditions:
++  - User rejects command adapter as v0.5 implementation target.
++  - Protocol docs require runtime decisions not covered by the confirmed spec.
++  - Validation failure cannot be resolved within the T050 allowed files.
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/plan.md b/.ai-platform/specs/v0.5-adapter-protocol/plan.md
+index 1089be7..410e446 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/plan.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/plan.md
+@@ -1,10 +1,10 @@
+ # SkillRun v0.5.0 Plan: Language-agnostic Adapter Protocol
+ 
+ Version: v0.5.0
+-Status: Ready_For_User_Review
++Status: Confirmed
+ Last updated: 2026-05-14
+ Source spec: `.ai-platform/specs/v0.5-adapter-protocol/spec.md`
+-Review: Prepared after v0.5 spec rereview passed; implementation requires user acceptance of this plan and tasks.
++Review: User requested review, commit and continuation on 2026-05-14; plan accepted for packetized execution.
+ 
+ ## Decision Summary
+ 
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/spec.md b/.ai-platform/specs/v0.5-adapter-protocol/spec.md
+index f31286c..0fb3fba 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/spec.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/spec.md
+@@ -1,11 +1,11 @@
+ # SkillRun v0.5.0 Feature Spec: Language-agnostic Adapter Protocol
+ 
+ Version: v0.5.0
+-Status: Ready_For_User_Review
++Status: Confirmed
+ Created: 2026-05-14
+ Updated: 2026-05-14
+ Source: User asked to start v0.5.0 from documentation and clarify the core problem.
+-Review: User requested review and continuation on 2026-05-14; assistant rereview found no blocking issue and prepared plan/work graph for user review.
++Review: User requested review, commit and continuation on 2026-05-14; assistant rereview found no blocking issue and treated the continuation request as approval to proceed with packetized execution.
+ 
+ ## 一句话判断
+ 
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index aad2e1c..ed9c452 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -1,10 +1,10 @@
+ # SkillRun v0.5.0 Work Graph: Language-agnostic Adapter Protocol
+ 
+ Version: v0.5.0
+-Status: Ready_For_User_Review
++Status: Confirmed
+ Source spec: `.ai-platform/specs/v0.5-adapter-protocol/spec.md`
+ Last updated: 2026-05-14
+-Review: Prepared after v0.5 spec rereview passed; implementation requires user acceptance.
++Review: User requested review, commit and continuation on 2026-05-14; work graph accepted for packetized execution.
+ 
+ ## Work Graph Summary
+ 
+@@ -19,7 +19,7 @@ Define and prove a language-agnostic Adapter Protocol with Level 0 command adapt
+ 
+ ### T050: Publish Adapter Protocol Contract
+ 
+-Status: Draft
++Status: Needs_Review
+ Priority: P0
+ Depends on: v0.4.2
+ Blocks: T051, T052
+@@ -38,10 +38,35 @@ Allowed files:
+ - `README.md`
+ - `README.zh-CN.md`
+ 
++Test targets:
++- Documentation consistency review.
++- `cargo test --test business_examples`
++
++Deliverables:
++- Public `docs/adapter-protocol.md` contract.
++- Updated architecture or index docs linking the protocol.
++- Updated v0.5 planning/evidence references if needed.
++
++Acceptance criteria:
++- Adapter Protocol lifecycle, metadata phase, run phase, envelopes and capability levels are defined.
++- Docs distinguish Adapter Protocol, Language Adapter and SDK.
++- Docs do not imply sandboxing, dependency installation, shell execution or new blessed language support.
++- Existing business examples still pass.
++
++Definition of Done:
++- `git diff --check` passes.
++- `cargo test --test business_examples` passes.
++- Delivery artifact validator reports no blocking errors for T050.
++
+ Validation commands:
+ - `git diff --check`
+ - `cargo test --test business_examples`
+ 
++TDD plan:
++- RED: Documentation-only task; use protocol consistency review instead of behavior RED.
++- GREEN: Add protocol docs and links until acceptance criteria are met.
++- REFACTOR: Remove duplicate or overbroad wording after validation.
++
+ Packet path:
+ - `.ai-platform/specs/v0.5-adapter-protocol/packets/T050.yaml`
+ 
+@@ -208,5 +233,5 @@ Evidence required:
+ 
+ ## User Review Gate
+ 
+-- Approval: pending.
+-- Reviewer notes: Implementation must not start until this work graph is accepted and task packets are generated for the selected Ready task.
++- Approval: accepted by user's 2026-05-14 review/commit/continue request.
++- Reviewer notes: T050 is Ready after packet generation. Later tasks remain Draft until their dependencies are completed and packets are generated.
+diff --git a/README.md b/README.md
+index 48dcc89..ede6d3a 100644
+--- a/README.md
++++ b/README.md
+@@ -233,6 +233,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
+ | `v0.2` | Real MCP stdio server and public release candidate readiness |
+ | `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
+ | `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
++| `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
+ 
+ ## Classic Business Examples
+ 
+@@ -254,11 +255,13 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
+ - [Documentation index](docs/README.md)
+ - [MVP contract](docs/mvp.md)
+ - [Architecture SSOT](docs/ssot.md)
++- [Adapter Protocol](docs/adapter-protocol.md)
+ - [Positioning](docs/positioning.md)
+ - [Vision](docs/vision.md)
+ - [Trust model](docs/trust-model.md)
+ - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
+ - [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
++- [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
+ - [Business examples](docs/business-examples.md)
+ - [Test strategy](docs/testing.md)
+ - [Release policy](docs/release-policy.md)
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 61c91d9..98048d4 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -232,6 +232,7 @@ SkillRun 对信任边界保持诚实：
+ | `v0.2` | Real MCP stdio server 和 public release candidate readiness |
+ | `v0.3` | Adapter boundary、JS Action Alpha via `action.mjs`、`doctor` 和 explicit TypeScript boundary |
+ | `v0.4` | Portable Consumer Checks、dependency-aware Consumer Mode、`check` 和 structured `DependencyError` |
++| `v0.5` | Language-agnostic Adapter Protocol 和 Level 0 command adapter |
+ 
+ ## 经典业务示例
+ 
+@@ -253,11 +254,13 @@ SkillRun 的业务证明刻意保持收敛：
+ - [文档入口](docs/README.md)
+ - [MVP 合同](docs/mvp.md)
+ - [架构 SSOT](docs/ssot.md)
++- [Adapter Protocol](docs/adapter-protocol.md)
+ - [项目定位](docs/positioning.md)
+ - [愿景](docs/vision.md)
+ - [信任模型](docs/trust-model.md)
+ - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
+ - [v0.4.2 官方参考胶囊](docs/v0.4.2-official-capsules.md)
++- [v0.5 Adapter Protocol 计划](docs/v0.5-adapter-protocol.md)
+ - [经典业务示例](docs/business-examples.md)
+ - [测试策略](docs/testing.md)
+ - [发布策略](docs/release-policy.md)
+diff --git a/docs/README.md b/docs/README.md
+index c560cb7..2af2bf0 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -14,13 +14,14 @@
+ 
+ - [MVP 合同](mvp.md)：MVP 范围、非目标和发布边界。
+ - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
++- [Adapter Protocol](adapter-protocol.md)：v0.5 起的 Core-to-adapter 南向协议、capability levels、IPC/envelope 和 conformance 边界。
+ - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
+ - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
+ - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。
+ - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
+ - [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
+ - [v0.4.2 官方参考胶囊](v0.4.2-official-capsules.md)：Commit Message Gate、Bounded File Patcher 和 Read-only Diagnostics Runner。
+-- [v0.5 Adapter Protocol Draft](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 的设计草案。
++- [v0.5 Adapter Protocol](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 和 Level 0 command adapter 的 v0.5 计划。
+ - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
+ 
+ ## 维护者流程
+diff --git a/docs/adapter-protocol.md b/docs/adapter-protocol.md
+new file mode 100644
+index 0000000..4de2504
+--- /dev/null
++++ b/docs/adapter-protocol.md
+@@ -0,0 +1,305 @@
++# SkillRun Adapter Protocol
++
++**文档状态**：v0.5.0 confirmed contract
++**版本**：adapter.v1 draft for v0.5.0 implementation
++**最后更新**：2026-05-14
++
++---
++
++## 一句话判断
++
++Adapter Protocol 是 SkillRun Core 与 action 进程之间的南向执行契约：Core 只认 Manifest、IPC、Envelope 和 Artifact；语言生态通过 adapter 接入，但不能反向定义 SkillRun 的产品语义。
++
++这份文档不是“新增一门语言”的说明，而是定义未来所有语言接入必须遵守的最小边界。
++
++## 边界模型
++
++```text
++MCP / CLI / Agent Framework
++        |
++        v
++SkillRun Core
++  - Rust runtime
++  - reads Manifest
++  - validates schemas, permissions, source hashes
++  - creates IPC files and artifact directory
++  - validates output/error/artifact envelopes
++        |
++        v
++Adapter Protocol
++  - metadata phase
++  - run phase
++  - runtime requirement diagnostics
++  - stdout/stderr discipline
++        |
++        v
++Language Adapter / Command Adapter
++        |
++        v
++Action code
++```
++
++Core 的稳定职责：
++
++- 读取 Manifest。
++- 准备 `SKILLRUN_CONTEXT_JSON`、`SKILLRUN_INPUT_JSON`、`SKILLRUN_OUTPUT_JSON`、`SKILLRUN_ARTIFACT_DIR`。
++- 启动 adapter 或 command 进程。
++- 校验 output/error envelope。
++- 校验 artifact path 不能逃逸 artifact directory。
++- 记录 run evidence。
++
++Adapter 的稳定职责：
++
++- 在 metadata phase 中报告 schema、capability 和 runtime requirements。
++- 在 run phase 中读取 IPC 输入，执行 action，并写入 envelope。
++- 将 stdout/stderr 当作日志，而不是结构化结果。
++- 把 adapter/language/package-manager 细节留在 adapter 层，不污染 Core。
++
++SDK 的稳定职责：
++
++- 降低作者实现 `preflight`、`run`、typed I/O 和 artifact 的摩擦。
++- 不成为 runtime authority。
++- 不绕过 Manifest、IPC 或 envelope contract。
++
++## Capability Levels
++
++### Level 0: Command Adapter
++
++Level 0 是 v0.5.0 必须实际实现的最小语言无关路径。
++
++约束：
++
++- `runtime.adapter = "command"`。
++- `runtime.command` 必须是 argv array，不是 shell string。
++- input/output schema 来自 config 或 Manifest。
++- 不进行动态 metadata import。
++- Consumer Mode 只信任 Manifest。
++- command 进程必须使用标准 IPC 环境变量。
++- command 进程必须写 `SKILLRUN_OUTPUT_JSON`。
++- stdout/stderr 只作为日志。
++- readiness 只诊断 executable 是否存在，不安装依赖。
++
++Level 0 不是 Ruby/PHP/Go 官方支持，也不是通用 shell runner。它证明的是：任何进程只要遵守 SkillRun IPC/envelope contract，就可以被 Core 以语言无关方式调用。
++
++### Level 1: Community Adapter
++
++Level 1 是社区维护的语言 adapter。
++
++要求：
++
++- 实现 metadata phase 和 run phase。
++- 通过 adapter conformance fixtures。
++- 明确 runtime requirements。
++- 可以提供有限 SDK ergonomics。
++- 不承诺由 SkillRun core team 长期维护。
++
++### Level 2: Blessed Adapter
++
++Level 2 是官方维护的 adapter。
++
++要求：
++
++- 通过 conformance fixtures。
++- 有模板、文档、release tests 和 readiness diagnostics。
++- 在 README 和 release notes 中明确列为稳定或 alpha。
++- 维护者愿意承担兼容性与回归风险。
++
++## Metadata Phase
++
++Metadata phase 只存在于 Author Mode，用于生成或刷新 Manifest。
++
++输入：
++
++- capsule root。
++- action entrypoint。
++- adapter runtime config。
++- 不包含 secrets。
++
++输出：
++
++- input schema。
++- output schema。
++- adapter capability。
++- runtime requirements。
++- preflight support marker。
++- artifact support marker。
++
++约束：
++
++- 必须有 timeout。
++- 不执行业务 action。
++- 不注入生产 secrets。
++- 失败应返回可诊断错误，而不是让 Core 猜测 schema。
++
++Consumer Mode 不运行 metadata phase。Consumer Mode 只读取 Manifest，并在 Manifest 缺失、过期或 hash 不匹配时 fail closed。
++
++## Run Phase
++
++Run phase 是 Core 调用 adapter/action 的执行路径。
++
++Core 创建：
++
++```text
++SKILLRUN_CONTEXT_JSON
++SKILLRUN_INPUT_JSON
++SKILLRUN_OUTPUT_JSON
++SKILLRUN_ARTIFACT_DIR
++```
++
++Adapter 必须：
++
++- 读取 context 和 input。
++- 执行 preflight 和 action。
++- 把成功或失败写入 `SKILLRUN_OUTPUT_JSON`。
++- 将 artifact 写入 `SKILLRUN_ARTIFACT_DIR` 内。
++- 不把 stdout 当作 result。
++
++成功 envelope：
++
++```json
++{
++  "ok": true,
++  "result": {},
++  "artifacts": [],
++  "display": {
++    "markdown": "Done."
++  }
++}
++```
++
++失败 envelope：
++
++```json
++{
++  "ok": false,
++  "error": {
++    "code": "PolicyViolation",
++    "message": "Blocked by preflight policy.",
++    "llm_hint": "Ask the user for approval before retrying.",
++    "recoverable": true,
++    "details": {}
++  }
++}
++```
++
++如果 adapter 成功退出但未写 output file，Core 必须返回 `ProtocolViolation`。
++
++## Runtime Requirements
++
++Runtime requirements 是诊断合同，不是安装计划。
++
++允许表达：
++
++- executable 名称和版本期望。
++- package 名称和版本期望。
++- requirements 用于 metadata、runtime 或两者。
++
++禁止承诺：
++
++- 自动安装。
++- 自动创建 virtualenv、node_modules、bundle、composer vendor 或 Go module cache。
++- dependency vendoring。
++- reproducible runtime image。
++
++缺失依赖应映射为 `DependencyError`，并带有可读的恢复建议。
++
++## Conformance Fixtures
++
++v0.5.0 起，adapter 行为应被 conformance fixtures 描述，而不是只靠文档约定。
++
++最小覆盖：
++
++- success envelope 写入 `SKILLRUN_OUTPUT_JSON`。
++- invalid input 在执行前映射为 `ValidationError`。
++- preflight rejection 映射为 `PolicyViolation`。
++- missing executable 映射为 `DependencyError`。
++- malformed output 映射为 `ProtocolViolation`。
++- command exits zero without output file 映射为 `ProtocolViolation`。
++- stdout text 不会成为 result。
++- artifact path traversal 被拒绝。
++- Consumer Mode 不 import source 以提取 metadata。
++
++## Manifest Fields
++
++v0.5.0 推荐 Manifest 记录：
++
++```yaml
++runtime:
++  adapter: command
++  protocol_version: adapter.v1
++  command:
++    - ruby
++    - action.rb
++```
++
++作者侧 `skillrun.config.json` 可以声明：
++
++```json
++{
++  "runtime": {
++    "adapter": "command",
++    "command": ["ruby", "action.rb"],
++    "timeout": "30s"
++  },
++  "input_schema": {
++    "type": "object",
++    "required": ["name"],
++    "additionalProperties": false,
++    "properties": {
++      "name": { "type": "string" }
++    }
++  },
++  "output_schema": {
++    "type": "object",
++    "required": ["message"],
++    "additionalProperties": false,
++    "properties": {
++      "message": { "type": "string" }
++    }
++  }
++}
++```
++
++`command` 必须是 argv array。SkillRun 不应把一个 shell string 交给系统 shell 解释。
++
++## Security Claims
++
++Adapter Protocol 提供的是执行边界和诊断边界，不是 sandbox。
++
++可以诚实声明：
++
++- Consumer Mode 不为 metadata import 未信任源码。
++- stdout/stderr 不被当作成功结果。
++- output/error/artifact contract 由 Core 校验。
++- 缺失依赖以结构化错误暴露。
++- artifact path 受到 Core 校验。
++
++不能声明：
++
++- 任意第三方 action 是安全的。
++- command adapter 是 sandbox。
++- `.skr` 是 secure install format。
++- dependency readiness 等于隔离执行。
++
++SkillRun 的安全叙事必须保持克制：它减少隐式执行、隐式成功和隐式信任，但运行第三方 action 仍然意味着执行第三方代码。
++
++## v0.5.0 Scope
++
++v0.5.0 应交付：
++
++- 公开 Adapter Protocol 文档。
++- Python stable 和 JS alpha 行为到 protocol 的映射。
++- adapter conformance tests 的第一批 fixtures。
++- Level 0 command adapter 的 Manifest/config 支持。
++- Level 0 command adapter runtime。
++- 一个不暗示新 blessed language 的 command adapter 示例。
++
++v0.5.0 不做：
++
++- 完整 TypeScript runtime。
++- package-manager install flow。
++- dependency vendoring。
++- registry 或 marketplace。
++- OS sandbox。
++- 新 MCP transport。
++- `.skr` runtime image。
+diff --git a/docs/ssot.md b/docs/ssot.md
+index 1ebbc00..e3c7109 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -295,6 +295,28 @@ CLI 语言语义必须分阶段：
+ 
+ > **Zero-config 不是猜遍全世界，而是给每种语言一条唯一、稳定、可解释的黄金路径。**
+ 
++### 8.1 v0.5 Adapter Protocol
++
++v0.5 起，语言接入必须被描述为 Adapter Protocol，而不是 Core 中不断增加的语言特判。
++
++稳定边界：
++
++- Core 只认 Manifest、Adapter Protocol、IPC、Envelope 和 Artifact。
++- Language Adapter 实现 metadata phase、run phase 和 runtime requirement diagnostics。
++- SDK 只提供作者体验，不成为 runtime authority。
++- Consumer Mode 不为了 metadata 动态 import 未信任源码。
++
++Level 0 command adapter 是第一条协议原生证明路径：
++
++- `runtime.adapter = "command"`。
++- `runtime.command` 必须是 argv array。
++- schema 来自 config 或 Manifest，不从源码动态提取。
++- command 进程必须读写标准 SkillRun IPC。
++- stdout/stderr 只作为日志。
++- readiness 只诊断 executable，不安装依赖。
++
++这不是新增 Ruby/PHP/Go 官方支持，也不是 shell runner。它证明任意进程只要遵守 SkillRun IPC/envelope contract，就能作为低层 adapter 被 Core 调用。
++
+ ---
+ 
+ ## 9. Schema 策略
+diff --git a/docs/v0.5-adapter-protocol.md b/docs/v0.5-adapter-protocol.md
+index 9f3733a..2129bb7 100644
+--- a/docs/v0.5-adapter-protocol.md
++++ b/docs/v0.5-adapter-protocol.md
+@@ -1,6 +1,6 @@
+ # SkillRun v0.5.0: Language-agnostic Adapter Protocol
+ 
+-**文档状态**：Draft
++**文档状态**：Confirmed planning contract
+ **版本**：v0.5.0 design draft
+ **最后更新**：2026-05-14
+ 

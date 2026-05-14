@@ -1,10 +1,10 @@
 # SkillRun v0.5.0 Work Graph: Language-agnostic Adapter Protocol
 
 Version: v0.5.0
-Status: Ready_For_User_Review
+Status: Confirmed
 Source spec: `.ai-platform/specs/v0.5-adapter-protocol/spec.md`
 Last updated: 2026-05-14
-Review: Prepared after v0.5 spec rereview passed; implementation requires user acceptance.
+Review: User requested review, commit and continuation on 2026-05-14; work graph accepted for packetized execution.
 
 ## Work Graph Summary
 
@@ -19,7 +19,7 @@ Define and prove a language-agnostic Adapter Protocol with Level 0 command adapt
 
 ### T050: Publish Adapter Protocol Contract
 
-Status: Draft
+Status: Needs_Review
 Priority: P0
 Depends on: v0.4.2
 Blocks: T051, T052
@@ -38,9 +38,34 @@ Allowed files:
 - `README.md`
 - `README.zh-CN.md`
 
+Test targets:
+- Documentation consistency review.
+- `cargo test --test business_examples`
+
+Deliverables:
+- Public `docs/adapter-protocol.md` contract.
+- Updated architecture or index docs linking the protocol.
+- Updated v0.5 planning/evidence references if needed.
+
+Acceptance criteria:
+- Adapter Protocol lifecycle, metadata phase, run phase, envelopes and capability levels are defined.
+- Docs distinguish Adapter Protocol, Language Adapter and SDK.
+- Docs do not imply sandboxing, dependency installation, shell execution or new blessed language support.
+- Existing business examples still pass.
+
+Definition of Done:
+- `git diff --check` passes.
+- `cargo test --test business_examples` passes.
+- Delivery artifact validator reports no blocking errors for T050.
+
 Validation commands:
 - `git diff --check`
 - `cargo test --test business_examples`
+
+TDD plan:
+- RED: Documentation-only task; use protocol consistency review instead of behavior RED.
+- GREEN: Add protocol docs and links until acceptance criteria are met.
+- REFACTOR: Remove duplicate or overbroad wording after validation.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T050.yaml`
@@ -208,5 +233,5 @@ Evidence required:
 
 ## User Review Gate
 
-- Approval: pending.
-- Reviewer notes: Implementation must not start until this work graph is accepted and task packets are generated for the selected Ready task.
+- Approval: accepted by user's 2026-05-14 review/commit/continue request.
+- Reviewer notes: T050 is Ready after packet generation. Later tasks remain Draft until their dependencies are completed and packets are generated.

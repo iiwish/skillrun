@@ -14,13 +14,14 @@
 
 - [MVP 合同](mvp.md)：MVP 范围、非目标和发布边界。
 - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
+- [Adapter Protocol](adapter-protocol.md)：v0.5 起的 Core-to-adapter 南向协议、capability levels、IPC/envelope 和 conformance 边界。
 - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
 - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
 - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。
 - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
 - [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
 - [v0.4.2 官方参考胶囊](v0.4.2-official-capsules.md)：Commit Message Gate、Bounded File Patcher 和 Read-only Diagnostics Runner。
-- [v0.5 Adapter Protocol Draft](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 的设计草案。
+- [v0.5 Adapter Protocol](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 和 Level 0 command adapter 的 v0.5 计划。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
 ## 维护者流程

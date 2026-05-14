@@ -1,10 +1,10 @@
 # SkillRun v0.5.0 Plan: Language-agnostic Adapter Protocol
 
 Version: v0.5.0
-Status: Ready_For_User_Review
+Status: Confirmed
 Last updated: 2026-05-14
 Source spec: `.ai-platform/specs/v0.5-adapter-protocol/spec.md`
-Review: Prepared after v0.5 spec rereview passed; implementation requires user acceptance of this plan and tasks.
+Review: User requested review, commit and continuation on 2026-05-14; plan accepted for packetized execution.
 
 ## Decision Summary
 

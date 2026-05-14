@@ -1,0 +1,93 @@
+schema_version: 1
+packet_id: T050-A001
+task_id: T050
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+work_unit:
+  title: Publish Adapter Protocol Contract
+  goal: Create the public Adapter Protocol contract and update architecture docs so v0.5.0 has a stable language-neutral boundary before runtime implementation begins.
+  requirements:
+    - FR-050-001
+    - FR-050-002
+    - FR-050-003
+    - FR-050-004
+    - NFR-050-003
+  dependencies:
+    - v0.4.2 release baseline on main
+  blocks:
+    - T051
+    - T052
+codebase_context:
+  source_docs:
+    - docs/ssot.md
+    - docs/v0.5-adapter-protocol.md
+    - README.md
+    - README.zh-CN.md
+  existing_patterns:
+    - docs/README.md links release/design documentation.
+    - docs/ssot.md is the project-level SSOT and should not be rewritten wholesale.
+    - v0.4.2 docs distinguish Skill Capsule, Manifest, Consumer Mode and reference capsules.
+  boundaries:
+    - Adapter Protocol defines the southbound Core-to-adapter contract.
+    - Language Adapter is an implementation of that protocol.
+    - SDK is authoring convenience and must not become runtime authority.
+execution_constraints:
+  allowed_files:
+    - docs/adapter-protocol.md
+    - docs/v0.5-adapter-protocol.md
+    - docs/README.md
+    - docs/ssot.md
+    - README.md
+    - README.zh-CN.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - .ai-platform/evidence/T050/**
+  forbidden_changes:
+    - Runtime implementation changes.
+    - Manifest schema changes.
+    - New language adapter implementation.
+    - Registry, package manager, dependency install or sandbox claims.
+    - Expanding v0.5 beyond Level 0 command adapter positioning.
+  delegation: direct execute fallback is acceptable because T050 is a bounded documentation task and no subagent execution was explicitly requested for this packet.
+tdd_plan:
+  red: No behavior test required for documentation-only T050; use diff/check validation and SSOT consistency review.
+  green: Add or refine protocol documentation until the docs clearly define lifecycle, IPC/envelope discipline, capability levels, Consumer Mode boundary and command-adapter non-goals.
+  refactor: Keep terminology consistent and remove duplicated or overbroad claims after validation.
+validation_loop:
+  commands:
+    - git diff --check
+    - cargo test --test business_examples
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T050
+  expected_signals:
+    - No whitespace errors.
+    - Existing business examples still pass.
+    - Delivery artifact validator reports no structural blocker for T050.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T050/summary.md
+    - .ai-platform/evidence/T050/test-results.md
+    - .ai-platform/evidence/T050/diff.patch
+  required_content:
+    - Changed files.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Spec compliance review.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify FR-050-001 through FR-050-004 and NFR-050-003 are covered without scope drift.
+  bug_quality: Verify docs do not imply sandboxing, dependency installation, shell execution or new blessed language support.
+  qa_acceptance: User review required before marking T050 Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
+stop_conditions:
+  - User rejects command adapter as v0.5 implementation target.
+  - Protocol docs require runtime decisions not covered by the confirmed spec.
+  - Validation failure cannot be resolved within the T050 allowed files.

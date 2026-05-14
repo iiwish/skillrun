@@ -232,6 +232,7 @@ SkillRun 对信任边界保持诚实：
 | `v0.2` | Real MCP stdio server 和 public release candidate readiness |
 | `v0.3` | Adapter boundary、JS Action Alpha via `action.mjs`、`doctor` 和 explicit TypeScript boundary |
 | `v0.4` | Portable Consumer Checks、dependency-aware Consumer Mode、`check` 和 structured `DependencyError` |
+| `v0.5` | Language-agnostic Adapter Protocol 和 Level 0 command adapter |
 
 ## 经典业务示例
 
@@ -253,11 +254,13 @@ SkillRun 的业务证明刻意保持收敛：
 - [文档入口](docs/README.md)
 - [MVP 合同](docs/mvp.md)
 - [架构 SSOT](docs/ssot.md)
+- [Adapter Protocol](docs/adapter-protocol.md)
 - [项目定位](docs/positioning.md)
 - [愿景](docs/vision.md)
 - [信任模型](docs/trust-model.md)
 - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
 - [v0.4.2 官方参考胶囊](docs/v0.4.2-official-capsules.md)
+- [v0.5 Adapter Protocol 计划](docs/v0.5-adapter-protocol.md)
 - [经典业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
 - [发布策略](docs/release-policy.md)

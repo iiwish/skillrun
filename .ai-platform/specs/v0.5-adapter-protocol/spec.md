@@ -1,11 +1,11 @@
 # SkillRun v0.5.0 Feature Spec: Language-agnostic Adapter Protocol
 
 Version: v0.5.0
-Status: Ready_For_User_Review
+Status: Confirmed
 Created: 2026-05-14
 Updated: 2026-05-14
 Source: User asked to start v0.5.0 from documentation and clarify the core problem.
-Review: User requested review and continuation on 2026-05-14; assistant rereview found no blocking issue and prepared plan/work graph for user review.
+Review: User requested review, commit and continuation on 2026-05-14; assistant rereview found no blocking issue and treated the continuation request as approval to proceed with packetized execution.
 
 ## 一句话判断
 

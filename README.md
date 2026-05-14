@@ -233,6 +233,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.2` | Real MCP stdio server and public release candidate readiness |
 | `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
 | `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
+| `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
 
 ## Classic Business Examples
 
@@ -254,11 +255,13 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [Documentation index](docs/README.md)
 - [MVP contract](docs/mvp.md)
 - [Architecture SSOT](docs/ssot.md)
+- [Adapter Protocol](docs/adapter-protocol.md)
 - [Positioning](docs/positioning.md)
 - [Vision](docs/vision.md)
 - [Trust model](docs/trust-model.md)
 - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
 - [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
+- [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)
