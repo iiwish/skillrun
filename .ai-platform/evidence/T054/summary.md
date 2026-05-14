@@ -3,7 +3,7 @@
 Task ID: T054
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -48,7 +48,7 @@ Pass. The example writes a valid output envelope file, emits stdout only as a lo
 
 ## User Acceptance
 
-Pending. T054 is in `Needs_Review` until the user accepts this implementation slice.
+Accepted by user's 2026-05-14 review/commit/continue request after the T054 review passed.
 
 ## Residual Risk
 

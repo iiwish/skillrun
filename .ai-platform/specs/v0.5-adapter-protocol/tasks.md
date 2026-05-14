@@ -263,7 +263,7 @@ Review:
 
 ### T054: Add Command Adapter Example Capsule
 
-Status: Needs_Review
+Status: Accepted
 Priority: P1
 Depends on: T053
 Blocks: T055
@@ -321,11 +321,11 @@ Readiness:
 
 Review:
 - Implementation evidence recorded at `.ai-platform/evidence/T054/summary.md`.
-- Awaiting user acceptance before marking Accepted.
+- Accepted by user's 2026-05-14 review/commit/continue request after T054 evidence review passed.
 
 ### T055: Prepare v0.5.0 Release Readiness
 
-Status: Draft
+Status: Ready
 Priority: P1
 Depends on: T054
 Blocks: release decision
@@ -356,6 +356,10 @@ Packet path:
 
 Evidence required:
 - Release validation summary, diff, residual risk.
+
+Readiness:
+- Dependencies satisfied by accepted T054 command adapter example.
+- Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`.
 
 ## User Review Gate
 
