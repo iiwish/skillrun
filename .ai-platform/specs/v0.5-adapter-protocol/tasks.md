@@ -198,7 +198,7 @@ Acceptance:
 
 ### T053: Implement Level 0 Command Adapter Runtime
 
-Status: Ready
+Status: Needs_Review
 Priority: P0
 Depends on: T052
 Blocks: T054, T055
@@ -256,6 +256,10 @@ Packet path:
 
 Evidence required:
 - RED/GREEN test evidence, diff summary, residual risk.
+
+Review:
+- Implementation evidence recorded at `.ai-platform/evidence/T053/summary.md`.
+- Awaiting user acceptance before marking Accepted.
 
 ### T054: Add Command Adapter Example Capsule
 

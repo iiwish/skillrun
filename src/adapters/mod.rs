@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::schemas::Schemas;
 
+pub mod command;
 pub mod node;
 pub mod python;
 
@@ -20,6 +21,7 @@ pub struct DiscoveredDependency {
 pub struct ActionRunRequest<'a> {
     pub capsule_dir: &'a Path,
     pub entrypoint: &'a str,
+    pub command: Option<&'a [String]>,
     pub context_json: &'a Path,
     pub input_json: &'a Path,
     pub output_json: &'a Path,
@@ -48,6 +50,7 @@ pub fn extract_schemas(
 
 pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
     match adapter {
+        "command" => Ok(()),
         "node" => Ok(()),
         "python" => Ok(()),
         _ => Err(format!("unsupported runtime adapter: {adapter}")),
@@ -67,6 +70,7 @@ pub fn run_action(
     request: &ActionRunRequest<'_>,
 ) -> Result<ActionRunOutput, String> {
     match adapter {
+        "command" => command::run_action(request),
         "node" => node::run_action(request),
         "python" => python::run_action(request),
         _ => Err(format!("unsupported runtime adapter: {adapter}")),

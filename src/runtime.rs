@@ -81,6 +81,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     adapters::ensure_runtime_adapter(adapter)?;
 
     let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
+    let command = string_array_at(&manifest.value, &["runtime", "command"])?;
     let timeout = string_at(&manifest.value, &["runtime", "timeout"])
         .and_then(parse_timeout)
         .unwrap_or_else(|| Duration::from_secs(30));
@@ -135,6 +136,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
         &ActionRunRequest {
             capsule_dir,
             entrypoint,
+            command: command.as_deref(),
             context_json: &paths.context_json,
             input_json: &paths.input_json,
             output_json: &paths.output_json,
@@ -440,6 +442,23 @@ fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
 
 fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
     value_at(value, path)?.as_str()
+}
+
+fn string_array_at(value: &YamlValue, path: &[&str]) -> Result<Option<Vec<String>>, String> {
+    let Some(value) = value_at(value, path) else {
+        return Ok(None);
+    };
+    let sequence = value
+        .as_sequence()
+        .ok_or_else(|| format!("{} must be an array of strings", path.join(".")))?;
+    let mut strings = Vec::with_capacity(sequence.len());
+    for item in sequence {
+        let Some(string) = item.as_str() else {
+            return Err(format!("{} must contain only strings", path.join(".")));
+        };
+        strings.push(string.to_string());
+    }
+    Ok(Some(strings))
 }
 
 fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<Value> {
