@@ -21,6 +21,7 @@
 - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
 - [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
 - [v0.4.2 官方参考胶囊](v0.4.2-official-capsules.md)：Commit Message Gate、Bounded File Patcher 和 Read-only Diagnostics Runner。
+- [v0.4.3 CI 与 runtime 错误稳定化](v0.4.3-ci-stabilization.md)：修复 v0.4.2 合入后的 Linux CI 问题，并稳定缺失 metadata runtime 的跨平台错误文案。
 - [v0.5 Adapter Protocol](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 和 Level 0 command adapter 的 v0.5 计划。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 

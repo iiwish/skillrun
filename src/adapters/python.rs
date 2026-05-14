@@ -347,9 +347,12 @@ fn non_empty(value: String) -> Option<String> {
 }
 
 fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("failed to spawn Python metadata extractor: {error}"))?;
+    let mut child = command.spawn().map_err(|error| {
+        format!(
+            "failed to spawn Python metadata extractor: {}",
+            spawn_error_text(&error)
+        )
+    })?;
     let started_at = Instant::now();
 
     loop {
@@ -373,5 +376,13 @@ fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, S
         }
 
         thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn spawn_error_text(error: &std::io::Error) -> String {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        "program not found".to_string()
+    } else {
+        error.to_string()
     }
 }

@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.0 is the current release-candidate version. The latest completed local release is v0.4.2; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter.
+SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, and v0.5 Adapter Protocol with Level 0 command adapter runtime.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, and v0.5 Adapter Protocol with Level 0 command adapter runtime.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
@@ -222,7 +222,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The v0.4.2 local release handoff is complete. v0.5.0 merge, tag creation, remote push and package publication remain separate explicit decisions after review approval.
+- The v0.4.3 mainline patch release is complete. v0.5.0 merge, tag creation, remote push and package publication remain separate explicit decisions after review approval.
 
 ## Security Model
 
@@ -287,6 +287,7 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [Trust model](docs/trust-model.md)
 - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
 - [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
+- [v0.4.3 CI and runtime error stabilization](docs/v0.4.3-ci-stabilization.md)
 - [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

@@ -38,13 +38,15 @@ fn temp_dir(label: &str) -> PathBuf {
 
 fn write_fake_python(fake_dir: &Path, pydantic_version: Option<&str>) {
     fs::create_dir_all(fake_dir).expect("fake runtime dir should be created");
-    let pydantic_branch = match pydantic_version {
-        Some(version) => format!("echo {version}"),
-        None => "echo ModuleNotFoundError: No module named pydantic 1>&2\nexit /b 1".to_string(),
-    };
 
     #[cfg(windows)]
     {
+        let pydantic_branch = match pydantic_version {
+            Some(version) => format!("echo {version}"),
+            None => {
+                "echo ModuleNotFoundError: No module named pydantic 1>&2\nexit /b 1".to_string()
+            }
+        };
         let script = format!(
             "@echo off\r\n\
 if not \"%SKILLRUN_FAKE_PYTHON_LOG%\"==\"\" echo %*>>\"%SKILLRUN_FAKE_PYTHON_LOG%\"\r\n\

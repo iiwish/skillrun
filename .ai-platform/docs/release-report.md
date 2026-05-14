@@ -52,6 +52,42 @@ The release story is deliberately constrained:
 - Command adapter is not an OS sandbox. Running third-party command actions still executes third-party code.
 - Python stable and JS alpha remain the only language adapters with authoring conveniences. Command adapter is protocol-level execution, not a new blessed SDK.
 
+## v0.4.3 Release Candidate
+
+Version: v0.4.3
+Status: Ready_For_Release
+Last updated: 2026-05-14
+Review gate: v0.4.2 CI fix merged to `main` through PR #3; v0.4.3 release branch prepares version, docs and tag handoff
+
+### Scope
+
+v0.4.3 is a narrow patch release candidate for the v0.4.2 line. It restores trusted CI on `main` and stabilizes cross-platform error text for missing Node/Python metadata runtimes.
+
+This release does not add a runtime feature, adapter, Manifest schema change, registry, installer, signed capsule or runtime image.
+
+### Included v0.4.3 Work
+
+- Fixed Linux clippy failures caused by Windows-only fake Python helper variables being compiled as unused on Ubuntu.
+- Made the CI `test` job declare Python, Node and Pydantic dependencies explicitly.
+- Updated GitHub Actions checkout usage to v6.
+- Normalized `NotFound` spawn errors for Node/Python metadata extractors to the stable message `program not found`.
+- Bumped package, CLI version output and `.skr` package-name expectations from `0.4.2` to `0.4.3`.
+- Added `docs/v0.4.3-ci-stabilization.md` and updated README, docs index, SSOT and this release report.
+
+### Validation Summary
+
+- `cargo fmt --check`: passed.
+- `cargo clippy --locked --all-targets -- -D warnings`: passed.
+- `cargo clippy --locked --target x86_64-unknown-linux-gnu --all-targets -- -D warnings`: passed.
+- `cargo test --locked`: passed.
+- GitHub Actions `Rust CI` on `main` after PR #3 merge: passed.
+
+### Known Limits
+
+- This is a CI/runtime-error stabilization patch, not a new product capability release.
+- v0.4.2 official reference capsules remain the current official capsule gallery.
+- `.skr` remains source + Manifest archive.
+
 ## v0.4.2 Release Candidate
 
 Version: v0.4.2
