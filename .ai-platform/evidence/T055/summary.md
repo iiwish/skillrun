@@ -3,7 +3,7 @@
 Task ID: T055
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -55,7 +55,7 @@ Pass. Cargo version and lockfile agree, version-sensitive tests pass, full suite
 
 ## User Acceptance
 
-Pending. Merge to `main`, tag creation, remote push and publication remain blocked until the user explicitly requests them.
+Accepted by user's 2026-05-14 review/commit/continue request after the T055 review passed. Merge to `main`, tag creation, remote push and publication remain blocked until the user explicitly requests them.
 
 ## Residual Risk
 

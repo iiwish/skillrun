@@ -325,7 +325,7 @@ Review:
 
 ### T055: Prepare v0.5.0 Release Readiness
 
-Status: Needs_Review
+Status: Accepted
 Priority: P1
 Depends on: T054
 Blocks: release decision
@@ -393,7 +393,7 @@ Readiness:
 
 Review:
 - Release readiness evidence recorded at `.ai-platform/evidence/T055/summary.md`.
-- Awaiting user acceptance before merge/tag decisions.
+- Accepted by user's 2026-05-14 review/commit/continue request after T055 evidence review passed.
 
 ## User Review Gate
 

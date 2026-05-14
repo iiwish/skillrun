@@ -3,9 +3,9 @@
 ## v0.5.0 Release Candidate
 
 Version: v0.5.0
-Status: Ready_For_User_Review
+Status: Ready_For_Main_Merge_Review
 Last updated: 2026-05-14
-Review gate: T050-T055 evidence prepared on `codex/v0.5-integration`; merge, tag creation and publication remain pending explicit user command
+Review gate: T050-T055 evidence accepted on `codex/v0.5-integration`; merge, tag creation and publication remain pending explicit user command
 
 ### Scope
 
@@ -42,7 +42,7 @@ The release story is deliberately constrained:
 
 - Spec compliance review: no blocking issue found against the v0.5 scope. The work defines Adapter Protocol, conformance coverage, command Manifest support, command runtime support and a runnable example.
 - Bug/code-quality review: runtime and business example suites pass; full suite passes on rerun.
-- QA acceptance review: ready for user review; merge, tag and publication decisions remain separate explicit user actions.
+- QA acceptance review: accepted for local handoff; merge, tag and publication decisions remain separate explicit user actions.
 
 ### Known Limits
 
