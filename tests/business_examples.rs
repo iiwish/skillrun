@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.3.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "wecom pack");
-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.2.skr");
+    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.3.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked-wecom");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -323,7 +323,7 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
         assert_success(&pack, &format!("{capsule_name} pack"));
         assert!(capsule
             .join("dist")
-            .join(format!("{capsule_name}-0.4.2.skr"))
+            .join(format!("{capsule_name}-0.4.3.skr"))
             .is_file());
     }
 
