@@ -2,16 +2,24 @@ use serde::Serialize;
 use std::fs;
 use std::path::Path;
 
+use crate::schemas::Schemas;
+
 #[derive(Debug, Serialize)]
 pub struct CapsuleConfig {
     pub runtime: RuntimeConfig,
     pub permissions: ManifestPermissions,
+    #[serde(skip_serializing)]
+    pub schemas: Option<Schemas>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct RuntimeConfig {
     pub adapter: String,
     pub entrypoint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_version: Option<String>,
     pub timeout: String,
     pub requirements: RuntimeRequirements,
 }
@@ -63,6 +71,7 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
         return Ok(CapsuleConfig {
             runtime: default_runtime_config(),
             permissions: default_permissions(),
+            schemas: None,
         });
     }
 
@@ -79,22 +88,56 @@ pub fn load_config(path: &Path) -> Result<CapsuleConfig, String> {
         .unwrap_or("python")
         .to_string();
 
+    let timeout = runtime
+        .get("timeout")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("30s")
+        .to_string();
+
+    let (runtime, schemas) = if adapter == "command" {
+        let command = parse_command(runtime.get("command"))?;
+        let entrypoint = runtime
+            .get("entrypoint")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+            .unwrap_or_else(|| command_entrypoint(&command));
+        let executable = command
+            .first()
+            .expect("parse_command should reject empty command")
+            .clone();
+        (
+            RuntimeConfig {
+                adapter,
+                entrypoint,
+                command: Some(command),
+                protocol_version: Some("adapter.v1".to_string()),
+                timeout,
+                requirements: runtime_requirements_for_command(&executable),
+            },
+            Some(parse_static_schemas(&json)?),
+        )
+    } else {
+        (
+            RuntimeConfig {
+                entrypoint: runtime
+                    .get("entrypoint")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("action.py")
+                    .to_string(),
+                command: None,
+                protocol_version: None,
+                timeout,
+                requirements: runtime_requirements_for_adapter(&adapter),
+                adapter,
+            },
+            None,
+        )
+    };
+
     Ok(CapsuleConfig {
-        runtime: RuntimeConfig {
-            entrypoint: runtime
-                .get("entrypoint")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("action.py")
-                .to_string(),
-            timeout: runtime
-                .get("timeout")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("30s")
-                .to_string(),
-            requirements: runtime_requirements_for_adapter(&adapter),
-            adapter,
-        },
+        runtime,
         permissions: parse_permissions(json.get("permissions"))?,
+        schemas,
     })
 }
 
@@ -170,6 +213,8 @@ fn default_runtime_config() -> RuntimeConfig {
     RuntimeConfig {
         adapter: "python".to_string(),
         entrypoint: "action.py".to_string(),
+        command: None,
+        protocol_version: None,
         timeout: "30s".to_string(),
         requirements: runtime_requirements_for_adapter("python"),
     }
@@ -195,6 +240,13 @@ pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
                 required_for: vec!["metadata".to_string(), "runtime".to_string()],
             }],
         },
+        "command" => RuntimeRequirements {
+            executable: ExecutableRequirement {
+                name: "command".to_string(),
+                version: "present".to_string(),
+            },
+            packages: Vec::new(),
+        },
         other => RuntimeRequirements {
             executable: ExecutableRequirement {
                 name: other.to_string(),
@@ -202,5 +254,73 @@ pub fn runtime_requirements_for_adapter(adapter: &str) -> RuntimeRequirements {
             },
             packages: Vec::new(),
         },
+    }
+}
+
+pub fn runtime_requirements_for_command(executable: &str) -> RuntimeRequirements {
+    RuntimeRequirements {
+        executable: ExecutableRequirement {
+            name: executable.to_string(),
+            version: "present".to_string(),
+        },
+        packages: Vec::new(),
+    }
+}
+
+fn parse_command(value: Option<&serde_json::Value>) -> Result<Vec<String>, String> {
+    let Some(value) = value else {
+        return Err("runtime.command is required when runtime.adapter is command".to_string());
+    };
+    if value.is_string() {
+        return Err(
+            "runtime.command must be an array of strings; shell strings are not supported"
+                .to_string(),
+        );
+    }
+    let values = value
+        .as_array()
+        .ok_or_else(|| "runtime.command must be an array of strings".to_string())?;
+    if values.is_empty() {
+        return Err("runtime.command must not be empty".to_string());
+    }
+    values
+        .iter()
+        .map(|item| {
+            item.as_str()
+                .filter(|part| !part.trim().is_empty())
+                .map(str::to_string)
+                .ok_or_else(|| "runtime.command must contain only non-empty strings".to_string())
+        })
+        .collect()
+}
+
+fn command_entrypoint(command: &[String]) -> String {
+    command
+        .iter()
+        .skip(1)
+        .find(|part| !part.starts_with('-'))
+        .cloned()
+        .unwrap_or_else(|| command[0].clone())
+}
+
+fn parse_static_schemas(json: &serde_json::Value) -> Result<Schemas, String> {
+    let input = json
+        .get("input_schema")
+        .cloned()
+        .ok_or_else(|| "input_schema is required when runtime.adapter is command".to_string())?;
+    let output = json
+        .get("output_schema")
+        .cloned()
+        .ok_or_else(|| "output_schema is required when runtime.adapter is command".to_string())?;
+    ensure_schema_object(&input, "input_schema")?;
+    ensure_schema_object(&output, "output_schema")?;
+    Ok(Schemas { input, output })
+}
+
+fn ensure_schema_object(value: &serde_json::Value, name: &str) -> Result<(), String> {
+    if value.as_object().is_some() {
+        Ok(())
+    } else {
+        Err(format!("{name} must be a JSON Schema object"))
     }
 }

@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.4.3.skr");
+    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -167,7 +167,7 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
 
     assert!(
         docs.contains("v0.1 MVP only implements the refund capsule")
-            || docs.contains("v0.1 MVP 只要求完整实现 `refund`")
+            || docs.contains("v0.1 MVP 鍙姹傚畬鏁村疄鐜?`refund`")
     );
     assert!(readme.contains("Support Triage"));
     assert!(readme.contains("Access Request Approval"));
@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "wecom pack");
-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.3.skr");
+    let archive_path = capsule.join("dist").join("wecom_team_notice-0.5.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked-wecom");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -323,7 +323,7 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
         assert_success(&pack, &format!("{capsule_name} pack"));
         assert!(capsule
             .join("dist")
-            .join(format!("{capsule_name}-0.4.3.skr"))
+            .join(format!("{capsule_name}-0.5.0.skr"))
             .is_file());
     }
 
@@ -379,6 +379,56 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
         .as_str()
         .unwrap()
         .contains("SKILL.md"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_example_capsule_proves_level_zero_ipc() {
+    let output_root = temp_dir("business-command-adapter");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/command_hello");
+    let capsule = output_root.join("command_hello");
+    copy_dir(&source, &capsule);
+    let cwd = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
+    assert_success(&manifest, "command adapter manifest");
+    let manifest_yaml =
+        fs::read_to_string(capsule.join(".skillrun/manifest.generated.yaml")).unwrap();
+    assert!(manifest_yaml.contains("adapter: command"));
+    assert!(manifest_yaml.contains("protocol_version: adapter.v1"));
+    assert!(manifest_yaml.contains("- python"));
+    assert!(manifest_yaml.contains("- action.py"));
+
+    let check = run_skillrun(&["check", "--cwd", &cwd]);
+    assert_success(&check, "command adapter check");
+
+    let test = run_skillrun(&["test", "--cwd", &cwd]);
+    let test_stdout = assert_success(&test, "command adapter test");
+    assert!(!test_stdout.contains("command adapter log"));
+    let test_envelope: Value = serde_json::from_str(&test_stdout).expect("test JSON");
+    assert_eq!(test_envelope["ok"], true);
+    assert_eq!(test_envelope["output"]["adapter"], "command");
+    assert_eq!(
+        test_envelope["output"]["message"],
+        "hello Ada from command adapter"
+    );
+    assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
+    let run_dir = PathBuf::from(test_envelope["run_dir"].as_str().unwrap());
+    let stdout_log = fs::read_to_string(run_dir.join("stdout.log")).expect("stdout log readable");
+    assert!(stdout_log.contains("command adapter log"));
+
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
+    let serve_stdout = assert_success(&serve, "command adapter serve dry-run");
+    let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
+    assert_eq!(contract["tools"][0]["name"], "command_hello");
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+    assert_success(&pack, "command adapter pack");
+    assert!(capsule
+        .join("dist")
+        .join("command_hello-0.5.0.skr")
+        .is_file());
 
     fs::remove_dir_all(output_root).ok();
 }

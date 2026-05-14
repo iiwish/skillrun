@@ -1,0 +1,93 @@
+schema_version: 1
+packet_id: T051-A001
+task_id: T051
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+  previous_evidence: .ai-platform/evidence/T050/summary.md
+work_unit:
+  title: Add Adapter Conformance Fixtures For Existing Adapters
+  goal: Add conformance tests that map Python stable and JS alpha behavior to the Adapter Protocol without changing user-visible behavior.
+  requirements:
+    - FR-050-006
+    - FR-050-007
+    - FR-050-009
+  dependencies:
+    - T050 accepted
+  blocks:
+    - T052
+    - T053
+codebase_context:
+  source_docs:
+    - docs/adapter-protocol.md
+    - docs/v0.5-adapter-protocol.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  relevant_existing_tests:
+    - tests/business_examples.rs
+    - tests/manifest.rs
+    - tests/runtime.rs
+    - tests/consumer_guards.rs
+  existing_capsules:
+    - examples/refund
+  boundaries:
+    - T051 may add tests and fixtures only.
+    - T051 must not refactor runtime dispatch.
+    - T051 must not implement command adapter behavior.
+execution_constraints:
+  allowed_files:
+    - tests/adapter_conformance.rs
+    - tests/fixtures/**
+    - examples/refund/**
+    - templates/**
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - .ai-platform/evidence/T051/**
+  forbidden_changes:
+    - Runtime implementation changes.
+    - Manifest schema changes.
+    - Command adapter implementation.
+    - README or public positioning changes unrelated to conformance evidence.
+  delegation: direct execute fallback is acceptable because the user asked to continue in this thread and no subagent delegation was explicitly requested.
+tdd_plan:
+  red: Add focused adapter conformance assertions first and confirm the new test target fails before any missing fixture/helper is added.
+  green: Add the smallest fixture/helper support needed for Python stable and JS alpha conformance tests to pass.
+  refactor: Keep helpers inside tests unless an existing test utility pattern is already present.
+validation_loop:
+  commands:
+    - cargo test --test adapter_conformance
+    - cargo test
+    - git diff --check
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T051
+  expected_signals:
+    - Adapter conformance tests pass.
+    - Full test suite remains green.
+    - No whitespace errors.
+    - Delivery artifact validator reports no blocking errors for T051.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T051/summary.md
+    - .ai-platform/evidence/T051/test-results.md
+    - .ai-platform/evidence/T051/diff.patch
+  required_content:
+    - Changed files.
+    - RED/GREEN evidence.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify FR-050-006, FR-050-007 and FR-050-009 are covered without changing runtime behavior.
+  bug_quality: Verify tests do not depend on network, package installation, registry behavior or hidden local state.
+  qa_acceptance: User review required before marking T051 Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
+stop_conditions:
+  - Existing adapter behavior requires runtime changes to satisfy conformance.
+  - Tests require dependency installation or network access.
+  - Scope pressure appears to implement command adapter before T052/T053.

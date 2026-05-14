@@ -140,6 +140,56 @@ fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn generated_command_capsule(label: &str, action_source: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello\n").expect("skill should be written");
+    fs::write(capsule.join("action.py"), action_source).expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    (output_root, capsule)
+}
+
 fn generated_capsule_under(output_root: &Path) -> PathBuf {
     let output_arg = output_root.to_string_lossy().to_string();
     let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
@@ -265,6 +315,49 @@ fn test_returns_dependency_error_when_node_is_missing() {
     let cwd_arg = capsule.to_string_lossy().to_string();
     let output = run_skillrun_with_path(&["test", "--cwd", &cwd_arg], &fake_path);
     assert_dependency_error(&output, &["node", ">=18", "missing"]);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn test_returns_dependency_error_when_command_executable_is_missing() {
+    let output_root = temp_dir("runtime-command-missing-executable");
+    let capsule = output_root.join("command_missing");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command missing\n").expect("skill should be written");
+    fs::write(capsule.join("action.sh"), "echo should-not-run\n").expect("action should exist");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["skillrun-definitely-missing-command", "action.sh"]
+  },
+  "input_schema": { "type": "object" },
+  "output_schema": { "type": "object" }
+}"#,
+    )
+    .expect("config should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let fake_path = output_root.join("empty-path");
+    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
+
+    let output = run_skillrun_with_path(&["test", "--cwd", &cwd_arg], &fake_path);
+    assert_dependency_error(
+        &output,
+        &["skillrun-definitely-missing-command", "present", "missing"],
+    );
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -408,6 +501,99 @@ fn test_command_uses_default_example_and_writes_run_record() {
     let context = read_json(&dir.join("context.json"));
     assert_eq!(context["run_id"], run_id);
     assert_eq!(context["mode"], "test");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_runs_argv_and_writes_standard_output_envelope() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+input_payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
+context = json.loads(Path(os.environ["SKILLRUN_CONTEXT_JSON"]).read_text(encoding="utf-8"))
+artifact_dir = Path(os.environ["SKILLRUN_ARTIFACT_DIR"])
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {
+        "message": f"hello {input_payload['name']} from {context['mode']}"
+    },
+    "artifacts": [],
+    "display": {
+        "markdown": f"hello {input_payload['name']} in {artifact_dir.name}"
+    }
+}, ensure_ascii=False), encoding="utf-8")
+"#;
+    let (output_root, capsule) = generated_command_capsule("runtime-command-success", action);
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let run_id = run_id_from(&output);
+    let dir = run_dir(&capsule, &run_id);
+    let output_json = read_json(&dir.join("output.json"));
+
+    assert_eq!(output_json["ok"], true);
+    assert_eq!(output_json["output"]["message"], "hello Ada from test");
+    assert_eq!(output_json["display"]["markdown"], "hello Ada in artifacts");
+    let record = read_json(&dir.join("record.json"));
+    assert_eq!(record["status"], "succeeded");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_stdout_is_captured_as_log_not_result() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+print("command adapter stdout noise")
+payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {"message": f"hello {payload['name']}"},
+    "display": {"markdown": "done"}
+}), encoding="utf-8")
+"#;
+    let (output_root, capsule) = generated_command_capsule("runtime-command-stdout-log", action);
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    assert!(!stdout.contains("command adapter stdout noise"));
+    let run_id = run_id_from(&run);
+    let stdout_log = fs::read_to_string(run_dir(&capsule, &run_id).join("stdout.log"))
+        .expect("stdout log should be readable");
+    assert_contains(&stdout_log, "command adapter stdout noise");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_missing_output_returns_protocol_violation() {
+    let action = r#"
+print("FAKE_OK_FROM_STDOUT")
+"#;
+    let (output_root, capsule) =
+        generated_command_capsule("runtime-command-missing-output", action);
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    assert!(!stdout.contains("FAKE_OK_FROM_STDOUT"));
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "ProtocolViolation");
+    let run_id = envelope["run_id"]
+        .as_str()
+        .expect("run_id should be present");
+    let stdout_log = fs::read_to_string(run_dir(&capsule, run_id).join("stdout.log"))
+        .expect("stdout log should be readable");
+    assert_contains(&stdout_log, "FAKE_OK_FROM_STDOUT");
 
     fs::remove_dir_all(output_root).ok();
 }

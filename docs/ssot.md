@@ -295,6 +295,28 @@ CLI 语言语义必须分阶段：
 
 > **Zero-config 不是猜遍全世界，而是给每种语言一条唯一、稳定、可解释的黄金路径。**
 
+### 8.1 v0.5 Adapter Protocol
+
+v0.5 起，语言接入必须被描述为 Adapter Protocol，而不是 Core 中不断增加的语言特判。
+
+稳定边界：
+
+- Core 只认 Manifest、Adapter Protocol、IPC、Envelope 和 Artifact。
+- Language Adapter 实现 metadata phase、run phase 和 runtime requirement diagnostics。
+- SDK 只提供作者体验，不成为 runtime authority。
+- Consumer Mode 不为了 metadata 动态 import 未信任源码。
+
+Level 0 command adapter 是第一条协议原生证明路径：
+
+- `runtime.adapter = "command"`。
+- `runtime.command` 必须是 argv array。
+- schema 来自 config 或 Manifest，不从源码动态提取。
+- command 进程必须读写标准 SkillRun IPC。
+- stdout/stderr 只作为日志。
+- readiness 只诊断 executable，不安装依赖。
+
+这不是新增 Ruby/PHP/Go 官方支持，也不是 shell runner。它证明任意进程只要遵守 SkillRun IPC/envelope contract，就能作为低层 adapter 被 Core 调用。
+
 ---
 
 ## 9. Schema 策略

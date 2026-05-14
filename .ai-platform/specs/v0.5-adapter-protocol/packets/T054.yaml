@@ -1,0 +1,94 @@
+schema_version: 1
+packet_id: T054-A001
+task_id: T054
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+  previous_evidence: .ai-platform/evidence/T053/summary.md
+work_unit:
+  title: Add Command Adapter Example Capsule
+  goal: Add a minimal runnable command-adapter capsule that proves Level 0 IPC without implying a new blessed language adapter.
+  requirements:
+    - US-050-004
+    - FR-050-010
+    - FR-050-011
+  dependencies:
+    - T053 accepted
+  blocks:
+    - T055
+codebase_context:
+  source_docs:
+    - docs/adapter-protocol.md
+    - docs/v0.5-adapter-protocol.md
+    - docs/business-examples.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  relevant_files:
+    - examples/command_hello/**
+    - docs/business-examples.md
+    - docs/v0.5-adapter-protocol.md
+    - tests/business_examples.rs
+  boundaries:
+    - The example should demonstrate command adapter Level 0, not a new Python/Ruby/Node SDK.
+    - The example must keep static schemas in `skillrun.config.json`.
+    - The action must write the standard SkillRun output envelope file and treat stdout/stderr as logs only.
+execution_constraints:
+  allowed_files:
+    - examples/command_hello/**
+    - docs/business-examples.md
+    - docs/v0.5-adapter-protocol.md
+    - tests/business_examples.rs
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - .ai-platform/evidence/T054/**
+  forbidden_changes:
+    - Adding another language SDK.
+    - Adding package manager integration.
+    - Adding registry or marketplace behavior.
+    - Presenting command adapter as sandboxing.
+    - Reworking existing reference capsules.
+  delegation: direct execute fallback is acceptable because the user asked to continue in this thread and the implementation scope is a small example slice.
+tdd_plan:
+  red: Add a business example test expecting `examples/command_hello` to manifest, check, test, serve dry-run and pack.
+  green: Add the smallest command adapter example capsule and docs references needed for the test to pass.
+  refactor: Keep example code compact and avoid shared runtime changes.
+validation_loop:
+  commands:
+    - cargo test --test business_examples command_adapter_example
+    - cargo test --test business_examples
+    - cargo test
+    - cargo fmt --check
+    - git diff --check
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T054
+  expected_signals:
+    - New command adapter example test passes.
+    - Existing business examples remain green.
+    - Full suite remains green.
+    - Delivery artifact validator reports no blocking errors for T054.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T054/summary.md
+    - .ai-platform/evidence/T054/test-results.md
+    - .ai-platform/evidence/T054/diff.patch
+  required_content:
+    - Changed files.
+    - RED/GREEN evidence.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify the example proves Level 0 command adapter IPC and does not imply sandboxing, dependency vendoring or a new SDK.
+  bug_quality: Verify manifest/check/test/serve/pack run locally and stdout is not used as the result channel.
+  qa_acceptance: User review required before marking T054 Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
+stop_conditions:
+  - The example requires a non-standard host dependency.
+  - The example needs package installation or vendoring.
+  - The example cannot run through `skillrun test` with the command adapter runtime.

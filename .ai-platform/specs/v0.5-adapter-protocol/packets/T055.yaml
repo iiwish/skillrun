@@ -1,0 +1,95 @@
+schema_version: 1
+packet_id: T055-A001
+task_id: T055
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+  previous_evidence: .ai-platform/evidence/T054/summary.md
+work_unit:
+  title: Prepare v0.5.0 Release Readiness
+  goal: Update release notes, README status, version metadata and release report for v0.5.0, then run release validation.
+  requirements:
+    - release readiness
+  dependencies:
+    - T054 accepted
+  blocks:
+    - v0.5.0 merge decision
+codebase_context:
+  source_docs:
+    - docs/adapter-protocol.md
+    - docs/v0.5-adapter-protocol.md
+    - docs/business-examples.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  relevant_files:
+    - Cargo.toml
+    - Cargo.lock
+    - README.md
+    - README.zh-CN.md
+    - RELEASE_NOTES.md
+    - .ai-platform/docs/release-report.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  boundaries:
+    - T055 prepares release readiness only; it must not merge to main or create tags.
+    - Release docs must keep the security story honest: no sandbox, no registry trust, no dependency vendoring.
+    - Version bump is project artifact metadata, not a project-name suffix.
+execution_constraints:
+  allowed_files:
+    - Cargo.toml
+    - Cargo.lock
+    - README.md
+    - README.zh-CN.md
+    - RELEASE_NOTES.md
+    - .ai-platform/docs/release-report.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - tests/**
+    - .ai-platform/evidence/T055/**
+  forbidden_changes:
+    - Merging to `main`.
+    - Creating a release tag.
+    - Publishing artifacts.
+    - Adding new runtime behavior beyond already accepted v0.5 tasks.
+  delegation: direct execute fallback is acceptable because the user asked to continue in this thread and the release-readiness scope is bounded to docs, version metadata and validation.
+tdd_plan:
+  red: Release-readiness docs/version task; use consistency grep and release validation instead of behavior RED.
+  green: Update version metadata, release notes, README status and release report.
+  refactor: Remove stale v0.4.2 release-candidate wording that would confuse current state.
+validation_loop:
+  commands:
+    - cargo fmt --check
+    - cargo test
+    - cargo clippy --all-targets -- -D warnings
+    - git diff --check
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T055
+  expected_signals:
+    - Version metadata reports 0.5.0.
+    - README and release notes describe v0.5.0 as release candidate readiness.
+    - Full tests and clippy pass.
+    - Delivery artifact validator reports no blocking errors for T055.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T055/summary.md
+    - .ai-platform/evidence/T055/test-results.md
+    - .ai-platform/evidence/T055/diff.patch
+  required_content:
+    - Changed files.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify v0.5 release docs highlight Adapter Protocol, conformance fixtures, command adapter runtime and command example.
+  bug_quality: Verify Cargo version and lockfile agree and no stale v0.4.2 current-release wording remains in README.
+  qa_acceptance: User review required before merge/tag decisions.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Prepare local handoff only; do not merge or tag without explicit user instruction.
+stop_conditions:
+  - Release validation fails and cannot be fixed inside allowed files.
+  - Release readiness requires changing runtime behavior.
+  - User asks to stop before merge/tag decisions.

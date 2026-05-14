@@ -1,6 +1,7 @@
 use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use crate::adapters;
 use crate::hashing;
@@ -373,6 +374,10 @@ fn dependency_checks(
         return Vec::new();
     }
 
+    if adapter == "command" {
+        return command_dependency_checks(requirements);
+    }
+
     let Some(discovery) = adapters::discover_runtime(adapter) else {
         return Vec::new();
     };
@@ -407,6 +412,45 @@ fn dependency_checks(
     }
 
     checks
+}
+
+fn command_dependency_checks(requirements: &RequirementsView) -> Vec<HostDependencyCheck> {
+    let Some(required) = requirements.executable.as_ref() else {
+        return Vec::new();
+    };
+
+    let detected = detect_command_executable(&required.name);
+    let status = if detected.is_some() {
+        "satisfied"
+    } else {
+        "missing"
+    };
+
+    vec![HostDependencyCheck {
+        kind: "executable",
+        name: required.name.clone(),
+        required: required.version.clone(),
+        detected,
+        status,
+    }]
+}
+
+fn detect_command_executable(name: &str) -> Option<String> {
+    let output = Command::new(name).arg("--version").output().ok()?;
+    if !output.status.success() {
+        return Some("present".to_string());
+    }
+    let text = if output.stdout.is_empty() {
+        String::from_utf8_lossy(&output.stderr).to_string()
+    } else {
+        String::from_utf8_lossy(&output.stdout).to_string()
+    };
+    let detected = text.lines().next().unwrap_or("present").trim();
+    if detected.is_empty() {
+        Some("present".to_string())
+    } else {
+        Some(detected.to_string())
+    }
 }
 
 fn host_dependency_check(

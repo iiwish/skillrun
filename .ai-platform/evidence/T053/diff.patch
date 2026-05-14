@@ -1,0 +1,573 @@
+﻿diff --git a/.ai-platform/evidence/T053/summary.md b/.ai-platform/evidence/T053/summary.md
+new file mode 100644
+index 0000000..32efb6e
+--- /dev/null
++++ b/.ai-platform/evidence/T053/summary.md
+@@ -0,0 +1,52 @@
++# T053 Evidence Summary
++
++Task ID: T053
++Executor: Codex direct execute fallback
++Branch: codex/v0.5-integration
++Status: Needs_Review
++
++## Files Changed
++
++- `src/adapters/mod.rs`
++- `src/adapters/command.rs`
++- `src/runtime.rs`
++- `tests/runtime.rs`
++- `.ai-platform/specs/v0.5-adapter-protocol/tasks.md`
++- `.ai-platform/evidence/T053/summary.md`
++- `.ai-platform/evidence/T053/test-results.md`
++- `.ai-platform/evidence/T053/diff.patch`
++
++## Commands Run
++
++- `cargo test --test runtime command_adapter -- --nocapture` - RED failed before implementation because runtime rejected `adapter: command`.
++- `cargo test --test runtime command_adapter -- --nocapture` - GREEN passed after command adapter dispatch implementation.
++- `cargo test --test runtime command_executable -- --nocapture` - passed missing executable dependency path.
++- `cargo test --test runtime --test errors --test adapter_conformance` - passed target suite.
++- `cargo fmt` - applied formatting.
++- `cargo test` - passed full suite.
++- `cargo fmt --check` - passed.
++- `git diff --check` - passed.
++
++## Diff Summary
++
++- Added a Level 0 command adapter runner that executes explicit argv through `std::process::Command` without shell-string execution.
++- Wired `runtime.adapter = "command"` into runtime adapter validation and dispatch.
++- Passed standard SkillRun IPC environment variables to command adapter processes.
++- Preserved stdout/stderr as run logs while keeping the structured output envelope file as the only result channel.
++- Added runtime tests for command adapter success, stdout logging, missing output protocol violation and missing executable dependency failure.
++
++## Spec Compliance Review
++
++Pass. T053 covers FR-050-003, FR-050-010, FR-050-011 and FR-050-012: command adapter execution is Manifest-driven, argv-only, IPC-based, and still uses Core envelope/artifact validation.
++
++## Bug / Quality Review
++
++Pass. Missing output remains a `ProtocolViolation`, missing executable is caught by readiness as `DependencyError`, and Python/JS adapter target tests remain green. The implementation does not add dependency installation, registry behavior or shell execution.
++
++## User Acceptance
++
++Pending. T053 is in `Needs_Review` until the user accepts this implementation slice.
++
++## Residual Risk
++
++The command adapter currently duplicates small process environment and timeout helpers from Python/Node adapters. This is acceptable for Level 0 but should be reconsidered only after the protocol stabilizes enough to justify shared process infrastructure.
+diff --git a/.ai-platform/evidence/T053/test-results.md b/.ai-platform/evidence/T053/test-results.md
+new file mode 100644
+index 0000000..2566f48
+--- /dev/null
++++ b/.ai-platform/evidence/T053/test-results.md
+@@ -0,0 +1,102 @@
++# T053 Test Results
++
++## RED
++
++Command:
++
++```text
++cargo test --test runtime command_adapter -- --nocapture
++```
++
++Result: failed as expected.
++
++Key output:
++
++```text
++command should succeed
++stderr: error: unsupported runtime adapter: command
++```
++
++The failure proved the runtime did not yet dispatch `runtime.adapter = "command"`.
++
++## GREEN
++
++Command:
++
++```text
++cargo test --test runtime command_adapter -- --nocapture
++```
++
++Result: passed.
++
++Summary:
++
++```text
++3 passed
++```
++
++## Dependency Failure Path
++
++Command:
++
++```text
++cargo test --test runtime command_executable -- --nocapture
++```
++
++Result: passed.
++
++Summary:
++
++```text
++1 passed
++```
++
++## Target Suite
++
++Command:
++
++```text
++cargo test --test runtime --test errors --test adapter_conformance
++```
++
++Result: passed.
++
++Summary:
++
++```text
++adapter_conformance: 3 passed
++errors: 9 passed
++runtime: 16 passed
++```
++
++## Full Suite
++
++Command:
++
++```text
++cargo test
++```
++
++Result: passed.
++
++Summary: full workspace test suite passed, including existing Python/JS runtime, MCP, pack, manifest, business example and release matrix paths.
++
++## Formatting
++
++Command:
++
++```text
++cargo fmt --check
++```
++
++Result: passed.
++
++## Whitespace
++
++Command:
++
++```text
++git diff --check
++```
++
++Result: passed.
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index 8fda4c3..c389f97 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -198,7 +198,7 @@ Acceptance:
+
+ ### T053: Implement Level 0 Command Adapter Runtime
+
+-Status: Ready
++Status: Needs_Review
+ Priority: P0
+ Depends on: T052
+ Blocks: T054, T055
+@@ -257,6 +257,10 @@ Packet path:
+ Evidence required:
+ - RED/GREEN test evidence, diff summary, residual risk.
+
++Review:
++- Implementation evidence recorded at `.ai-platform/evidence/T053/summary.md`.
++- Awaiting user acceptance before marking Accepted.
++
+ ### T054: Add Command Adapter Example Capsule
+
+ Status: Draft
+diff --git a/src/adapters/command.rs b/src/adapters/command.rs
+new file mode 100644
+index 0000000..a3d3028
+--- /dev/null
++++ b/src/adapters/command.rs
+@@ -0,0 +1,86 @@
++use std::process::{Command, Output, Stdio};
++use std::thread;
++use std::time::{Duration, Instant};
++
++use crate::adapters::{ActionRunOutput, ActionRunRequest};
++
++pub fn run_action(request: &ActionRunRequest<'_>) -> Result<ActionRunOutput, String> {
++    let command = request
++        .command
++        .ok_or_else(|| "runtime.command is required for command adapter".to_string())?;
++    let (program, args) = command
++        .split_first()
++        .ok_or_else(|| "runtime.command must not be empty".to_string())?;
++
++    let mut child = Command::new(program);
++    child.args(args).current_dir(request.capsule_dir);
++    apply_process_env(&mut child);
++    for (key, value) in request.env {
++        child.env(key, value);
++    }
++    child
++        .env("SKILLRUN_CONTEXT_JSON", request.context_json)
++        .env("SKILLRUN_INPUT_JSON", request.input_json)
++        .env("SKILLRUN_OUTPUT_JSON", request.output_json)
++        .env("SKILLRUN_ARTIFACT_DIR", request.artifact_dir)
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped());
++
++    let output = run_with_timeout(child, request.timeout)
++        .map_err(|error| format!("failed to run command adapter {program}: {error}"))?;
++
++    Ok(ActionRunOutput {
++        success: output.status.success(),
++        stdout: output.stdout,
++        stderr: output.stderr,
++    })
++}
++
++fn apply_process_env(command: &mut Command) {
++    command.env_clear();
++    for key in [
++        "SystemRoot",
++        "WINDIR",
++        "COMSPEC",
++        "TEMP",
++        "TMP",
++        "USERPROFILE",
++        "LOCALAPPDATA",
++        "APPDATA",
++        "PATH",
++    ] {
++        if let Ok(value) = std::env::var(key) {
++            command.env(key, value);
++        }
++    }
++}
++
++fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
++    let mut child = command
++        .spawn()
++        .map_err(|error| format!("failed to spawn command adapter: {error}"))?;
++    let started_at = Instant::now();
++
++    loop {
++        if child
++            .try_wait()
++            .map_err(|error| format!("failed to poll command adapter: {error}"))?
++            .is_some()
++        {
++            return child
++                .wait_with_output()
++                .map_err(|error| format!("failed to collect command adapter output: {error}"));
++        }
++
++        if started_at.elapsed() >= timeout {
++            let _ = child.kill();
++            let _ = child.wait_with_output();
++            return Err(format!(
++                "command adapter timed out after {} ms",
++                timeout.as_millis()
++            ));
++        }
++
++        thread::sleep(Duration::from_millis(10));
++    }
++}
+diff --git a/src/adapters/mod.rs b/src/adapters/mod.rs
+index a8e85c3..cb1cac1 100644
+--- a/src/adapters/mod.rs
++++ b/src/adapters/mod.rs
+@@ -3,6 +3,7 @@ use std::time::Duration;
+
+ use crate::schemas::Schemas;
+
++pub mod command;
+ pub mod node;
+ pub mod python;
+
+@@ -20,6 +21,7 @@ pub struct DiscoveredDependency {
+ pub struct ActionRunRequest<'a> {
+     pub capsule_dir: &'a Path,
+     pub entrypoint: &'a str,
++    pub command: Option<&'a [String]>,
+     pub context_json: &'a Path,
+     pub input_json: &'a Path,
+     pub output_json: &'a Path,
+@@ -48,6 +50,7 @@ pub fn extract_schemas(
+
+ pub fn ensure_runtime_adapter(adapter: &str) -> Result<(), String> {
+     match adapter {
++        "command" => Ok(()),
+         "node" => Ok(()),
+         "python" => Ok(()),
+         _ => Err(format!("unsupported runtime adapter: {adapter}")),
+@@ -67,6 +70,7 @@ pub fn run_action(
+     request: &ActionRunRequest<'_>,
+ ) -> Result<ActionRunOutput, String> {
+     match adapter {
++        "command" => command::run_action(request),
+         "node" => node::run_action(request),
+         "python" => python::run_action(request),
+         _ => Err(format!("unsupported runtime adapter: {adapter}")),
+diff --git a/src/runtime.rs b/src/runtime.rs
+index de1fcbf..3b244ce 100644
+--- a/src/runtime.rs
++++ b/src/runtime.rs
+@@ -81,6 +81,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
+     adapters::ensure_runtime_adapter(adapter)?;
+
+     let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
++    let command = string_array_at(&manifest.value, &["runtime", "command"])?;
+     let timeout = string_at(&manifest.value, &["runtime", "timeout"])
+         .and_then(parse_timeout)
+         .unwrap_or_else(|| Duration::from_secs(30));
+@@ -135,6 +136,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
+         &ActionRunRequest {
+             capsule_dir,
+             entrypoint,
++            command: command.as_deref(),
+             context_json: &paths.context_json,
+             input_json: &paths.input_json,
+             output_json: &paths.output_json,
+@@ -442,6 +444,23 @@ fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
+     value_at(value, path)?.as_str()
+ }
+
++fn string_array_at(value: &YamlValue, path: &[&str]) -> Result<Option<Vec<String>>, String> {
++    let Some(value) = value_at(value, path) else {
++        return Ok(None);
++    };
++    let sequence = value
++        .as_sequence()
++        .ok_or_else(|| format!("{} must be an array of strings", path.join(".")))?;
++    let mut strings = Vec::with_capacity(sequence.len());
++    for item in sequence {
++        let Some(string) = item.as_str() else {
++            return Err(format!("{} must contain only strings", path.join(".")));
++        };
++        strings.push(string.to_string());
++    }
++    Ok(Some(strings))
++}
++
+ fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<Value> {
+     let value = value_at(value, path)?;
+     serde_json::to_value(value).ok()
+diff --git a/tests/runtime.rs b/tests/runtime.rs
+index 8ba56bf..584b729 100644
+--- a/tests/runtime.rs
++++ b/tests/runtime.rs
+@@ -138,6 +138,56 @@ fn generated_js_capsule(label: &str) -> (PathBuf, PathBuf) {
+     (output_root, capsule)
+ }
+
++fn generated_command_capsule(label: &str, action_source: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let capsule = output_root.join("command_hello");
++    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# command hello\n").expect("skill should be written");
++    fs::write(capsule.join("action.py"), action_source).expect("action should be written");
++    fs::write(
++        capsule.join("examples").join("default.input.json"),
++        r#"{"name":"Ada"}"#,
++    )
++    .expect("example should be written");
++    fs::write(
++        capsule.join("skillrun.config.json"),
++        r#"{
++  "runtime": {
++    "adapter": "command",
++    "command": ["python", "action.py"],
++    "timeout": "30s"
++  },
++  "input_schema": {
++    "type": "object",
++    "required": ["name"],
++    "additionalProperties": false,
++    "properties": {
++      "name": { "type": "string" }
++    }
++  },
++  "output_schema": {
++    "type": "object",
++    "required": ["message"],
++    "additionalProperties": false,
++    "properties": {
++      "message": { "type": "string" }
++    }
++  }
++}"#,
++    )
++    .expect("config should be written");
++
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
+ fn generated_capsule_under(output_root: &Path) -> PathBuf {
+     let output_arg = output_root.to_string_lossy().to_string();
+     let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
+@@ -267,6 +317,49 @@ fn test_returns_dependency_error_when_node_is_missing() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn test_returns_dependency_error_when_command_executable_is_missing() {
++    let output_root = temp_dir("runtime-command-missing-executable");
++    let capsule = output_root.join("command_missing");
++    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
++    fs::write(capsule.join("SKILL.md"), "# command missing\n").expect("skill should be written");
++    fs::write(capsule.join("action.sh"), "echo should-not-run\n").expect("action should exist");
++    fs::write(
++        capsule.join("examples").join("default.input.json"),
++        r#"{"name":"Ada"}"#,
++    )
++    .expect("example should be written");
++    fs::write(
++        capsule.join("skillrun.config.json"),
++        r#"{
++  "runtime": {
++    "adapter": "command",
++    "command": ["skillrun-definitely-missing-command", "action.sh"]
++  },
++  "input_schema": { "type": "object" },
++  "output_schema": { "type": "object" }
++}"#,
++    )
++    .expect("config should be written");
++    let cwd_arg = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++    let fake_path = output_root.join("empty-path");
++    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
++
++    let output = run_skillrun_with_path(&["test", "--cwd", &cwd_arg], &fake_path);
++    assert_dependency_error(
++        &output,
++        &["skillrun-definitely-missing-command", "present", "missing"],
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn run_returns_dependency_error_when_pydantic_is_missing_without_importing_action() {
+     let (output_root, capsule) = generated_capsule("runtime-missing-pydantic");
+@@ -410,6 +503,99 @@ fn test_command_uses_default_example_and_writes_run_record() {
+     fs::remove_dir_all(output_root).ok();
+ }
+
++#[test]
++fn command_adapter_runs_argv_and_writes_standard_output_envelope() {
++    let action = r#"
++import json
++import os
++from pathlib import Path
++
++input_payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
++context = json.loads(Path(os.environ["SKILLRUN_CONTEXT_JSON"]).read_text(encoding="utf-8"))
++artifact_dir = Path(os.environ["SKILLRUN_ARTIFACT_DIR"])
++Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
++    "ok": True,
++    "output": {
++        "message": f"hello {input_payload['name']} from {context['mode']}"
++    },
++    "artifacts": [],
++    "display": {
++        "markdown": f"hello {input_payload['name']} in {artifact_dir.name}"
++    }
++}, ensure_ascii=False), encoding="utf-8")
++"#;
++    let (output_root, capsule) = generated_command_capsule("runtime-command-success", action);
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let run_id = run_id_from(&output);
++    let dir = run_dir(&capsule, &run_id);
++    let output_json = read_json(&dir.join("output.json"));
++
++    assert_eq!(output_json["ok"], true);
++    assert_eq!(output_json["output"]["message"], "hello Ada from test");
++    assert_eq!(output_json["display"]["markdown"], "hello Ada in artifacts");
++    let record = read_json(&dir.join("record.json"));
++    assert_eq!(record["status"], "succeeded");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn command_adapter_stdout_is_captured_as_log_not_result() {
++    let action = r#"
++import json
++import os
++from pathlib import Path
++
++print("command adapter stdout noise")
++payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
++Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
++    "ok": True,
++    "output": {"message": f"hello {payload['name']}"},
++    "display": {"markdown": "done"}
++}), encoding="utf-8")
++"#;
++    let (output_root, capsule) = generated_command_capsule("runtime-command-stdout-log", action);
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
++    assert!(!stdout.contains("command adapter stdout noise"));
++    let run_id = run_id_from(&run);
++    let stdout_log = fs::read_to_string(run_dir(&capsule, &run_id).join("stdout.log"))
++        .expect("stdout log should be readable");
++    assert_contains(&stdout_log, "command adapter stdout noise");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn command_adapter_missing_output_returns_protocol_violation() {
++    let action = r#"
++print("FAKE_OK_FROM_STDOUT")
++"#;
++    let (output_root, capsule) =
++        generated_command_capsule("runtime-command-missing-output", action);
++    let cwd_arg = capsule.to_string_lossy().to_string();
++
++    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
++    assert!(!run.status.success());
++    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
++    assert!(!stdout.contains("FAKE_OK_FROM_STDOUT"));
++    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
++    assert_eq!(envelope["ok"], false);
++    assert_eq!(envelope["error"]["code"], "ProtocolViolation");
++    let run_id = envelope["run_id"]
++        .as_str()
++        .expect("run_id should be present");
++    let stdout_log = fs::read_to_string(run_dir(&capsule, run_id).join("stdout.log"))
++        .expect("stdout log should be readable");
++    assert_contains(&stdout_log, "FAKE_OK_FROM_STDOUT");
++
++    fs::remove_dir_all(output_root).ok();
++}
++
+ #[test]
+ fn run_command_uses_explicit_input_and_unique_run_ids() {
+     let (output_root, capsule) = generated_capsule("runtime-run-command");

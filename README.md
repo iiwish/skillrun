@@ -13,13 +13,14 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.4.3 is the current patch release candidate. The latest public release is v0.4.0; v0.4.3 stabilizes the v0.4.2 release line by fixing Linux CI failures and normalizing missing metadata-runtime errors.
+SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, the v0.4.1 WeCom Team Notice example, v0.4.2 official reference capsules, and v0.4.3 CI/runtime error stabilization.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, and v0.5 Adapter Protocol with Level 0 command adapter runtime.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
+- Level 0 `runtime.adapter = "command"` runs explicit argv commands that obey SkillRun IPC and envelope contracts. It is a protocol-native escape hatch, not a new blessed language SDK.
 
 ## Why SkillRun
 
@@ -86,6 +87,8 @@ In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and r
 
 In v0.4, `skillrun check` is the automation-grade readiness command. It reads the Manifest, source hashes, entrypoint, examples, and runtime requirements to explain whether the current host can consume or run a capsule. It does not import `action.py` or `action.mjs`, and it does not install dependencies.
 
+In v0.5, the Adapter Protocol makes the southbound runtime boundary explicit. Core still reads Manifest, creates IPC paths, validates envelopes and exposes MCP; adapters bridge user action ecosystems back into that contract.
+
 ## Release Candidate Workflow
 
 ```bash
@@ -138,6 +141,26 @@ The JS alpha contract is canonical ESM `action.mjs` with explicit `inputSchema`,
 
 `action.ts` is not a runtime entrypoint. Authors may compile TypeScript to `action.mjs` themselves, but SkillRun v0.3 does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
 
+## Level 0 Command Adapter
+
+The v0.5 command adapter proves language agnosticism without blessing another language ecosystem:
+
+```json
+{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "10s"
+  },
+  "input_schema": { "type": "object" },
+  "output_schema": { "type": "object" }
+}
+```
+
+Core starts the explicit argv command, injects `SKILLRUN_INPUT_JSON`, `SKILLRUN_CONTEXT_JSON`, `SKILLRUN_OUTPUT_JSON`, and `SKILLRUN_ARTIFACT_DIR`, then validates the output envelope and artifacts. stdout/stderr remain logs only.
+
+See `examples/command_hello` for a minimal SDK-free command capsule. It uses `python action.py` only as a portable command process; it is not the Python adapter and does not use Pydantic metadata extraction.
+
 ## Let an Agent Learn a Capsule Before Calling It
 
 SkillRun capsules are designed to be learned before they are called. Give an AI assistant a URL or repository path that points directly to a capsule folder, not just a generic project homepage. The folder should include `SKILL.md`, `skillrun.config.json`, an action entrypoint such as `action.py` or `action.mjs`, and `examples/`.
@@ -178,12 +201,12 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Current local binary output:
 
 ```text
-skillrun 0.4.3
+skillrun 0.5.0
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
 
-The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image. After unpacking, a consumer can still run `inspect` and `check` to understand the capsule and diagnose missing Python, Node, or Pydantic dependencies without executing action source.
+The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image. After unpacking, a consumer can still run `inspect` and `check` to understand the capsule and diagnose missing Python, Node, Pydantic, or command executable dependencies without executing action source for metadata.
 
 ## Release Candidate Limits
 
@@ -193,12 +216,13 @@ The current integration scope is intentionally narrow:
 - Each capsule exposes one primary Manifest-derived tool.
 - Python `action.py` is the stable action adapter target.
 - JS `action.mjs` is alpha only and is not full TypeScript support.
-- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
+- `runtime.adapter = "command"` is Level 0 protocol execution with explicit argv and static schema. It is not shell-string execution, package installation, sandboxing, or a newly blessed language adapter.
+- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, shell-string commands, npm install flows, and dependency vendoring are out of scope.
 - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
-- `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
+- `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The v0.4.0 tag and public release have already been published. v0.4.3 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
+- The v0.4.3 mainline patch release is complete. v0.5.0 merge, tag creation, remote push and package publication remain separate explicit decisions after review approval.
 
 ## Security Model
 
@@ -212,6 +236,7 @@ SkillRun is honest about trust boundaries:
 - SkillRun does not claim to be a full OS sandbox. Running a third-party action still means executing third-party code.
 - `.skr` is not a secure install format, registry package, or dependency bundle.
 - Dependency readiness is not sandboxing, vendoring, or reproducible environment creation.
+- Command adapter execution is argv-only and still executes host code. It is not an OS sandbox.
 
 The goal is a small, hard boundary: no implicit execution of instruction-only skills, no stdout success fallback, and no source-code metadata import in consumer mode.
 
@@ -233,6 +258,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.2` | Real MCP stdio server and public release candidate readiness |
 | `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
 | `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
+| `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
 
 ## Classic Business Examples
 
@@ -246,20 +272,23 @@ SkillRun's business proof is intentionally narrow:
 - `B006: Commit Message Gate` is implemented in `examples/commit_message_gate` as a v0.4.2 official reference capsule. It validates concise Conventional Commits subjects without auto-staging files.
 - `B007: Bounded File Patcher` is implemented in `examples/bounded_file_patcher` as a v0.4.2 official reference capsule. It applies one exact text replacement inside declared project directories and records a patch artifact.
 - `B008: Read-only Diagnostics Runner` is implemented in `examples/readonly_diagnostics_runner` as a v0.4.2 official reference capsule. It runs only named, allowlisted diagnostics without accepting arbitrary shell strings.
+- `B009: Command Hello` is implemented in `examples/command_hello` as a v0.5.0 Level 0 command adapter reference capsule. It demonstrates static schema, standard IPC env vars, output envelope writing, artifact output, and stdout-as-log behavior without using a SkillRun SDK.
 
-The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell.
+The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell. `command_hello` proves Level 0 adapter protocol execution without making SkillRun a language framework.
 
 ## Documentation
 
 - [Documentation index](docs/README.md)
 - [MVP contract](docs/mvp.md)
 - [Architecture SSOT](docs/ssot.md)
+- [Adapter Protocol](docs/adapter-protocol.md)
 - [Positioning](docs/positioning.md)
 - [Vision](docs/vision.md)
 - [Trust model](docs/trust-model.md)
 - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
 - [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
 - [v0.4.3 CI and runtime error stabilization](docs/v0.4.3-ci-stabilization.md)
+- [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)

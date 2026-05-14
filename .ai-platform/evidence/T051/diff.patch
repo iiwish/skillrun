@@ -1,0 +1,250 @@
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index cd81e70..28453f2 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -78,7 +78,7 @@ Acceptance:
+ 
+ ### T051: Add Adapter Conformance Fixtures For Existing Adapters
+ 
+-Status: Ready
++Status: Needs_Review
+ Priority: P0
+ Depends on: T050
+ Blocks: T052, T053
+diff --git a/tests/adapter_conformance.rs b/tests/adapter_conformance.rs
+new file mode 100644
+index 0000000..aebf95b
+--- /dev/null
++++ b/tests/adapter_conformance.rs
+@@ -0,0 +1,231 @@
++use serde_json::Value as JsonValue;
++use serde_yaml::Value as YamlValue;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::time::{SystemTime, UNIX_EPOCH};
++
++fn run_skillrun(args: &[&str]) -> std::process::Output {
++    Command::new(env!("CARGO_BIN_EXE_skillrun"))
++        .args(args)
++        .output()
++        .expect("skillrun binary should run")
++}
++
++fn temp_dir(label: &str) -> PathBuf {
++    let stamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .expect("system clock should be after unix epoch")
++        .as_nanos();
++    std::env::temp_dir().join(format!("skillrun-{label}-{}-{stamp}", std::process::id()))
++}
++
++fn generated_capsule(label: &str, language_flag: &str) -> (PathBuf, PathBuf) {
++    let output_root = temp_dir(label);
++    let output_arg = output_root.to_string_lossy().to_string();
++
++    let init = run_skillrun(&["init", "refund", language_flag, "--output", &output_arg]);
++    assert!(
++        init.status.success(),
++        "init should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&init.stdout),
++        String::from_utf8_lossy(&init.stderr)
++    );
++
++    let capsule = output_root.join("refund");
++    let cwd = capsule.to_string_lossy().to_string();
++    let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
++    assert!(
++        manifest.status.success(),
++        "manifest should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&manifest.stdout),
++        String::from_utf8_lossy(&manifest.stderr)
++    );
++
++    (output_root, capsule)
++}
++
++fn manifest_yaml(capsule: &Path) -> YamlValue {
++    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
++    let manifest = fs::read_to_string(manifest_path).expect("manifest should be readable");
++    serde_yaml::from_str(&manifest).expect("manifest should parse as YAML")
++}
++
++fn yaml_at<'a>(value: &'a YamlValue, path: &[&str]) -> &'a YamlValue {
++    let mut current = value;
++    for segment in path {
++        current = if let Some(sequence) = current.as_sequence() {
++            let index = segment
++                .parse::<usize>()
++                .unwrap_or_else(|_| panic!("YAML path {} needs a sequence index", path.join(".")));
++            sequence
++                .get(index)
++                .unwrap_or_else(|| panic!("missing YAML path {}", path.join(".")))
++        } else {
++            current
++                .get(*segment)
++                .unwrap_or_else(|| panic!("missing YAML path {}", path.join(".")))
++        };
++    }
++    current
++}
++
++fn yaml_str_at<'a>(value: &'a YamlValue, path: &[&str]) -> &'a str {
++    yaml_at(value, path)
++        .as_str()
++        .unwrap_or_else(|| panic!("YAML path {} should be a string", path.join(".")))
++}
++
++fn run_id_from(output: &std::process::Output) -> String {
++    assert!(
++        output.status.success(),
++        "command should succeed\nstdout: {}\nstderr: {}",
++        String::from_utf8_lossy(&output.stdout),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
++    let envelope: JsonValue = serde_json::from_str(&stdout).expect("stdout should be JSON");
++    assert_eq!(envelope["ok"], true);
++    envelope["run_id"]
++        .as_str()
++        .expect("run_id should be present")
++        .to_string()
++}
++
++fn run_dir(capsule: &Path, run_id: &str) -> PathBuf {
++    capsule.join(".skillrun").join("runs").join(run_id)
++}
++
++fn assert_manifest_maps_adapter_contract(
++    manifest: &YamlValue,
++    adapter: &str,
++    entrypoint: &str,
++    executable: &str,
++) {
++    assert_eq!(yaml_str_at(manifest, &["runtime", "adapter"]), adapter);
++    assert_eq!(
++        yaml_str_at(manifest, &["runtime", "entrypoint"]),
++        entrypoint
++    );
++    assert_eq!(
++        yaml_str_at(manifest, &["runtime", "requirements", "executable", "name"]),
++        executable
++    );
++    assert_eq!(
++        yaml_str_at(
++            manifest,
++            &["schemas", "input", "properties", "order_id", "type"]
++        ),
++        "string"
++    );
++    assert_eq!(
++        yaml_str_at(
++            manifest,
++            &["schemas", "output", "properties", "decision", "type"]
++        ),
++        "string"
++    );
++}
++
++#[test]
++fn python_stable_adapter_manifest_maps_to_protocol_contract() {
++    let (output_root, capsule) = generated_capsule("conformance-python-manifest", "--python");
++    let manifest = manifest_yaml(&capsule);
++
++    assert_manifest_maps_adapter_contract(&manifest, "python", "action.py", "python");
++    assert_eq!(
++        yaml_str_at(
++            &manifest,
++            &["runtime", "requirements", "packages", "0", "name"]
++        ),
++        "pydantic"
++    );
++    assert_eq!(
++        yaml_str_at(
++            &manifest,
++            &[
++                "runtime",
++                "requirements",
++                "packages",
++                "0",
++                "required_for",
++                "0"
++            ]
++        ),
++        "metadata"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn js_alpha_adapter_manifest_maps_to_protocol_contract() {
++    let (output_root, capsule) = generated_capsule("conformance-js-manifest", "--js");
++    let manifest = manifest_yaml(&capsule);
++
++    assert_manifest_maps_adapter_contract(&manifest, "node", "action.mjs", "node");
++    assert!(
++        yaml_at(&manifest, &["runtime", "requirements", "packages"])
++            .as_sequence()
++            .expect("packages should be a sequence")
++            .is_empty(),
++        "JS alpha should not imply package-manager ownership"
++    );
++
++    fs::remove_dir_all(output_root).ok();
++}
++
++#[test]
++fn python_and_js_adapters_capture_stdout_as_logs_not_results() {
++    for (label, flag, action_file, needle, replacement) in [
++        (
++            "conformance-python-stdout",
++            "--python",
++            "action.py",
++            "def run(input: Input, ctx) -> Output:\n",
++            "def run(input: Input, ctx) -> Output:\n    print(\"adapter stdout noise\")\n",
++        ),
++        (
++            "conformance-js-stdout",
++            "--js",
++            "action.mjs",
++            "export async function run(input, ctx) {\n",
++            "export async function run(input, ctx) {\n  console.log(\"adapter stdout noise\");\n",
++        ),
++    ] {
++        let output_root = temp_dir(label);
++        let output_arg = output_root.to_string_lossy().to_string();
++        let init = run_skillrun(&["init", "refund", flag, "--output", &output_arg]);
++        assert!(init.status.success());
++
++        let capsule = output_root.join("refund");
++        let action_path = capsule.join(action_file);
++        let action = fs::read_to_string(&action_path).expect("action should be readable");
++        let action = action.replace(needle, replacement);
++        fs::write(&action_path, action).expect("action should be updated");
++
++        let cwd = capsule.to_string_lossy().to_string();
++        let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
++        assert!(
++            manifest.status.success(),
++            "manifest should succeed\nstderr: {}",
++            String::from_utf8_lossy(&manifest.stderr)
++        );
++
++        let run = run_skillrun(&["test", "--cwd", &cwd]);
++        let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
++        assert!(
++            !stdout.contains("adapter stdout noise"),
++            "adapter stdout must not leak into the structured result\n{stdout}"
++        );
++        let run_id = run_id_from(&run);
++        let stdout_log = fs::read_to_string(run_dir(&capsule, &run_id).join("stdout.log"))
++            .expect("stdout log should be readable");
++        assert!(
++            stdout_log.contains("adapter stdout noise"),
++            "adapter stdout should be captured as a log\n{stdout_log}"
++        );
++
++        fs::remove_dir_all(output_root).ok();
++    }
++}

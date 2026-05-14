@@ -1,0 +1,100 @@
+schema_version: 1
+packet_id: T052-A001
+task_id: T052
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+  previous_evidence: .ai-platform/evidence/T051/summary.md
+work_unit:
+  title: Support Static Schema And Command Runtime Manifest Generation
+  goal: Teach manifest generation and readiness logic to understand Level 0 command adapter config with explicit argv command and static JSON schemas.
+  requirements:
+    - FR-050-005
+    - FR-050-008
+    - FR-050-010
+    - FR-050-012
+  dependencies:
+    - T051 accepted
+  blocks:
+    - T053
+codebase_context:
+  source_docs:
+    - docs/adapter-protocol.md
+    - .ai-platform/specs/v0.5-adapter-protocol/plan.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  relevant_files:
+    - src/config.rs
+    - src/manifest.rs
+    - src/readiness.rs
+    - src/check.rs
+    - src/doctor.rs
+    - tests/manifest.rs
+    - tests/consumer_guards.rs
+  boundaries:
+    - T052 adds manifest/config/readiness recognition only.
+    - T052 must not run command adapter actions.
+    - T052 must not introduce shell-string execution.
+    - T052 must not install dependencies.
+execution_constraints:
+  allowed_files:
+    - src/config.rs
+    - src/manifest.rs
+    - src/readiness.rs
+    - src/check.rs
+    - src/doctor.rs
+    - tests/manifest.rs
+    - tests/consumer_guards.rs
+    - tests/fixtures/**
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - .ai-platform/evidence/T052/**
+  forbidden_changes:
+    - Runtime command adapter execution.
+    - MCP behavior changes.
+    - Package manager integration.
+    - Sandbox or dependency installation claims.
+  delegation: direct execute fallback is acceptable because the user asked to continue in this thread and the current scope is a bounded implementation slice.
+tdd_plan:
+  red: Add tests for command adapter static schemas, argv-only command validation and consumer-mode command readiness diagnostics.
+  green: Add minimal config, manifest and readiness support so those tests pass.
+  refactor: Keep changes behind existing config/manifest/readiness APIs and avoid broad adapter refactors.
+validation_loop:
+  commands:
+    - cargo test --test manifest --test consumer_guards
+    - cargo test
+    - cargo fmt --check
+    - git diff --check
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T052
+  expected_signals:
+    - Target tests pass.
+    - Full test suite remains green.
+    - No formatting or whitespace errors.
+    - Delivery artifact validator reports no blocking errors for T052.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T052/summary.md
+    - .ai-platform/evidence/T052/test-results.md
+    - .ai-platform/evidence/T052/diff.patch
+  required_content:
+    - Changed files.
+    - RED/GREEN evidence.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify FR-050-005, FR-050-008, FR-050-010 and FR-050-012 without implementing T053 runtime dispatch.
+  bug_quality: Verify command config is argv-only, schema is static, and readiness does not install dependencies or import action source.
+  qa_acceptance: User review required before marking T052 Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
+stop_conditions:
+  - Command adapter requires runtime execution to satisfy manifest tests.
+  - Static schema support would require changing the public Manifest shape beyond the v0.5 contract.
+  - Existing Python or JS manifest behavior regresses.

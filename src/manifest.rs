@@ -102,7 +102,11 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
         ));
     }
 
-    let schemas = adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?;
+    let schemas = if let Some(schemas) = config.schemas {
+        schemas
+    } else {
+        adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?
+    };
     let skill_hash = hashing::sha256_file(&skill_path)?;
     let action_hash = hashing::sha256_file(&action_path)?;
     let config_source = if config_path.exists() {
@@ -197,6 +201,7 @@ fn resolve_capsule_config(
     Ok(config::CapsuleConfig {
         runtime: convention_runtime(capsule_dir)?,
         permissions: config::default_permissions(),
+        schemas: None,
     })
 }
 
@@ -220,6 +225,8 @@ fn convention_runtime(capsule_dir: &Path) -> Result<RuntimeConfig, String> {
         [(entrypoint, adapter)] => Ok(RuntimeConfig {
             adapter: (*adapter).to_string(),
             entrypoint: (*entrypoint).to_string(),
+            command: None,
+            protocol_version: None,
             timeout: "30s".to_string(),
             requirements: config::runtime_requirements_for_adapter(adapter),
         }),

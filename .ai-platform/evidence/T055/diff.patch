@@ -1,0 +1,776 @@
+diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index ef2cf69..b3e7312 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -1,5 +1,57 @@
+ # SkillRun Release Report
+
++## v0.5.0 Release Candidate
++
++Version: v0.5.0
++Status: Ready_For_User_Review
++Last updated: 2026-05-14
++Review gate: T050-T055 evidence prepared on `codex/v0.5-integration`; merge, tag creation and publication remain pending explicit user command
++
++### Scope
++
++v0.5.0 is the Adapter Protocol release candidate. It moves “language support” from ad hoc Core behavior into a documented adapter boundary, then proves that boundary with a Level 0 command adapter.
++
++The release story is deliberately constrained:
++
++> Core reads Manifest, creates IPC, validates envelopes, and exposes MCP; adapters bridge action ecosystems back into that contract.
++
++### Included v0.5.0 Work
++
++- Public Adapter Protocol contract: `docs/adapter-protocol.md`.
++- v0.5 design boundary: `docs/v0.5-adapter-protocol.md`.
++- Conformance tests for Python stable and JS alpha adapter behavior.
++- Command adapter Manifest support with explicit argv command and static JSON schemas.
++- Command executable readiness diagnostics without source metadata import or dependency installation.
++- Level 0 command adapter runtime dispatch through standard SkillRun IPC env vars.
++- Command adapter stdout/stderr log discipline and Core envelope/artifact validation.
++- SDK-free command adapter example: `examples/command_hello`.
++- README, release notes, business example catalog and version metadata updates.
++- Version bump from `0.4.2` to `0.5.0`.
++
++### Validation Summary
++
++- `cargo fmt --check`: passed.
++- `git diff --check`: passed.
++- `cargo test --test runtime --test errors --test adapter_conformance`: passed during T053.
++- `cargo test --test business_examples`: passed during T054.
++- `cargo test`: passed after one transient business example empty-output failure was rerun successfully.
++- `cargo clippy --all-targets -- -D warnings`: passed.
++- Delivery artifact validator: passed with non-blocking legacy-spec scan warnings.
++
++### Review Summary
++
++- Spec compliance review: no blocking issue found against the v0.5 scope. The work defines Adapter Protocol, conformance coverage, command Manifest support, command runtime support and a runnable example.
++- Bug/code-quality review: runtime and business example suites pass; full suite passes on rerun.
++- QA acceptance review: ready for user review; merge, tag and publication decisions remain separate explicit user actions.
++
++### Known Limits
++
++- This release does not introduce registry, marketplace, `skillrun install`, signed capsules, trusted downloads, dependency vendoring or runtime images.
++- Command adapter uses explicit argv only; shell strings remain rejected.
++- Command adapter readiness diagnoses executable presence; it does not install command dependencies.
++- Command adapter is not an OS sandbox. Running third-party command actions still executes third-party code.
++- Python stable and JS alpha remain the only language adapters with authoring conveniences. Command adapter is protocol-level execution, not a new blessed SDK.
++
+ ## v0.4.2 Release Candidate
+
+ Version: v0.4.2
+diff --git a/.ai-platform/evidence/T055/summary.md b/.ai-platform/evidence/T055/summary.md
+new file mode 100644
+index 0000000..7fef9e8
+--- /dev/null
++++ b/.ai-platform/evidence/T055/summary.md
+@@ -0,0 +1,62 @@
++# T055 Evidence Summary
++
++Task ID: T055
++Executor: Codex direct execute fallback
++Branch: codex/v0.5-integration
++Status: Needs_Review
++
++## Files Changed
++
++- `Cargo.toml`
++- `Cargo.lock`
++- `README.md`
++- `README.zh-CN.md`
++- `RELEASE_NOTES.md`
++- `.ai-platform/docs/release-report.md`
++- `.ai-platform/specs/v0.5-adapter-protocol/tasks.md`
++- `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`
++- `tests/business_examples.rs`
++- `tests/cli.rs`
++- `tests/consumer_guards.rs`
++- `tests/e2e_matrix.rs`
++- `tests/manifest.rs`
++- `tests/pack.rs`
++- `.ai-platform/evidence/T055/summary.md`
++- `.ai-platform/evidence/T055/test-results.md`
++- `.ai-platform/evidence/T055/diff.patch`
++
++## Commands Run
++
++- `cargo run -- --version` - passed and printed `skillrun 0.5.0`.
++- `cargo test --test cli --test manifest --test pack --test business_examples` - passed affected version/pack/example tests.
++- `cargo fmt` - applied formatting.
++- `cargo test` - passed full suite.
++- `cargo clippy --all-targets -- -D warnings` - passed.
++- `cargo fmt --check` - passed.
++- `git diff --check` - passed.
++- `rg` stale-version check - no stale `0.4.2` test/package version assertions remained.
++- `python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T055` - passed with non-blocking legacy-spec scan warnings.
++
++## Diff Summary
++
++- Bumped crate and lockfile version from `0.4.2` to `0.5.0`.
++- Updated README and README.zh-CN status, command adapter boundary, version output and release limits.
++- Added v0.5.0 release notes and release report section.
++- Updated version-sensitive tests for CLI output, Manifest generator version and `.skr` archive filenames.
++- Marked T055 as `Needs_Review` with release-readiness evidence.
++
++## Spec Compliance Review
++
++Pass. T055 prepares v0.5.0 release readiness for Adapter Protocol, Level 0 command adapter runtime, conformance coverage and the command adapter example without adding new runtime behavior.
++
++## Bug / Quality Review
++
++Pass. Cargo version and lockfile agree, version-sensitive tests pass, full suite passes, and clippy is clean.
++
++## User Acceptance
++
++Pending. Merge to `main`, tag creation, remote push and publication remain blocked until the user explicitly requests them.
++
++## Residual Risk
++
++The release is ready for review but not yet merged or tagged. The command adapter remains Level 0: it diagnoses executable presence and runs explicit argv, but does not install dependencies or provide sandboxing.
+diff --git a/.ai-platform/evidence/T055/test-results.md b/.ai-platform/evidence/T055/test-results.md
+new file mode 100644
+index 0000000..1d5c24d
+--- /dev/null
++++ b/.ai-platform/evidence/T055/test-results.md
+@@ -0,0 +1,98 @@
++# T055 Test Results
++
++## Version Check
++
++Command:
++
++```text
++cargo run -- --version
++```
++
++Result: passed.
++
++Output:
++
++```text
++skillrun 0.5.0
++```
++
++## Affected Tests
++
++Command:
++
++```text
++cargo test --test cli --test manifest --test pack --test business_examples
++```
++
++Result: passed.
++
++Summary:
++
++```text
++business_examples: 5 passed
++cli: 3 passed
++manifest: 13 passed
++pack: 5 passed
++```
++
++## Full Suite
++
++Command:
++
++```text
++cargo test
++```
++
++Result: passed.
++
++Summary: full workspace test suite passed with crate version `0.5.0`.
++
++## Clippy
++
++Command:
++
++```text
++cargo clippy --all-targets -- -D warnings
++```
++
++Result: passed.
++
++## Formatting
++
++Command:
++
++```text
++cargo fmt --check
++```
++
++Result: passed.
++
++## Whitespace
++
++Command:
++
++```text
++git diff --check
++```
++
++Result: passed.
++
++## Stale Version Check
++
++Command:
++
++```text
++rg -n "0\.4\.2\.skr|skillrun 0\.4\.2|generated_by: skillrun@0\.4\.2|version = \"0\.4\.2\"" tests Cargo.toml Cargo.lock README.md README.zh-CN.md
++```
++
++Result: no matches.
++
++## Delivery Artifact Validation
++
++Command:
++
++```text
++python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T055
++```
++
++Result: passed with non-blocking warnings for legacy spec directories that do not contain T055 packets.
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml b/.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml
+index c832612..ddbd203 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml
++++ b/.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml
+@@ -47,6 +47,7 @@ execution_constraints:
+     - RELEASE_NOTES.md
+     - .ai-platform/docs/release-report.md
+     - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
++    - tests/**
+     - .ai-platform/evidence/T055/**
+   forbidden_changes:
+     - Merging to `main`.
+diff --git a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+index 12be459..772556b 100644
+--- a/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
++++ b/.ai-platform/specs/v0.5-adapter-protocol/tasks.md
+@@ -325,7 +325,7 @@ Review:
+
+ ### T055: Prepare v0.5.0 Release Readiness
+
+-Status: Ready
++Status: Needs_Review
+ Priority: P1
+ Depends on: T054
+ Blocks: release decision
+@@ -344,6 +344,31 @@ Allowed files:
+ - `RELEASE_NOTES.md`
+ - `.ai-platform/docs/release-report.md`
+ - `.ai-platform/specs/v0.5-adapter-protocol/tasks.md`
++- `tests/**`
++
++Test targets:
++- Version-sensitive CLI, Manifest, pack and business example tests.
++- Full workspace regression suite.
++
++Deliverables:
++- Version metadata updated to `0.5.0`.
++- README and README.zh-CN current-status updates.
++- v0.5.0 release notes.
++- v0.5.0 release report.
++- Version-sensitive test expectations updated for the new package version.
++
++Acceptance criteria:
++- `skillrun --version` reports `0.5.0`.
++- README and release notes describe v0.5.0 as Adapter Protocol and Level 0 command adapter release readiness.
++- Release docs do not claim sandboxing, dependency vendoring, registry trust or broad language support.
++- Full tests and clippy pass.
++
++Definition of Done:
++- `cargo fmt --check` passes.
++- `cargo test` passes.
++- `cargo clippy --all-targets -- -D warnings` passes.
++- `git diff --check` passes.
++- Delivery evidence captures release validation and residual risk.
+
+ Validation commands:
+ - `cargo fmt --check`
+@@ -351,6 +376,11 @@ Validation commands:
+ - `cargo clippy --all-targets -- -D warnings`
+ - `git diff --check`
+
++TDD plan:
++- RED: Release-readiness docs/version task; use stale-version grep and release validation instead of behavior RED.
++- GREEN: Update version metadata, release docs and version-sensitive test expectations.
++- REFACTOR: Remove stale v0.4.2 current-release wording while preserving historical v0.4.2 references.
++
+ Packet path:
+ - `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`
+
+@@ -361,6 +391,10 @@ Readiness:
+ - Dependencies satisfied by accepted T054 command adapter example.
+ - Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`.
+
++Review:
++- Release readiness evidence recorded at `.ai-platform/evidence/T055/summary.md`.
++- Awaiting user acceptance before merge/tag decisions.
++
+ ## User Review Gate
+
+ - Approval: accepted by user's 2026-05-14 review/commit/continue request.
+diff --git a/Cargo.lock b/Cargo.lock
+index 35ebd77..15d7e89 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -428,7 +428,7 @@ checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
+
+ [[package]]
+ name = "skillrun"
+-version = "0.4.2"
++version = "0.5.0"
+ dependencies = [
+  "chrono",
+  "flate2",
+diff --git a/Cargo.toml b/Cargo.toml
+index b017849..d1f29db 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "skillrun"
+-version = "0.4.2"
++version = "0.5.0"
+ edition = "2021"
+ description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
+ license = "Apache-2.0"
+diff --git a/README.md b/README.md
+index ede6d3a..a30d28d 100644
+--- a/README.md
++++ b/README.md
+@@ -13,13 +13,14 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
+
+ ## Status
+
+-SkillRun v0.4.2 is the current release-candidate version. The latest public release is v0.4.0; v0.4.2 prepares positioning/trust-model documentation and three official example capsules on top of the v0.4.1 WeCom Team Notice work.
++SkillRun v0.5.0 is the current release-candidate version. The latest completed local release is v0.4.2; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter.
+
+-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, the v0.4.1 WeCom Team Notice example, and v0.4.2 official reference capsules.
++- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, and v0.5 Adapter Protocol with Level 0 command adapter runtime.
+ - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+ - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+ - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
++- Level 0 `runtime.adapter = "command"` runs explicit argv commands that obey SkillRun IPC and envelope contracts. It is a protocol-native escape hatch, not a new blessed language SDK.
+
+ ## Why SkillRun
+
+@@ -86,6 +87,8 @@ In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and r
+
+ In v0.4, `skillrun check` is the automation-grade readiness command. It reads the Manifest, source hashes, entrypoint, examples, and runtime requirements to explain whether the current host can consume or run a capsule. It does not import `action.py` or `action.mjs`, and it does not install dependencies.
+
++In v0.5, the Adapter Protocol makes the southbound runtime boundary explicit. Core still reads Manifest, creates IPC paths, validates envelopes and exposes MCP; adapters bridge user action ecosystems back into that contract.
++
+ ## Release Candidate Workflow
+
+ ```bash
+@@ -138,6 +141,26 @@ The JS alpha contract is canonical ESM `action.mjs` with explicit `inputSchema`,
+
+ `action.ts` is not a runtime entrypoint. Authors may compile TypeScript to `action.mjs` themselves, but SkillRun v0.3 does not run `ts-node`, `tsx`, source maps, CJS/ESM compatibility matrices, or package-manager install flows.
+
++## Level 0 Command Adapter
++
++The v0.5 command adapter proves language agnosticism without blessing another language ecosystem:
++
++```json
++{
++  "runtime": {
++    "adapter": "command",
++    "command": ["python", "action.py"],
++    "timeout": "10s"
++  },
++  "input_schema": { "type": "object" },
++  "output_schema": { "type": "object" }
++}
++```
++
++Core starts the explicit argv command, injects `SKILLRUN_INPUT_JSON`, `SKILLRUN_CONTEXT_JSON`, `SKILLRUN_OUTPUT_JSON`, and `SKILLRUN_ARTIFACT_DIR`, then validates the output envelope and artifacts. stdout/stderr remain logs only.
++
++See `examples/command_hello` for a minimal SDK-free command capsule. It uses `python action.py` only as a portable command process; it is not the Python adapter and does not use Pydantic metadata extraction.
++
+ ## Let an Agent Learn a Capsule Before Calling It
+
+ SkillRun capsules are designed to be learned before they are called. Give an AI assistant a URL or repository path that points directly to a capsule folder, not just a generic project homepage. The folder should include `SKILL.md`, `skillrun.config.json`, an action entrypoint such as `action.py` or `action.mjs`, and `examples/`.
+@@ -178,12 +201,12 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ Current local binary output:
+
+ ```text
+-skillrun 0.4.2
++skillrun 0.5.0
+ ```
+
+ The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
+
+-The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image. After unpacking, a consumer can still run `inspect` and `check` to understand the capsule and diagnose missing Python, Node, or Pydantic dependencies without executing action source.
++The `.skr` package is a source/Manifest archive. It is not signed, does not vendor dependencies, and does not provide a reproducible runtime image. After unpacking, a consumer can still run `inspect` and `check` to understand the capsule and diagnose missing Python, Node, Pydantic, or command executable dependencies without executing action source for metadata.
+
+ ## Release Candidate Limits
+
+@@ -193,12 +216,13 @@ The current integration scope is intentionally narrow:
+ - Each capsule exposes one primary Manifest-derived tool.
+ - Python `action.py` is the stable action adapter target.
+ - JS `action.mjs` is alpha only and is not full TypeScript support.
+-- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, npm install flows, and dependency vendoring are out of scope.
++- `runtime.adapter = "command"` is Level 0 protocol execution with explicit argv and static schema. It is not shell-string execution, package installation, sandboxing, or a newly blessed language adapter.
++- `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, shell-string commands, npm install flows, and dependency vendoring are out of scope.
+ - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
+-- `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
++- `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
+ - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
+ - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
+-- The v0.4.0 tag and public release have already been published. v0.4.2 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
++- The v0.4.2 local release handoff is complete. v0.5.0 merge, tag creation, remote push and package publication remain separate explicit decisions after review approval.
+
+ ## Security Model
+
+@@ -212,6 +236,7 @@ SkillRun is honest about trust boundaries:
+ - SkillRun does not claim to be a full OS sandbox. Running a third-party action still means executing third-party code.
+ - `.skr` is not a secure install format, registry package, or dependency bundle.
+ - Dependency readiness is not sandboxing, vendoring, or reproducible environment creation.
++- Command adapter execution is argv-only and still executes host code. It is not an OS sandbox.
+
+ The goal is a small, hard boundary: no implicit execution of instruction-only skills, no stdout success fallback, and no source-code metadata import in consumer mode.
+
+@@ -247,8 +272,9 @@ SkillRun's business proof is intentionally narrow:
+ - `B006: Commit Message Gate` is implemented in `examples/commit_message_gate` as a v0.4.2 official reference capsule. It validates concise Conventional Commits subjects without auto-staging files.
+ - `B007: Bounded File Patcher` is implemented in `examples/bounded_file_patcher` as a v0.4.2 official reference capsule. It applies one exact text replacement inside declared project directories and records a patch artifact.
+ - `B008: Read-only Diagnostics Runner` is implemented in `examples/readonly_diagnostics_runner` as a v0.4.2 official reference capsule. It runs only named, allowlisted diagnostics without accepting arbitrary shell strings.
++- `B009: Command Hello` is implemented in `examples/command_hello` as a v0.5.0 Level 0 command adapter reference capsule. It demonstrates static schema, standard IPC env vars, output envelope writing, artifact output, and stdout-as-log behavior without using a SkillRun SDK.
+
+-The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell.
++The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell. `command_hello` proves Level 0 adapter protocol execution without making SkillRun a language framework.
+
+ ## Documentation
+
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 98048d4..df822e1 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -13,13 +13,14 @@ SkillRun 关注的是：当 Agent 调用一个动作时，业务上下文、恢
+
+ ## 当前状态
+
+-SkillRun v0.4.2 是当前 release candidate 版本。最新 public release 是 v0.4.0；v0.4.2 在 v0.4.1 WeCom Team Notice 工作之上，准备合入定位/trust model 文档和三个官方参考胶囊。
++SkillRun v0.5.0 是当前 release candidate 版本。最近完成的本地 release handoff 是 v0.4.2；v0.5.0 定义 language-agnostic Adapter Protocol，并用 Level 0 command adapter 证明这条边界。
+
+-- 当前实现：v0.2 MCP stdio 行为、v0.3 JS Action Alpha、v0.4 Portable Consumer Checks、v0.4.1 WeCom Team Notice 示例，以及 v0.4.2 官方参考胶囊。
++- 当前实现：v0.2 MCP stdio 行为、v0.3 JS Action Alpha、v0.4 Portable Consumer Checks、v0.4.1 WeCom Team Notice、v0.4.2 官方参考胶囊，以及 v0.5 Adapter Protocol 与 Level 0 command adapter runtime。
+ - 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun init <name> --py`、`skillrun init <name> --js`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun check --cwd <capsule>`、`skillrun doctor --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、`skillrun pack --cwd <capsule>`、structured error envelopes、`DependencyError`、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP tools/resources、`.skr` package generation，以及 skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack 路径的 release tests。
+ - v0.2 保留 `serve --mcp --dry-run` 作为 contract inspection，但普通 `serve --mcp` 路径已经是真实 long-running MCP stdio server。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+ - Python `action.py` 是稳定 Action adapter 目标。JS `action.mjs` 是 alpha adapter 目标。二者都是用户 action 语言，不是 SkillRun 本体实现语言。
++- Level 0 `runtime.adapter = "command"` 可以运行显式 argv command，只要该进程遵守 SkillRun IPC 和 envelope contract。它是协议原生的低层接入点，不是新的 blessed language SDK。
+
+ ## 为什么需要 SkillRun
+
+@@ -86,6 +87,8 @@ v0.2 中，`skillrun serve --mcp` 已经是一个真实 MCP stdio server，同
+
+ v0.4 中，`skillrun check` 是面向自动化的 readiness command。它读取 Manifest、source hashes、entrypoint、examples 和 runtime requirements，解释当前机器能否消费或运行这个 capsule。它不会 import `action.py` 或 `action.mjs`，也不会安装依赖。
+
++v0.5 中，Adapter Protocol 把南向 runtime 边界显式化：Core 仍然只读 Manifest、创建 IPC path、校验 envelope/artifact 并暴露 MCP；adapter 只负责把用户 action 生态桥接回这份合同。
++
+ ## Release Candidate 工作流
+
+ ```bash
+@@ -137,6 +140,26 @@ JS alpha contract 是 canonical ESM `action.mjs`，显式导出 `inputSchema`、
+
+ `action.ts` 不是 runtime entrypoint。作者可以自行把 TypeScript 编译到 `action.mjs`，但 SkillRun v0.3 不运行 `ts-node`、`tsx`、source maps、CJS/ESM 兼容矩阵或 package-manager install flow。
+
++## Level 0 Command Adapter
++
++v0.5 command adapter 证明的是 language agnosticism，而不是新增一种官方语言生态：
++
++```json
++{
++  "runtime": {
++    "adapter": "command",
++    "command": ["python", "action.py"],
++    "timeout": "10s"
++  },
++  "input_schema": { "type": "object" },
++  "output_schema": { "type": "object" }
++}
++```
++
++Core 启动显式 argv command，注入 `SKILLRUN_INPUT_JSON`、`SKILLRUN_CONTEXT_JSON`、`SKILLRUN_OUTPUT_JSON` 和 `SKILLRUN_ARTIFACT_DIR`，然后校验 output envelope 与 artifact。stdout/stderr 仍然只是日志。
++
++`examples/command_hello` 是一个最小的 SDK-free command capsule。它用 `python action.py` 只是为了提供一个可移植 command process；它不是 Python adapter，也不使用 Pydantic metadata extraction。
++
+ ## 让 Agent 在调用前学习 Capsule
+
+ SkillRun Capsule 应该先被 AI 助手学会，再被调用。给 AI 的应该是直接指向 Capsule 文件夹的 URL 或 repo path，而不是项目首页。这个文件夹应包含 `SKILL.md`、`skillrun.config.json`、`action.py` 或 `action.mjs`，以及 `examples/`。
+@@ -177,12 +200,12 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ 当前本地 binary 输出：
+
+ ```text
+-skillrun 0.4.2
++skillrun 0.5.0
+ ```
+
+ 真实 `serve --mcp` 命令是 long-running stdio server，并已经通过 scripted MCP client release matrix 验证。
+
+-`.skr` package 是 source/Manifest archive。它不是 signed package，不 vendor dependencies，也不提供 reproducible runtime image。解包后，consumer 仍然可以运行 `inspect` 和 `check` 来理解 capsule，并在不执行 action source 的前提下诊断缺失的 Python、Node 或 Pydantic 依赖。
++`.skr` package 是 source/Manifest archive。它不是 signed package，不 vendor dependencies，也不提供 reproducible runtime image。解包后，consumer 仍然可以运行 `inspect` 和 `check` 来理解 capsule，并在不为 metadata 执行 action source 的前提下诊断缺失的 Python、Node、Pydantic 或 command executable 依赖。
+
+ ## Release Candidate 限制
+
+@@ -192,12 +215,13 @@ skillrun 0.4.2
+ - 每个 capsule 暴露一个 Manifest-derived primary tool。
+ - Python `action.py` 是稳定 action adapter 目标。
+ - JS `action.mjs` 只是 alpha，不是完整 TypeScript 支持。
+-- `action.ts`、直接 TypeScript runtime execution、`ts-node`、`tsx`、type-to-schema extraction、source maps、CJS compatibility、npm install flow 和 dependency vendoring 都不在 v0.3 范围内。
++- `runtime.adapter = "command"` 是显式 argv + static schema 的 Level 0 协议执行。它不是 shell-string execution、package installation、sandboxing 或新的 blessed language adapter。
++- `action.ts`、直接 TypeScript runtime execution、`ts-node`、`tsx`、type-to-schema extraction、source maps、CJS compatibility、shell-string command、npm install flow 和 dependency vendoring 都不在范围内。
+ - `.skr` 是 source + Manifest archive，不是 signed package、registry package、dependency bundle 或 runtime image。
+-- `check` 诊断 dependency readiness；它不会安装 Python、Node、Pydantic、npm packages，也不会创建 virtual environments。
++- `check` 诊断 dependency readiness；它不会安装 Python、Node、Pydantic、command executable、npm packages，也不会创建 virtual environments。
+ - 缺失 runtime dependencies 会在 CLI runtime path 和 MCP tool calls 中返回结构化 `DependencyError`。
+ - SkillRun 不提供 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
+-- `v0.4.0` tag 和 public release 已经发布。v0.4.2 tag creation、remote push 和 package publication 仍然是合并获批后的单独显式决策。
++- v0.4.2 本地 release handoff 已完成。v0.5.0 merge、tag creation、remote push 和 package publication 仍然是 review approval 之后的单独显式决策。
+
+ ## 安全模型
+
+@@ -211,6 +235,7 @@ SkillRun 对信任边界保持诚实：
+ - SkillRun 不声称提供完整 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
+ - `.skr` 不是 secure install format、registry package 或 dependency bundle。
+ - Dependency readiness 不是 sandboxing、vendoring 或 reproducible environment creation。
++- Command adapter 是 argv-only，但仍然执行宿主机代码；它不是 OS sandbox。
+
+ 目标是建立小而硬的边界：不隐式执行 instruction-only skill，不把 stdout 当成功兜底，不在 Consumer Mode 为 metadata import 源码。
+
+@@ -246,8 +271,9 @@ SkillRun 的业务证明刻意保持收敛：
+ - `B006: Commit Message Gate` 已在 `examples/commit_message_gate` 中作为 v0.4.2 official reference capsule 实现，用于说明如何校验简洁 Conventional Commits subject，并且不自动 stage 文件。
+ - `B007: Bounded File Patcher` 已在 `examples/bounded_file_patcher` 中作为 v0.4.2 official reference capsule 实现，用于说明如何在声明目录内执行一次精确文本替换，并记录 patch artifact。
+ - `B008: Read-only Diagnostics Runner` 已在 `examples/readonly_diagnostics_runner` 中作为 v0.4.2 official reference capsule 实现，用于说明如何只运行命名 allowlist 诊断，而不接受任意 shell 字符串。
++- `B009: Command Hello` 已在 `examples/command_hello` 中作为 v0.5.0 Level 0 command adapter reference capsule 实现，用于说明 static schema、标准 IPC env vars、output envelope、artifact 输出和 stdout-as-log 行为，并且不使用 SkillRun SDK。
+
+-当前可运行示例仍刻意保持收敛：`refund` 证明安全与审计边界，`wecom_team_notice` 证明更贴近日常工作的本地通知场景，但不把 SkillRun 变成企业微信 adapter 或 API wrapper。v0.4.2 参考胶囊展示可复用 preflight 模式，但不声称 OS sandbox、registry trust 或通用 shell。
++当前可运行示例仍刻意保持收敛：`refund` 证明安全与审计边界，`wecom_team_notice` 证明更贴近日常工作的本地通知场景，但不把 SkillRun 变成企业微信 adapter 或 API wrapper。v0.4.2 参考胶囊展示可复用 preflight 模式，但不声称 OS sandbox、registry trust 或通用 shell。`command_hello` 证明 Level 0 adapter protocol execution，但不把 SkillRun 变成语言框架。
+
+ ## 文档
+
+diff --git a/RELEASE_NOTES.md b/RELEASE_NOTES.md
+index a378c44..4594fdc 100644
+--- a/RELEASE_NOTES.md
++++ b/RELEASE_NOTES.md
+@@ -1,5 +1,45 @@
+ # SkillRun Release Notes
+
++## v0.5.0
++
++Status: Ready_For_Release_Decision
++Prepared on: 2026-05-14
++Publication: no v0.5.0 tag, remote push, package publication, registry entry, or artifact publication has been performed
++
++### Headline
++
++SkillRun defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter: any explicit argv command can act as a SkillRun action process when it obeys the IPC and output envelope contract.
++
++### What Is Included
++
++- `docs/adapter-protocol.md` as the public Adapter Protocol contract.
++- `docs/v0.5-adapter-protocol.md` as the v0.5 design and boundary document.
++- Adapter conformance tests that map Python stable and JS alpha behavior to the protocol contract.
++- Manifest generation for `runtime.adapter = "command"` with explicit argv command and static JSON schemas.
++- Consumer/readiness diagnostics for command executable presence without importing action source for metadata.
++- Runtime dispatch for Level 0 command adapter processes using standard SkillRun IPC environment variables.
++- stdout/stderr discipline for command adapter processes: logs only, never structured result fallback.
++- `examples/command_hello` as a runnable SDK-free command adapter reference capsule.
++- README, business example catalog, release report and version metadata updates.
++
++### Boundaries
++
++- This is an Adapter Protocol and Level 0 command adapter release, not a broad language-support release.
++- The command adapter uses explicit argv only. It does not accept shell strings.
++- It does not install Python, Node, Ruby, PHP, npm packages, virtualenvs or any command dependency.
++- It does not vendor dependencies into `.skr`.
++- It does not introduce registry, marketplace, `skillrun install`, signed capsules or trusted download behavior.
++- It does not turn SkillRun into an OS sandbox. Running a command adapter still executes host code.
++- Python remains the stable action adapter target; JS remains alpha; command adapter is protocol-level execution, not a new blessed SDK.
++
++### Validation
++
++- `cargo fmt --check`
++- `cargo test`
++- `cargo clippy --all-targets -- -D warnings`
++- `git diff --check`
++- Delivery artifact validator for T055
++
+ ## v0.4.2
+
+ Status: Ready_For_Release_Decision
+diff --git a/tests/business_examples.rs b/tests/business_examples.rs
+index 1c1f88c..572d5c3 100644
+--- a/tests/business_examples.rs
++++ b/tests/business_examples.rs
+@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
++    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
+     assert!(archive_path.is_file());
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+@@ -167,7 +167,7 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
+
+     assert!(
+         docs.contains("v0.1 MVP only implements the refund capsule")
+-            || docs.contains("v0.1 MVP 只要求完整实现 `refund`")
++            || docs.contains("v0.1 MVP 鍙姹傚畬鏁村疄鐜?`refund`")
+     );
+     assert!(readme.contains("Support Triage"));
+     assert!(readme.contains("Access Request Approval"));
+@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "wecom pack");
+-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.2.skr");
++    let archive_path = capsule.join("dist").join("wecom_team_notice-0.5.0.skr");
+     assert!(archive_path.is_file());
+     let unpacked = output_root.join("unpacked-wecom");
+     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+@@ -323,7 +323,7 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
+         assert_success(&pack, &format!("{capsule_name} pack"));
+         assert!(capsule
+             .join("dist")
+-            .join(format!("{capsule_name}-0.4.2.skr"))
++            .join(format!("{capsule_name}-0.5.0.skr"))
+             .is_file());
+     }
+
+@@ -427,7 +427,7 @@ fn command_adapter_example_capsule_proves_level_zero_ipc() {
+     assert_success(&pack, "command adapter pack");
+     assert!(capsule
+         .join("dist")
+-        .join("command_hello-0.4.2.skr")
++        .join("command_hello-0.5.0.skr")
+         .is_file());
+
+     fs::remove_dir_all(output_root).ok();
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 6711085..390c7ea 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -38,7 +38,7 @@ fn version_uses_approved_project_name() {
+     assert!(output.status.success());
+     assert_eq!(
+         String::from_utf8(output.stdout).expect("version output should be utf-8"),
+-        "skillrun 0.4.2\n"
++        "skillrun 0.5.0\n"
+     );
+ }
+
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index fa4f82e..918be98 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -286,7 +286,7 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
+     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+     assert!(pack.status.success());
+     let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+-    assert!(pack_stdout.contains("refund-0.4.2.skr"));
++    assert!(pack_stdout.contains("refund-0.5.0.skr"));
+     assert!(pack_stdout.contains("does not vendor dependencies"));
+
+     fs::remove_dir_all(output_root).ok();
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index b741ba6..84549d3 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -262,7 +262,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
++    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
+     assert!(archive_path.is_file(), "A012 archive should exist");
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack target should exist");
+@@ -546,7 +546,7 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
+     let pack_stdout = assert_success(&pack, "JS pack");
+     assert!(pack_stdout.contains("does not vendor dependencies"));
+     assert!(
+-        capsule.join("dist").join("refund-0.4.2.skr").is_file(),
++        capsule.join("dist").join("refund-0.5.0.skr").is_file(),
+         "JS pack should create .skr archive"
+     );
+
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index 0b041cc..1cd21f0 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -132,7 +132,7 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+
+     assert_contains(&manifest_text, "manifest_version: 0.1.0");
+-    assert_contains(&manifest_text, "generated_by: skillrun@0.4.2");
++    assert_contains(&manifest_text, "generated_by: skillrun@0.5.0");
+     assert_contains(&manifest_text, "name: refund");
+     assert_contains(&manifest_text, "adapter: python");
+     assert_contains(&manifest_text, "entrypoint: action.py");
+diff --git a/tests/pack.rs b/tests/pack.rs
+index cca735c..34f0fb5 100644
+--- a/tests/pack.rs
++++ b/tests/pack.rs
+@@ -137,10 +137,10 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
+     );
+     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+     assert!(stdout.contains("created"));
+-    assert!(stdout.contains("refund-0.4.2.skr"));
++    assert!(stdout.contains("refund-0.5.0.skr"));
+     assert!(stdout.contains("does not vendor dependencies"));
+
+-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
++    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
+     assert!(archive_path.is_file(), "archive should exist");
+
+     let entries = archive_entries(&archive_path);
+@@ -261,10 +261,10 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
+     );
+     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+     assert!(stdout.contains("created"));
+-    assert!(stdout.contains("refund-0.4.2.skr"));
++    assert!(stdout.contains("refund-0.5.0.skr"));
+     assert!(stdout.contains("does not vendor dependencies"));
+
+-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
++    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
+     assert!(archive_path.is_file(), "archive should exist");
+
+     let entries = archive_entries(&archive_path);
+@@ -375,7 +375,7 @@ fn pack_uses_capsule_name_for_archive_filename() {
+         String::from_utf8_lossy(&pack.stderr)
+     );
+
+-    assert!(capsule.join("dist").join("triage-0.4.2.skr").is_file());
++    assert!(capsule.join("dist").join("triage-0.5.0.skr").is_file());
+
+     fs::remove_dir_all(output_root).ok();
+ }
+@@ -399,7 +399,7 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
+     assert!(stderr.contains("action.py"));
+     assert!(!stderr.contains("command not implemented yet"));
+     assert!(
+-        !capsule.join("dist").join("refund-0.4.2.skr").exists(),
++        !capsule.join("dist").join("refund-0.5.0.skr").exists(),
+         "stale pack must not create an archive"
+     );
+
+@@ -423,11 +423,11 @@ fn pack_rejects_manifest_name_that_would_escape_dist() {
+     let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+     assert!(stderr.contains("invalid package name from Manifest"));
+     assert!(
+-        !capsule.join("escape-0.4.2.skr").exists(),
++        !capsule.join("escape-0.5.0.skr").exists(),
+         "invalid Manifest name must not escape dist"
+     );
+     assert!(
+-        !capsule.join("dist").join("escape-0.4.2.skr").exists(),
++        !capsule.join("dist").join("escape-0.5.0.skr").exists(),
+         "invalid Manifest name must not create a package"
+     );

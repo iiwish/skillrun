@@ -1,0 +1,102 @@
+schema_version: 1
+packet_id: T053-A001
+task_id: T053
+feature_id: v0.5-adapter-protocol
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.5-adapter-protocol/spec.md
+  plan: .ai-platform/specs/v0.5-adapter-protocol/plan.md
+  tasks: .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  checklist: .ai-platform/specs/v0.5-adapter-protocol/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.5-adapter-protocol/analysis.md
+  previous_evidence: .ai-platform/evidence/T052/summary.md
+work_unit:
+  title: Implement Level 0 Command Adapter Runtime
+  goal: Run explicit command adapter argv through standard SkillRun IPC, envelope validation, artifact checks, stdout/stderr logging and structured dependency/protocol errors.
+  requirements:
+    - FR-050-003
+    - FR-050-010
+    - FR-050-011
+    - FR-050-012
+  dependencies:
+    - T052 accepted
+  blocks:
+    - T054
+    - T055
+codebase_context:
+  source_docs:
+    - docs/adapter-protocol.md
+    - .ai-platform/specs/v0.5-adapter-protocol/plan.md
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+  relevant_files:
+    - src/adapters/mod.rs
+    - src/adapters/python.rs
+    - src/adapters/node.rs
+    - src/runtime.rs
+    - src/errors.rs
+    - tests/runtime.rs
+    - tests/errors.rs
+    - tests/adapter_conformance.rs
+  boundaries:
+    - T053 implements runtime dispatch only for already-manifested command adapter capsules.
+    - T053 must preserve argv-only execution and must not invoke a shell.
+    - T053 must not add package-manager or dependency installation behavior.
+    - T053 must not change MCP protocol semantics beyond existing Manifest-derived runtime behavior.
+execution_constraints:
+  allowed_files:
+    - src/adapters/mod.rs
+    - src/adapters/command.rs
+    - src/runtime.rs
+    - src/errors.rs
+    - tests/runtime.rs
+    - tests/errors.rs
+    - tests/adapter_conformance.rs
+    - tests/fixtures/**
+    - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - .ai-platform/evidence/T053/**
+  forbidden_changes:
+    - Shell-string execution.
+    - Dependency installation.
+    - Registry or package manager integration.
+    - Broad Python/Node adapter rewrites unrelated to command dispatch.
+  delegation: direct execute fallback is acceptable because the user asked to continue in this thread and the implementation scope is bounded to one adapter slice.
+tdd_plan:
+  red: Add command adapter runtime tests for success, stdout logging and protocol violation before implementation.
+  green: Add minimal command adapter module and dispatch wiring.
+  refactor: Extract shared process behavior only if tests force duplication that would be brittle.
+validation_loop:
+  commands:
+    - cargo test --test runtime --test errors --test adapter_conformance
+    - cargo test
+    - cargo fmt --check
+    - git diff --check
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T053
+  expected_signals:
+    - Target runtime/error/conformance tests pass.
+    - Full test suite remains green.
+    - No formatting or whitespace errors.
+    - Delivery artifact validator reports no blocking errors for T053.
+  retry_budget: 2
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T053/summary.md
+    - .ai-platform/evidence/T053/test-results.md
+    - .ai-platform/evidence/T053/diff.patch
+  required_content:
+    - Changed files.
+    - RED/GREEN evidence.
+    - Commands run and outcomes.
+    - Diff summary.
+    - Residual risk.
+review_contract:
+  spec_compliance: Verify FR-050-003, FR-050-010, FR-050-011 and FR-050-012 with no shell execution or source metadata import.
+  bug_quality: Verify missing output and malformed output stay ProtocolViolation and stdout/stderr remain logs.
+  qa_acceptance: User review required before marking T053 Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: Do not merge v0.5 work into main until all v0.5 tasks are accepted and release readiness passes.
+stop_conditions:
+  - Implementation requires shell-string execution.
+  - Existing Python or JS runtime behavior regresses.
+  - Command adapter cannot produce standard SkillRun output/error envelopes.
