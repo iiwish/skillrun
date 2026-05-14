@@ -28,7 +28,7 @@ The release story remains constrained:
 
 - Maintainer real send: `ok=true`, `decision=sent`, WeCom response `errcode=0`, with webhook URL omitted from evidence.
 - Python adapter fix: preserves baseline Windows process env while still injecting business env only when declared by Manifest permissions.
-- Full local validation: `cargo fmt --check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, and `git diff --check` are required before final merge handoff.
+- Full local validation passed: `cargo fmt --check`, `cargo test`, `cargo clippy --all-targets -- -D warnings`, and `git diff --check`.
 
 ### Known Limits
 
