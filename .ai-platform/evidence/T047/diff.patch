@@ -1,0 +1,663 @@
+﻿diff --git a/.ai-platform/docs/release-report.md b/.ai-platform/docs/release-report.md
+index c3c35b0..e32f2f2 100644
+--- a/.ai-platform/docs/release-report.md
++++ b/.ai-platform/docs/release-report.md
+@@ -1,5 +1,55 @@
+ # SkillRun Release Report
+
++## v0.4.2 Release Candidate
++
++Version: v0.4.2
++Status: Ready_For_User_Review
++Last updated: 2026-05-14
++Review gate: User requested completion of the v0.4.2 documentation and example-capsule slice on 2026-05-14; user acceptance, merge, tag creation and publication remain pending explicit command
++
++### Scope
++
++v0.4.2 is a positioning and example-led patch release candidate. It does not change the SkillRun runtime architecture. It sharpens the public narrative and adds official reference capsules that demonstrate reusable SOP-backed preflight patterns.
++
++The release story is deliberately constrained:
++
++> Move agent safety rules out of fragile prompts and into inspectable, testable Skill Contracts.
++
++### Included v0.4.2 Work
++
++- Project positioning: `docs/positioning.md`.
++- Long-term vision: `docs/vision.md`.
++- Honest trust model: `docs/trust-model.md`.
++- Official capsule design: `docs/v0.4.2-official-capsules.md`.
++- Commit message reference capsule: `examples/commit_message_gate`.
++- Bounded file patcher reference capsule: `examples/bounded_file_patcher`.
++- Read-only diagnostics reference capsule: `examples/readonly_diagnostics_runner`.
++- README, docs index, SSOT, business example catalog and release notes updates.
++- Version bump from `0.4.1` to `0.4.2`.
++
++### Validation Summary
++
++- `cargo fmt --check`: passed.
++- `git diff --check`: passed.
++- `cargo test --test business_examples`: passed, including the v0.4.2 reference capsule matrix.
++- `cargo test`: passed.
++- `cargo clippy --all-targets -- -D warnings`: passed.
++
++### Review Summary
++
++- Spec compliance review: no blocking issue found against the v0.4.2 scope. The work stays within documentation, examples, version metadata and tests.
++- Bug/code-quality review: no blocking issue found after full test and clippy validation.
++- QA acceptance review: ready for user review; final user acceptance is still pending.
++
++### Known Limits
++
++- This release does not introduce registry, marketplace, `skillrun install`, signed capsules, dependency vendoring or runtime images.
++- This release does not introduce a new adapter or implement the v0.5 language-agnostic Adapter Protocol.
++- `readonly_diagnostics_runner` is not a general-purpose shell.
++- `bounded_file_patcher` is not an OS sandbox.
++- `commit_message_gate` does not stage files automatically.
++- `.skr` remains source + Manifest archive.
++
+ ## v0.4.1 Merge Readiness
+
+ Version: v0.4.1
+diff --git a/Cargo.lock b/Cargo.lock
+index 8c60d82..35ebd77 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -428,7 +428,7 @@ checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
+
+ [[package]]
+ name = "skillrun"
+-version = "0.4.1"
++version = "0.4.2"
+ dependencies = [
+  "chrono",
+  "flate2",
+diff --git a/Cargo.toml b/Cargo.toml
+index 7425cf4..b017849 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "skillrun"
+-version = "0.4.1"
++version = "0.4.2"
+ edition = "2021"
+ description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
+ license = "Apache-2.0"
+diff --git a/README.md b/README.md
+index 8b4831e..48dcc89 100644
+--- a/README.md
++++ b/README.md
+@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
+
+ ## Status
+
+-SkillRun v0.4.1 is the current release-candidate version. The latest public release is v0.4.0; v0.4.1 prepares the WeCom Team Notice example and a narrow Python adapter process-environment fix.
++SkillRun v0.4.2 is the current release-candidate version. The latest public release is v0.4.0; v0.4.2 prepares positioning/trust-model documentation and three official example capsules on top of the v0.4.1 WeCom Team Notice work.
+
+-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, and the v0.4.1 WeCom Team Notice example.
++- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, the v0.4.1 WeCom Team Notice example, and v0.4.2 official reference capsules.
+ - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+ - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
+ - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
+@@ -178,7 +178,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ Current local binary output:
+
+ ```text
+-skillrun 0.4.1
++skillrun 0.4.2
+ ```
+
+ The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
+@@ -198,7 +198,7 @@ The current integration scope is intentionally narrow:
+ - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
+ - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
+ - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
+-- The v0.4.0 tag and public release have already been published. v0.4.1 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
++- The v0.4.0 tag and public release have already been published. v0.4.2 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
+
+ ## Security Model
+
+@@ -243,15 +243,22 @@ SkillRun's business proof is intentionally narrow:
+ - `B003: Access Request Approval` is a docs-level example showing approval boundaries, declared environment, and audit notes.
+ - `B004: Vendor Risk Review` is a docs-level example showing artifact-first review summaries and package distribution without dependency vendoring.
+ - `B005: WeCom Team Notice` is implemented in `examples/wecom_team_notice` as a v0.4.1 official runnable example. It shows dry-run previews, approval boundaries, declared `WECOM_WEBHOOK_URL`, structured `DependencyError`, markdown artifacts, and MCP usage for a real local notification workflow.
++- `B006: Commit Message Gate` is implemented in `examples/commit_message_gate` as a v0.4.2 official reference capsule. It validates concise Conventional Commits subjects without auto-staging files.
++- `B007: Bounded File Patcher` is implemented in `examples/bounded_file_patcher` as a v0.4.2 official reference capsule. It applies one exact text replacement inside declared project directories and records a patch artifact.
++- `B008: Read-only Diagnostics Runner` is implemented in `examples/readonly_diagnostics_runner` as a v0.4.2 official reference capsule. It runs only named, allowlisted diagnostics without accepting arbitrary shell strings.
+
+-The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper.
++The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell.
+
+ ## Documentation
+
+ - [Documentation index](docs/README.md)
+ - [MVP contract](docs/mvp.md)
+ - [Architecture SSOT](docs/ssot.md)
++- [Positioning](docs/positioning.md)
++- [Vision](docs/vision.md)
++- [Trust model](docs/trust-model.md)
+ - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
++- [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
+ - [Business examples](docs/business-examples.md)
+ - [Test strategy](docs/testing.md)
+ - [Release policy](docs/release-policy.md)
+diff --git a/README.zh-CN.md b/README.zh-CN.md
+index 5eb8cb5..61c91d9 100644
+--- a/README.zh-CN.md
++++ b/README.zh-CN.md
+@@ -13,9 +13,9 @@ SkillRun 关注的是：当 Agent 调用一个动作时，业务上下文、恢
+
+ ## 当前状态
+
+-SkillRun v0.4.1 是当前 release candidate 版本。最新 public release 是 v0.4.0；v0.4.1 准备合入 WeCom Team Notice 示例，以及一个收敛的 Python adapter process-environment 修复。
++SkillRun v0.4.2 是当前 release candidate 版本。最新 public release 是 v0.4.0；v0.4.2 在 v0.4.1 WeCom Team Notice 工作之上，准备合入定位/trust model 文档和三个官方参考胶囊。
+
+-- 当前实现：v0.2 MCP stdio 行为、v0.3 JS Action Alpha、v0.4 Portable Consumer Checks，以及 v0.4.1 WeCom Team Notice 示例。
++- 当前实现：v0.2 MCP stdio 行为、v0.3 JS Action Alpha、v0.4 Portable Consumer Checks、v0.4.1 WeCom Team Notice 示例，以及 v0.4.2 官方参考胶囊。
+ - 当前可用：`skillrun --help`、`skillrun --version`、`skillrun init <name> --python`、`skillrun init <name> --py`、`skillrun init <name> --js`、`skillrun manifest --cwd <capsule>`、`skillrun inspect --cwd <capsule>`、`skillrun check --cwd <capsule>`、`skillrun doctor --cwd <capsule>`、`skillrun test --cwd <capsule>`、`skillrun run --cwd <capsule> --input <file>`、`skillrun serve --mcp --cwd <capsule>`、`skillrun serve --mcp --cwd <capsule> --dry-run`、`skillrun pack --cwd <capsule>`、structured error envelopes、`DependencyError`、artifact validation、declared env injection、stale Manifest guards、instruction-only guards、Manifest-derived MCP tools/resources、`.skr` package generation，以及 skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack 路径的 release tests。
+ - v0.2 保留 `serve --mcp --dry-run` 作为 contract inspection，但普通 `serve --mcp` 路径已经是真实 long-running MCP stdio server。
+ - SkillRun 本体、CLI、Manifest、IPC、MCP 暴露和 pack 路径使用 Rust 实现。
+@@ -177,7 +177,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
+ 当前本地 binary 输出：
+
+ ```text
+-skillrun 0.4.1
++skillrun 0.4.2
+ ```
+
+ 真实 `serve --mcp` 命令是 long-running stdio server，并已经通过 scripted MCP client release matrix 验证。
+@@ -197,7 +197,7 @@ skillrun 0.4.1
+ - `check` 诊断 dependency readiness；它不会安装 Python、Node、Pydantic、npm packages，也不会创建 virtual environments。
+ - 缺失 runtime dependencies 会在 CLI runtime path 和 MCP tool calls 中返回结构化 `DependencyError`。
+ - SkillRun 不提供 OS sandbox。运行第三方 action 仍然意味着执行第三方代码。
+-- `v0.4.0` tag 和 public release 已经发布。v0.4.1 tag creation、remote push 和 package publication 仍然是合并获批后的单独显式决策。
++- `v0.4.0` tag 和 public release 已经发布。v0.4.2 tag creation、remote push 和 package publication 仍然是合并获批后的单独显式决策。
+
+ ## 安全模型
+
+@@ -242,15 +242,22 @@ SkillRun 的业务证明刻意保持收敛：
+ - `B003: Access Request Approval` 是 docs-level example，用于说明 approval boundary、declared env 和 audit note。
+ - `B004: Vendor Risk Review` 是 docs-level example，用于说明 artifact-first review summary，以及不 vendor dependencies 的 package distribution。
+ - `B005: WeCom Team Notice` 已在 `examples/wecom_team_notice` 中作为 v0.4.1 official runnable example 实现，用于说明 dry-run preview、approval boundary、declared `WECOM_WEBHOOK_URL`、structured `DependencyError`、markdown artifact，以及真实本地通知工作流的 MCP 使用方式。
++- `B006: Commit Message Gate` 已在 `examples/commit_message_gate` 中作为 v0.4.2 official reference capsule 实现，用于说明如何校验简洁 Conventional Commits subject，并且不自动 stage 文件。
++- `B007: Bounded File Patcher` 已在 `examples/bounded_file_patcher` 中作为 v0.4.2 official reference capsule 实现，用于说明如何在声明目录内执行一次精确文本替换，并记录 patch artifact。
++- `B008: Read-only Diagnostics Runner` 已在 `examples/readonly_diagnostics_runner` 中作为 v0.4.2 official reference capsule 实现，用于说明如何只运行命名 allowlist 诊断，而不接受任意 shell 字符串。
+
+-当前可运行示例仍刻意保持收敛：`refund` 证明安全与审计边界，`wecom_team_notice` 证明更贴近日常工作的本地通知场景，但不把 SkillRun 变成企业微信 adapter 或 API wrapper。
++当前可运行示例仍刻意保持收敛：`refund` 证明安全与审计边界，`wecom_team_notice` 证明更贴近日常工作的本地通知场景，但不把 SkillRun 变成企业微信 adapter 或 API wrapper。v0.4.2 参考胶囊展示可复用 preflight 模式，但不声称 OS sandbox、registry trust 或通用 shell。
+
+ ## 文档
+
+ - [文档入口](docs/README.md)
+ - [MVP 合同](docs/mvp.md)
+ - [架构 SSOT](docs/ssot.md)
++- [项目定位](docs/positioning.md)
++- [愿景](docs/vision.md)
++- [信任模型](docs/trust-model.md)
+ - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
++- [v0.4.2 官方参考胶囊](docs/v0.4.2-official-capsules.md)
+ - [经典业务示例](docs/business-examples.md)
+ - [测试策略](docs/testing.md)
+ - [发布策略](docs/release-policy.md)
+diff --git a/RELEASE_NOTES.md b/RELEASE_NOTES.md
+index ebdafd9..a378c44 100644
+--- a/RELEASE_NOTES.md
++++ b/RELEASE_NOTES.md
+@@ -1,5 +1,43 @@
+ # SkillRun Release Notes
+
++## v0.4.2
++
++Status: Ready_For_Release_Decision
++Prepared on: 2026-05-14
++Publication: no v0.4.2 tag, remote push, package publication, registry entry, or artifact publication has been performed
++
++### Headline
++
++SkillRun sharpens its public positioning and adds three official reference capsules that demonstrate reusable SOP-backed preflight patterns without expanding the runtime scope.
++
++### What Is Included
++
++- `docs/positioning.md` for the core project positioning: Manifest-driven runtime and packaging toolchain for SOP-backed agent skills.
++- `docs/vision.md` for long-term direction, including staged trust evolution and v0.5 language-agnostic Adapter Protocol direction.
++- `docs/trust-model.md` for the current trust boundary: manifest-bound execution and inspection, not OS sandboxing.
++- `docs/v0.4.2-official-capsules.md` for the official reference capsule design.
++- `examples/commit_message_gate` as a Python stable reference capsule for Conventional Commits validation.
++- `examples/bounded_file_patcher` as a Python stable reference capsule for exact old-text/new-text replacement inside declared project directories.
++- `examples/readonly_diagnostics_runner` as a Python stable reference capsule for named read-only diagnostics without arbitrary shell strings.
++- README, docs index and business example catalog updates.
++
++### Boundaries
++
++- This is a positioning and example-led patch release.
++- It does not introduce a registry, marketplace, `skillrun install`, signed package or trusted download story.
++- It does not introduce a new language adapter or the v0.5 Adapter Protocol.
++- The diagnostics runner is not a general-purpose shell.
++- The file patcher is not an OS sandbox.
++- The commit message gate does not stage files automatically.
++- `.skr` remains a source + Manifest archive.
++
++### Validation
++
++- `cargo fmt --check`
++- `cargo test --test business_examples`
++- `cargo test`
++- `git diff --check`
++
+ ## v0.4.1
+
+ Status: Ready_For_Release_Decision
+diff --git a/docs/README.md b/docs/README.md
+index eda06a2..539757f 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -14,8 +14,12 @@
+
+ - [MVP 合同](mvp.md)：MVP 范围、非目标和发布边界。
+ - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
++- [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
++- [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
++- [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。
+ - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
+ - [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
++- [v0.4.2 官方参考胶囊](v0.4.2-official-capsules.md)：Commit Message Gate、Bounded File Patcher 和 Read-only Diagnostics Runner。
+ - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
+
+ ## 维护者流程
+diff --git a/docs/business-examples.md b/docs/business-examples.md
+index 40414b3..ae48d01 100644
+--- a/docs/business-examples.md
++++ b/docs/business-examples.md
+@@ -1,9 +1,9 @@
+ # SkillRun 经典业务示例
+
+ **文档状态**：Confirmed
+-**版本**：v0.4.1 example catalog
+-**最后更新**：2026-05-13
+-**审批记录**：2026-05-11 文档审核无 blocking findings，作为 v0.1 业务示例目录继续推进；2026-05-13 增加 v0.4.1 `wecom_team_notice` 正式示例设计。
++**版本**：v0.4.2 example catalog
++**最后更新**：2026-05-14
++**审批记录**：2026-05-11 文档审核无 blocking findings，作为 v0.1 业务示例目录继续推进；2026-05-13 增加 v0.4.1 `wecom_team_notice` 正式示例设计；2026-05-14 增加 v0.4.2 official reference capsules。
+
+ ---
+
+@@ -13,7 +13,7 @@ SkillRun 的业务价值不是“把 Python 函数暴露给 Agent”。它证明
+
+ > 一份业务 SOP 可以和一个可执行 Action 绑定成可检查、可测试、可运行、可分发的 Skill Capsule。
+
+-本文件列出几个经典业务示例，用来解释 SkillRun 适合什么场景。v0.1 MVP 只要求完整实现 `refund`；v0.4.1 开始增加 `wecom_team_notice` 作为第一个更贴近日常工作流的正式可运行示例。换句话说：v0.1 MVP only implements the refund capsule；v0.4.1 adds an official WeCom team notice capsule without expanding SkillRun into a WeCom adapter。
++本文件列出几个经典业务示例，用来解释 SkillRun 适合什么场景。v0.1 MVP 只要求完整实现 `refund`；v0.4.1 增加 `wecom_team_notice` 作为第一个更贴近日常工作流的正式可运行示例；v0.4.2 增加三个 official reference capsules，用来展示通用 preflight 模式。换句话说：v0.1 MVP only implements the refund capsule；v0.4.1 adds an official WeCom team notice capsule without expanding SkillRun into a WeCom adapter；v0.4.2 adds reference capsules without turning SkillRun into a registry, sandbox or shell runner。
+
+ ---
+
+@@ -207,3 +207,105 @@ SkillRun 把“团队通知发布 SOP”封装成一个 Skill Capsule：Agent
+ - 缺少 webhook 会返回结构化 `DependencyError`。
+ - Agent 使用路径是 MCP tool，不是让 Agent 自己猜测 `skillrun run` 命令。
+ - 该示例不是企业微信 adapter、OpenAPI-to-MCP 或企业微信 CLI wrapper。
++
++---
++
++## 8. B006: Commit Message Gate
++
++**状态**：v0.4.2 official reference capsule。
++
++### 业务问题
++
++Agent 生成 commit message 时容易格式漂移、过长或把解释性段落塞进 subject。如果规范只写在 prompt 里，越到长上下文越容易失效。
++
++### SkillRun 价值
++
++SkillRun 把 Conventional Commits 规则放进 `preflight`，让提交规范成为可测试的 Skill Contract。默认路径只验证 message，不执行 Git 副作用；只有显式 `perform_commit=true` 时才尝试对已 staged changes 执行 `git commit -m`，并且不会运行 `git add .`。
++
++### Capsule 输入
++
++- `message`
++- `perform_commit`
++
++### Capsule 输出
++
++- `decision`: `accepted`、`committed`
++- `normalized_message`
++- `audit_note`
++- optional `git_stdout`
++- artifact: markdown validation receipt
++
++### 证明点
++
++- schema 和 preflight 拒绝非法格式、multiline subject 和过长 subject。
++- 默认运行无 Git 副作用。
++- 示例展示“把团队规范从 prompt 移进 runtime contract”，但不把 SkillRun 变成 Git assistant。
++
++---
++
++## 9. B007: Bounded File Patcher
++
++**状态**：v0.4.2 official reference capsule。
++
++### 业务问题
++
++Agent 修改文件时常见问题是整文件覆盖、路径写错、误碰 secrets 或 package manifests。把“不要乱改文件”写进 prompt 不够可靠。
++
++### SkillRun 价值
++
++SkillRun 用 schema 和 preflight 把文件修改约束变成硬边界：只允许 `src/`、`docs/`、`tests/` 下的一次精确 old-text/new-text replacement。路径穿越、隐藏目录、敏感文件、ambiguous replacement 都会被拒绝。
++
++### Capsule 输入
++
++- `file_path`
++- `old_text`
++- `new_text`
++
++### Capsule 输出
++
++- `decision`: `patched`
++- `file_path`
++- `replacements`
++- `audit_note`
++- artifact: markdown patch receipt
++
++### 证明点
++
++- 文件写入不是任意 overwrite，而是 bounded patch。
++- artifact 记录修改摘要。
++- 文档明确该示例不是 OS sandbox。
++
++---
++
++## 10. B008: Read-only Diagnostics Runner
++
++**状态**：v0.4.2 official reference capsule。
++
++### 业务问题
++
++开发者希望 Agent 能跑基础诊断，但直接暴露 shell command 容易引入删除、重定向、管道、进程管理或 package install 风险。
++
++### SkillRun 价值
++
++SkillRun 不接受任意 shell 字符串，而是把诊断动作枚举进 schema：`pwd`、`list`、`git_status`。Action 使用 subprocess argv，不使用 `shell=True`，并结构化返回 stdout、stderr、exit code 和 timeout 状态。
++
++### Capsule 输入
++
++- `diagnostic`: `pwd`、`list`、`git_status`
++- `max_output_chars`
++
++### Capsule 输出
++
++- `diagnostic`
++- `exit_code`
++- `stdout`
++- `stderr`
++- `timed_out`
++- `audit_note`
++- artifact: markdown diagnostic receipt
++
++### 证明点
++
++- 使用 allowlist，而不是危险命令黑名单。
++- 不支持任意 shell、管道、重定向或命令串联。
++- 展示如何把 terminal-shaped capability 收敛成 SOP-backed skill。
+diff --git a/docs/ssot.md b/docs/ssot.md
+index e0d8f24..1ebbc00 100644
+--- a/docs/ssot.md
++++ b/docs/ssot.md
+@@ -1,6 +1,6 @@
+ # SkillRun SSOT: SOP-backed Skill Capsule Runtime
+
+-**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已公开发布；v0.4.1 正在准备 WeCom Team Notice 示例与 Python adapter process-environment 修复；v0.1 未单独公开发布。
++**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已公开发布；v0.4.1 合入 WeCom Team Notice 示例与 Python adapter process-environment 修复；v0.4.2 正在准备定位/trust model 文档与官方参考胶囊；v0.1 未单独公开发布。
+ **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。
+ **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
+
+diff --git a/tests/business_examples.rs b/tests/business_examples.rs
+index b039dd1..e40a3b0 100644
+--- a/tests/business_examples.rs
++++ b/tests/business_examples.rs
+@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
++    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+     assert!(archive_path.is_file());
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "wecom pack");
+-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.1.skr");
++    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.2.skr");
+     assert!(archive_path.is_file());
+     let unpacked = output_root.join("unpacked-wecom");
+     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
+@@ -277,3 +277,108 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
+
+     fs::remove_dir_all(output_root).ok();
+ }
++
++#[test]
++fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
++    let output_root = temp_dir("business-v042-capsules");
++
++    for capsule_name in [
++        "commit_message_gate",
++        "bounded_file_patcher",
++        "readonly_diagnostics_runner",
++    ] {
++        let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
++            .join("examples")
++            .join(capsule_name);
++        let capsule = output_root.join(capsule_name);
++        copy_dir(&source, &capsule);
++        let cwd = capsule.to_string_lossy().to_string();
++
++        let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
++        assert_success(&manifest, &format!("{capsule_name} manifest"));
++
++        let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
++        let inspect_stdout = assert_success(&inspect, &format!("{capsule_name} inspect"));
++        assert!(
++            inspect_stdout.contains(&format!("MCP tool: {capsule_name}")),
++            "inspect should expose the capsule MCP tool"
++        );
++
++        let check = run_skillrun(&["check", "--cwd", &cwd]);
++        assert_success(&check, &format!("{capsule_name} check"));
++
++        let test = run_skillrun(&["test", "--cwd", &cwd]);
++        let test_stdout = assert_success(&test, &format!("{capsule_name} test"));
++        let test_envelope: Value =
++            serde_json::from_str(&test_stdout).expect("reference capsule test JSON");
++        assert_eq!(test_envelope["ok"], true);
++        assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
++
++        let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
++        let serve_stdout = assert_success(&serve, &format!("{capsule_name} serve dry-run"));
++        let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
++        assert_eq!(contract["tools"][0]["name"], capsule_name);
++
++        let pack = run_skillrun(&["pack", "--cwd", &cwd]);
++        assert_success(&pack, &format!("{capsule_name} pack"));
++        assert!(capsule
++            .join("dist")
++            .join(format!("{capsule_name}-0.4.2.skr"))
++            .is_file());
++    }
++
++    let commit_gate = output_root
++        .join("commit_message_gate")
++        .to_string_lossy()
++        .to_string();
++    let commit_violation = run_skillrun(&[
++        "run",
++        "--cwd",
++        &commit_gate,
++        "--input",
++        "examples/invalid.input.json",
++    ]);
++    let commit_envelope = error_envelope(&commit_violation, "PolicyViolation");
++    assert!(commit_envelope["error"]["llm_hint"]
++        .as_str()
++        .unwrap()
++        .contains("policy"));
++
++    let patcher = output_root
++        .join("bounded_file_patcher")
++        .to_string_lossy()
++        .to_string();
++    let blocked_path = run_skillrun(&[
++        "run",
++        "--cwd",
++        &patcher,
++        "--input",
++        "examples/blocked_path.input.json",
++    ]);
++    let path_envelope = error_envelope(&blocked_path, "PolicyViolation");
++    assert!(path_envelope["error"]["message"]
++        .as_str()
++        .unwrap()
++        .contains("file_path"));
++
++    let diagnostics = output_root
++        .join("readonly_diagnostics_runner")
++        .to_string_lossy()
++        .to_string();
++    let list = run_skillrun(&[
++        "run",
++        "--cwd",
++        &diagnostics,
++        "--input",
++        "examples/list.input.json",
++    ]);
++    let list_stdout = assert_success(&list, "readonly diagnostics list");
++    let list_envelope: Value = serde_json::from_str(&list_stdout).expect("list JSON");
++    assert_eq!(list_envelope["output"]["diagnostic"], "list");
++    assert!(list_envelope["output"]["stdout"]
++        .as_str()
++        .unwrap()
++        .contains("SKILL.md"));
++
++    fs::remove_dir_all(output_root).ok();
++}
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 7b15244..6711085 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -38,7 +38,7 @@ fn version_uses_approved_project_name() {
+     assert!(output.status.success());
+     assert_eq!(
+         String::from_utf8(output.stdout).expect("version output should be utf-8"),
+-        "skillrun 0.4.1\n"
++        "skillrun 0.4.2\n"
+     );
+ }
+
+diff --git a/tests/consumer_guards.rs b/tests/consumer_guards.rs
+index fc57f97..62247b2 100644
+--- a/tests/consumer_guards.rs
++++ b/tests/consumer_guards.rs
+@@ -286,7 +286,7 @@ fn valid_capsule_reaches_serve_dry_run_and_pack_success() {
+     let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+     assert!(pack.status.success());
+     let pack_stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+-    assert!(pack_stdout.contains("refund-0.4.1.skr"));
++    assert!(pack_stdout.contains("refund-0.4.2.skr"));
+     assert!(pack_stdout.contains("does not vendor dependencies"));
+
+     fs::remove_dir_all(output_root).ok();
+diff --git a/tests/e2e_matrix.rs b/tests/e2e_matrix.rs
+index a690044..b741ba6 100644
+--- a/tests/e2e_matrix.rs
++++ b/tests/e2e_matrix.rs
+@@ -262,7 +262,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
+
+     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+     assert_success(&pack, "pack");
+-    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
++    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+     assert!(archive_path.is_file(), "A012 archive should exist");
+     let unpacked = output_root.join("unpacked");
+     fs::create_dir_all(&unpacked).expect("unpack target should exist");
+@@ -546,7 +546,7 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
+     let pack_stdout = assert_success(&pack, "JS pack");
+     assert!(pack_stdout.contains("does not vendor dependencies"));
+     assert!(
+-        capsule.join("dist").join("refund-0.4.1.skr").is_file(),
++        capsule.join("dist").join("refund-0.4.2.skr").is_file(),
+         "JS pack should create .skr archive"
+     );
+
+diff --git a/tests/manifest.rs b/tests/manifest.rs
+index 8f9e08d..cae968e 100644
+--- a/tests/manifest.rs
++++ b/tests/manifest.rs
+@@ -132,7 +132,7 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
+     let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+
+     assert_contains(&manifest_text, "manifest_version: 0.1.0");
+-    assert_contains(&manifest_text, "generated_by: skillrun@0.4.1");
++    assert_contains(&manifest_text, "generated_by: skillrun@0.4.2");
+     assert_contains(&manifest_text, "name: refund");
+     assert_contains(&manifest_text, "adapter: python");
+     assert_contains(&manifest_text, "entrypoint: action.py");
+diff --git a/tests/pack.rs b/tests/pack.rs
+index 5e5dc98..cca735c 100644
+--- a/tests/pack.rs
++++ b/tests/pack.rs
+@@ -137,10 +137,10 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
+     );
+     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+     assert!(stdout.contains("created"));
+-    assert!(stdout.contains("refund-0.4.1.skr"));
++    assert!(stdout.contains("refund-0.4.2.skr"));
+     assert!(stdout.contains("does not vendor dependencies"));
+
+-    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
++    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+     assert!(archive_path.is_file(), "archive should exist");
+
+     let entries = archive_entries(&archive_path);
+@@ -261,10 +261,10 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
+     );
+     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
+     assert!(stdout.contains("created"));
+-    assert!(stdout.contains("refund-0.4.1.skr"));
++    assert!(stdout.contains("refund-0.4.2.skr"));
+     assert!(stdout.contains("does not vendor dependencies"));
+
+-    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
++    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+     assert!(archive_path.is_file(), "archive should exist");
+
+     let entries = archive_entries(&archive_path);
+@@ -375,7 +375,7 @@ fn pack_uses_capsule_name_for_archive_filename() {
+         String::from_utf8_lossy(&pack.stderr)
+     );
+
+-    assert!(capsule.join("dist").join("triage-0.4.1.skr").is_file());
++    assert!(capsule.join("dist").join("triage-0.4.2.skr").is_file());
+
+     fs::remove_dir_all(output_root).ok();
+ }
+@@ -399,7 +399,7 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
+     assert!(stderr.contains("action.py"));
+     assert!(!stderr.contains("command not implemented yet"));
+     assert!(
+-        !capsule.join("dist").join("refund-0.4.1.skr").exists(),
++        !capsule.join("dist").join("refund-0.4.2.skr").exists(),
+         "stale pack must not create an archive"
+     );
+
+@@ -423,11 +423,11 @@ fn pack_rejects_manifest_name_that_would_escape_dist() {
+     let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+     assert!(stderr.contains("invalid package name from Manifest"));
+     assert!(
+-        !capsule.join("escape-0.4.1.skr").exists(),
++        !capsule.join("escape-0.4.2.skr").exists(),
+         "invalid Manifest name must not escape dist"
+     );
+     assert!(
+-        !capsule.join("dist").join("escape-0.4.1.skr").exists(),
++        !capsule.join("dist").join("escape-0.4.2.skr").exists(),
+         "invalid Manifest name must not create a package"
+     );

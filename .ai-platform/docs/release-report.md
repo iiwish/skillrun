@@ -1,5 +1,56 @@
 # SkillRun Release Report
 
+## v0.4.2 Release Candidate
+
+Version: v0.4.2
+Status: Ready_For_User_Review
+Last updated: 2026-05-14
+Review gate: User requested completion of the v0.4.2 documentation and example-capsule slice on 2026-05-14; user acceptance, merge, tag creation and publication remain pending explicit command
+
+### Scope
+
+v0.4.2 is a positioning and example-led patch release candidate. It does not change the SkillRun runtime architecture. It sharpens the public narrative and adds official reference capsules that demonstrate reusable SOP-backed preflight patterns.
+
+The release story is deliberately constrained:
+
+> Move agent safety rules out of fragile prompts and into inspectable, testable Skill Contracts.
+
+### Included v0.4.2 Work
+
+- Project positioning: `docs/positioning.md`.
+- Long-term vision: `docs/vision.md`.
+- Honest trust model: `docs/trust-model.md`.
+- Official capsule design: `docs/v0.4.2-official-capsules.md`.
+- Commit message reference capsule: `examples/commit_message_gate`.
+- Bounded file patcher reference capsule: `examples/bounded_file_patcher`.
+- Read-only diagnostics reference capsule: `examples/readonly_diagnostics_runner`.
+- README, docs index, SSOT, business example catalog and release notes updates.
+- Version bump from `0.4.1` to `0.4.2`.
+
+### Validation Summary
+
+- `cargo fmt --check`: passed.
+- `git diff --check`: passed.
+- `cargo test --test business_examples`: passed, including the v0.4.2 reference capsule matrix.
+- `cargo test`: passed.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- Detailed official capsule matrix: passed for all three v0.4.2 reference capsules on fresh temporary copies.
+
+### Review Summary
+
+- Spec compliance review: no blocking issue found against the v0.4.2 scope. The work stays within documentation, examples, version metadata and tests.
+- Bug/code-quality review: no blocking issue found after full test and clippy validation.
+- QA acceptance review: ready for user review; final user acceptance is still pending.
+
+### Known Limits
+
+- This release does not introduce registry, marketplace, `skillrun install`, signed capsules, dependency vendoring or runtime images.
+- This release does not introduce a new adapter or implement the v0.5 language-agnostic Adapter Protocol.
+- `readonly_diagnostics_runner` is not a general-purpose shell.
+- `bounded_file_patcher` is not an OS sandbox.
+- `commit_message_gate` does not stage files automatically.
+- `.skr` remains source + Manifest archive.
+
 ## v0.4.1 Merge Readiness
 
 Version: v0.4.1

@@ -1,0 +1,4 @@
+{
+  "message": "Update lots of stuff with a very long explanation that should have been a PR body instead of a commit subject",
+  "perform_commit": false
+}

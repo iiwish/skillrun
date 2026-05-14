@@ -1,0 +1,19 @@
+{
+  "runtime": {
+    "adapter": "python",
+    "entrypoint": "action.py",
+    "timeout": "20s"
+  },
+  "permissions": {
+    "files": {
+      "read": [],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": []
+    },
+    "env": {
+      "read": []
+    }
+  }
+}
