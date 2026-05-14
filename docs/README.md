@@ -20,6 +20,7 @@
 - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。
 - [v0.4.1 WeCom Team Notice](v0.4.1-wecom-team-notice.md)：本地企业微信通知示例的 Skill Capsule 设计。
 - [v0.4.2 官方参考胶囊](v0.4.2-official-capsules.md)：Commit Message Gate、Bounded File Patcher 和 Read-only Diagnostics Runner。
+- [v0.5 Adapter Protocol Draft](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 的设计草案。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
 ## 维护者流程
