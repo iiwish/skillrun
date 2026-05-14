@@ -3,7 +3,7 @@
 Task ID: T051
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -41,7 +41,7 @@ Pass. The tests use local generated capsules, do not depend on network access, d
 
 ## User Acceptance
 
-Pending user review. T051 remains `Needs_Review` until the user accepts this slice.
+Accepted by user's 2026-05-14 review/commit/continue request after the T051 review passed.
 
 ## Residual Risk
 

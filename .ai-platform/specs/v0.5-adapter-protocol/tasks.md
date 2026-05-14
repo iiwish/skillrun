@@ -78,7 +78,7 @@ Acceptance:
 
 ### T051: Add Adapter Conformance Fixtures For Existing Adapters
 
-Status: Needs_Review
+Status: Accepted
 Priority: P0
 Depends on: T050
 Blocks: T052, T053
@@ -131,9 +131,12 @@ Packet path:
 Evidence required:
 - RED/GREEN test evidence, diff summary, residual risk.
 
+Acceptance:
+- Accepted by user's 2026-05-14 review/commit/continue request after T051 evidence review passed.
+
 ### T052: Support Static Schema And Command Runtime Manifest Generation
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T051
 Blocks: T053
@@ -154,9 +157,35 @@ Allowed files:
 - `tests/consumer_guards.rs`
 - `tests/fixtures/**`
 
+Test targets:
+- `tests/manifest.rs`
+- `tests/consumer_guards.rs`
+
+Deliverables:
+- Manifest generation recognizes `runtime.adapter = "command"` with explicit argv command.
+- Manifest generation accepts static JSON Schema from `skillrun.config.json`.
+- Consumer/readiness diagnostics can inspect command adapter executable requirements without importing source.
+- No runtime execution support for command adapter yet; that remains T053.
+
+Acceptance criteria:
+- A command-adapter capsule can generate a Manifest with `runtime.adapter: command`, argv command, protocol version and static schemas.
+- Command adapter configuration rejects shell-string commands.
+- Consumer Mode checks do not import command action source for metadata.
+- Missing command executable is diagnosed as a requirement/readiness issue, not installed.
+
+Definition of Done:
+- `cargo test --test manifest --test consumer_guards` passes.
+- `cargo test` passes.
+- Delivery evidence captures RED/GREEN results and residual risk.
+
 Validation commands:
 - `cargo test --test manifest --test consumer_guards`
 - `cargo test`
+
+TDD plan:
+- RED: Add manifest/consumer guard tests for command adapter static schema and argv-only config.
+- GREEN: Add minimal config/manifest/readiness support without runtime dispatch.
+- REFACTOR: Keep schema parsing and command requirement logic localized to existing config/manifest/readiness boundaries.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T052.yaml`
