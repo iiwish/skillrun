@@ -1,20 +1,20 @@
 manifest_version: 0.1.0
 generated_by: skillrun@0.4.0
-generated_at: 2026-05-14T02:31:41.613225700+00:00
+generated_at: 2026-05-14T02:50:21.679260400+00:00
 sources:
   skill:
     path: SKILL.md
-    sha256: e45e4d5a51e5c0e1ffea1e3f515361179fd3c643bda4af06da8aaba77ec2aaff
+    sha256: 488fac1667a7ac0f4ec51ed6f61486ad6f55ee673b8a7bf0de5bc6bfd08fccb7
   action:
     path: action.py
-    sha256: a165af7f60b2fcd480830987cbf33c8b3bd166f32b6bf0da42a3f37311450c3b
+    sha256: bd7782356f9ea5edb8fd65e50fe49bc6363b2022f60f12dc051bb1dbe328982b
   config:
     path: skillrun.config.json
     sha256: b20f1031e9b854185c009e4b687191d03d8bedb6fea32a856a62a1ba967f064c
 skill:
   name: wecom_team_notice
   sop_summary: Generated from SKILL.md. Inspect support lands in T004.
-  skill_hash: e45e4d5a51e5c0e1ffea1e3f515361179fd3c643bda4af06da8aaba77ec2aaff
+  skill_hash: 488fac1667a7ac0f4ec51ed6f61486ad6f55ee673b8a7bf0de5bc6bfd08fccb7
 tool:
   name: wecom_team_notice
   description: Execute the wecom_team_notice SkillRun capsule.

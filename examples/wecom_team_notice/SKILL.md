@@ -45,7 +45,10 @@ policy-bound team notification, not when it should freely send arbitrary text.
 
 If the action returns `PolicyViolation`, remove prohibited content or provide
 the required approval before retrying. If it returns `DependencyError`, configure
-`WECOM_WEBHOOK_URL` for real sends or retry with `dry_run=true`.
+`WECOM_WEBHOOK_URL` for real sends, check outbound access to
+`qyapi.weixin.qq.com`, or retry with `dry_run=true`. On Windows, the action uses
+direct Python HTTPS first and falls back to local `curl.exe` when Python's
+network transport cannot initialize.
 
 ## Prohibited Behavior
 
@@ -54,4 +57,3 @@ the required approval before retrying. If it returns `DependencyError`, configur
 - Do not use this capsule as a general WeCom API client.
 - Do not ask the agent to manually run `skillrun run`; configure this capsule as
   an MCP server and call the Manifest-derived tool.
-
