@@ -2,13 +2,13 @@
 
 ## v0.4.1
 
-Status: In_Development
-Prepared on: 2026-05-13
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-14
 Publication: no v0.4.1 tag, remote push, package publication, registry entry, or artifact publication has been performed
 
 ### Headline
 
-SkillRun adds `wecom_team_notice`, an official runnable example that turns a local WeCom group notification workflow into a dry-run-first, approval-bound Skill Capsule.
+SkillRun adds `wecom_team_notice`, an official runnable example that turns a local WeCom group notification workflow into a dry-run-first, approval-bound Skill Capsule, and hardens the Python adapter process environment needed for Windows network calls.
 
 ### What Is Included
 
@@ -19,19 +19,21 @@ SkillRun adds `wecom_team_notice`, an official runnable example that turns a loc
 - Secret-like content blocking through `PolicyViolation`.
 - Missing webhook behavior through structured `DependencyError`.
 - Markdown notice artifact and run record evidence.
+- Python adapter parity with the Node adapter for baseline process environment variables such as `SystemRoot`, `WINDIR`, temp directories and `PATH`, while still injecting business env vars only when declared in the Manifest.
 
 ### Boundaries
 
-- This is an example release, not a WeCom adapter.
+- This is an example-led patch release, not a WeCom adapter.
 - It is not OpenAPI-to-MCP, a WeCom CLI wrapper, bash action support or hosted server behavior.
 - Real webhook sending is manual and opt-in; CI uses dry-run and structured error paths.
+- The adapter fix preserves host process basics for Windows runtime viability; it does not relax declared business env permissions or create a sandbox.
 
 ## v0.4.0
 
-Status: Ready_For_Release_Decision
+Status: Released
 Prepared on: 2026-05-13
 Previous local release handoff: v0.3.0
-Publication: package version bumped to `0.4.0`; no `v0.4.0` tag, remote push, package publication, registry entry, or artifact publication has been performed
+Publication: v0.4.0 tag and public release artifact publication completed; no registry entry was performed
 
 ### Headline
 

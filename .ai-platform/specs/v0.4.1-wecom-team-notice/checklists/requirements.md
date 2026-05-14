@@ -39,5 +39,5 @@ Created: 2026-05-13
 
 - [x] README and README.zh-CN mention `wecom_team_notice` without making it the whole project identity.
 - [x] `docs/business-examples.md` adds WeCom as a v0.4.1 official example.
-- [x] Release notes for v0.4.1 distinguish example-only scope from runtime changes.
+- [x] Release notes for v0.4.1 distinguish the example-led scope from the required Python adapter process-environment fix.
 - [x] Tests cover dry-run, policy violation, dependency error, inspect/check/MCP/pack.

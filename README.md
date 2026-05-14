@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.4.0 is the current release-candidate version. The package version has been bumped to `0.4.0`; no `v0.4.0` tag, remote push, or package publication has been performed yet.
+SkillRun v0.4.1 is the current release-candidate version. The latest public release is v0.4.0; v0.4.1 prepares the WeCom Team Notice example and a narrow Python adapter process-environment fix.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, and v0.4 Portable Consumer Checks.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, and the v0.4.1 WeCom Team Notice example.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
@@ -178,7 +178,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Current local binary output:
 
 ```text
-skillrun 0.4.0
+skillrun 0.4.1
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -198,7 +198,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- No `v0.4.0` tag has been created yet. Tag creation, remote push and package publication are separate explicit decisions.
+- The v0.4.0 tag and public release have already been published. v0.4.1 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
 
 ## Security Model
 

@@ -1,10 +1,10 @@
 # SkillRun v0.4.1 Work Graph: WeCom Team Notice Example
 
 Version: v0.4.1
-Status: In_Progress
+Status: Ready_For_Main_Merge_Review
 Source spec: `.ai-platform/specs/v0.4.1-wecom-team-notice/spec.md`
-Last updated: 2026-05-13
-Review: User approved the spec and requested implementation continuation on 2026-05-13. T041-T044 are accepted; T045 is waiting for maintainer-provided webhook credentials.
+Last updated: 2026-05-14
+Review: User approved the spec and requested implementation continuation on 2026-05-13. T041-T046 are accepted; T045 was completed by maintainer-provided webhook validation on 2026-05-14.
 
 ## Work Graph Summary
 
@@ -233,7 +233,7 @@ Evidence required:
 
 ### T045: Manual Real-send Evidence
 
-Status: Blocked
+Status: Accepted
 Priority: P1
 Depends on: T042
 Blocks: T046
@@ -265,7 +265,7 @@ Acceptance criteria:
 - CI does not depend on real webhook.
 
 Blocker:
-- Requires maintainer-provided `WECOM_WEBHOOK_URL`. This must be run locally by a maintainer and redacted in evidence.
+- Resolved on 2026-05-14 by maintainer local validation with redacted evidence.
 
 Definition of Done:
 - Manual evidence exists and contains no secret.
@@ -283,7 +283,7 @@ Evidence required:
 
 ### T046: Prepare v0.4.1 Release Notes
 
-Status: Pending
+Status: Accepted
 Priority: P1
 Depends on: T043, T044, T045
 Blocks: None
@@ -317,7 +317,7 @@ Deliverables:
 - Final task status updates.
 
 Acceptance criteria:
-- v0.4.1 is described as example-only unless runtime changes become necessary.
+- v0.4.1 is described as example-led, with the required Python adapter process-environment fix called out explicitly.
 - Release notes include known limits and manual-send guidance.
 - Worktree is clean before handoff.
 
@@ -339,4 +339,4 @@ Evidence required:
 ## User Review Gate
 
 - Approval: Granted on 2026-05-13.
-- Reviewer notes: T041, T042, T043 and T044 were implemented, reviewed and accepted. T045 is blocked on maintainer-only real webhook validation. T046 remains pending until T045 is completed or explicitly waived.
+- Reviewer notes: T041-T046 were implemented, reviewed and accepted. T045 real webhook validation was completed by the maintainer and recorded with no webhook secret. This branch is ready for merge review; merging to `main`, tag creation and publication remain separate explicit decisions.

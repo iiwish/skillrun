@@ -7,7 +7,7 @@ Created: 2026-05-13
 
 ## Technical Approach
 
-Implement `wecom_team_notice` as an official example capsule using the existing Python stable adapter. The example must not require SkillRun Core changes. The action should use Pydantic for typed input/output, the existing SDK/error envelope behavior for structured errors, and Python standard library HTTP support for the real webhook send path.
+Implement `wecom_team_notice` as an official example capsule using the existing Python stable adapter. The action should use Pydantic for typed input/output, the existing SDK/error envelope behavior for structured errors, and Python standard library HTTP support for the real webhook send path. During validation, a narrow Python adapter process-environment fix was required to preserve Windows baseline environment variables while keeping business env injection Manifest-declared.
 
 ## Architecture Boundary
 
@@ -58,4 +58,4 @@ Manual validation:
 ## Review Gate
 
 - Approval: Granted on 2026-05-13.
-- Reviewer notes: Implementation path accepted. T041-T044 are complete; T045 requires maintainer-provided webhook credentials and must not be faked in CI.
+- Reviewer notes: Implementation path accepted. T041-T046 are complete; T045 was validated by a maintainer-provided webhook and must not be faked in CI.

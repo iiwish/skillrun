@@ -3,7 +3,7 @@
 Version: v0.4.1
 Status: Confirmed
 Created: 2026-05-13
-Updated: 2026-05-13
+Updated: 2026-05-14
 Source: `docs/v0.4.1-wecom-team-notice.md`
 Review: User approved the scope and requested implementation continuation on 2026-05-13.
 
@@ -48,7 +48,7 @@ SkillRun 的产品原子仍然是 Skill Capsule，而不是企业微信 API、MC
 
 ## Non-functional Requirements
 
-- NFR-041-001: No SkillRun Core runtime expansion.
+- NFR-041-001: No broad SkillRun Core runtime expansion; one narrow Python adapter process-environment fix is allowed because real Windows network sending requires baseline OS environment variables.
 - NFR-041-002: No new adapter language; Python `action.py` remains the stable path.
 - NFR-041-003: No bash action path in v0.4.1.
 - NFR-041-004: No OpenAPI-to-MCP or enterprise API collection narrative.
@@ -106,4 +106,4 @@ SkillRun 的产品原子仍然是 Skill Capsule，而不是企业微信 API、MC
 ## Review Gate
 
 - Approval: Granted on 2026-05-13.
-- Reviewer notes: Scope approved for implementation. T041-T044 have been implemented and reviewed; T045 remains manual real-send validation because it requires a real `WECOM_WEBHOOK_URL`.
+- Reviewer notes: Scope approved for implementation. T041-T046 have been implemented and reviewed; T045 was completed by maintainer manual real-send validation with redacted evidence.

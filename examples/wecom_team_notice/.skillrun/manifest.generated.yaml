@@ -1,6 +1,6 @@
 manifest_version: 0.1.0
-generated_by: skillrun@0.4.0
-generated_at: 2026-05-14T02:50:21.679260400+00:00
+generated_by: skillrun@0.4.1
+generated_at: 2026-05-14T03:21:22.226405600+00:00
 sources:
   skill:
     path: SKILL.md
