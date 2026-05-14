@@ -19,7 +19,7 @@ Define and prove a language-agnostic Adapter Protocol with Level 0 command adapt
 
 ### T050: Publish Adapter Protocol Contract
 
-Status: Needs_Review
+Status: Accepted
 Priority: P0
 Depends on: v0.4.2
 Blocks: T051, T052
@@ -73,9 +73,12 @@ Packet path:
 Evidence required:
 - Summary, diff, validation results.
 
+Acceptance:
+- Accepted by user's 2026-05-14 review/commit/continue request after T050 evidence review passed.
+
 ### T051: Add Adapter Conformance Fixtures For Existing Adapters
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T050
 Blocks: T052, T053
@@ -92,9 +95,35 @@ Allowed files:
 - `examples/refund/**` only if fixture input is required
 - `templates/**` only if test fixture reuse requires it
 
+Test targets:
+- `tests/adapter_conformance.rs`
+- Existing Python stable capsule behavior.
+- Existing JS alpha capsule behavior.
+
+Deliverables:
+- A focused adapter conformance integration test suite.
+- Fixtures or helper data needed to exercise existing Python and JS adapters.
+- No user-visible CLI behavior changes.
+
+Acceptance criteria:
+- Python stable adapter path is covered by conformance tests.
+- JS alpha adapter path is covered by conformance tests.
+- Tests describe success envelope behavior, schema/metadata availability and stdout-not-result discipline where currently supported.
+- Existing behavior is mapped, not refactored.
+
+Definition of Done:
+- `cargo test --test adapter_conformance` passes.
+- `cargo test` passes.
+- Delivery evidence captures RED/GREEN results and residual risk.
+
 Validation commands:
 - `cargo test --test adapter_conformance`
 - `cargo test`
+
+TDD plan:
+- RED: Add adapter conformance tests and confirm they fail before required fixture/test support exists, or document why existing behavior already satisfies a specific assertion.
+- GREEN: Add the smallest fixtures/helpers needed for the tests to pass without runtime behavior changes.
+- REFACTOR: Keep helper code local to tests unless an existing public test helper pattern already exists.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T051.yaml`

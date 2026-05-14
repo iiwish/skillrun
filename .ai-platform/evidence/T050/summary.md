@@ -3,7 +3,7 @@
 Task ID: T050
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -42,7 +42,7 @@ Pass. The docs keep the security claim narrow: command adapter is not described 
 
 ## User Acceptance
 
-Pending user review. T050 remains `Needs_Review` until the user accepts this slice.
+Accepted by user's 2026-05-14 review/commit/continue request after the T050 review passed.
 
 ## Residual Risk
 
