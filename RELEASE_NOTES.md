@@ -1,5 +1,43 @@
 # SkillRun Release Notes
 
+## v0.4.2
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-14
+Publication: no v0.4.2 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun sharpens its public positioning and adds three official reference capsules that demonstrate reusable SOP-backed preflight patterns without expanding the runtime scope.
+
+### What Is Included
+
+- `docs/positioning.md` for the core project positioning: Manifest-driven runtime and packaging toolchain for SOP-backed agent skills.
+- `docs/vision.md` for long-term direction, including staged trust evolution and v0.5 language-agnostic Adapter Protocol direction.
+- `docs/trust-model.md` for the current trust boundary: manifest-bound execution and inspection, not OS sandboxing.
+- `docs/v0.4.2-official-capsules.md` for the official reference capsule design.
+- `examples/commit_message_gate` as a Python stable reference capsule for Conventional Commits validation.
+- `examples/bounded_file_patcher` as a Python stable reference capsule for exact old-text/new-text replacement inside declared project directories.
+- `examples/readonly_diagnostics_runner` as a Python stable reference capsule for named read-only diagnostics without arbitrary shell strings.
+- README, docs index and business example catalog updates.
+
+### Boundaries
+
+- This is a positioning and example-led patch release.
+- It does not introduce a registry, marketplace, `skillrun install`, signed package or trusted download story.
+- It does not introduce a new language adapter or the v0.5 Adapter Protocol.
+- The diagnostics runner is not a general-purpose shell.
+- The file patcher is not an OS sandbox.
+- The commit message gate does not stage files automatically.
+- `.skr` remains a source + Manifest archive.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test --test business_examples`
+- `cargo test`
+- `git diff --check`
+
 ## v0.4.1
 
 Status: Ready_For_Release_Decision

@@ -1,0 +1,79 @@
+schema_version: 1
+packet_id: T047-A001
+task_id: T047
+feature_id: v0.4.2-positioning-capsules
+mode: direct_execute_fallback
+governance_inputs:
+  constitution: .ai-platform/memory/constitution.md
+  spec: .ai-platform/specs/v0.4.2-positioning-capsules/spec.md
+  plan: .ai-platform/specs/v0.4.2-positioning-capsules/plan.md
+  tasks: .ai-platform/specs/v0.4.2-positioning-capsules/tasks.md
+  checklist: .ai-platform/specs/v0.4.2-positioning-capsules/checklists/requirements.md
+  analysis: .ai-platform/specs/v0.4.2-positioning-capsules/analysis.md
+work_unit:
+  goal: Add v0.4.2 positioning docs, official reference capsules, release docs, version bump and automated coverage.
+  requirements:
+    - FR-042-001
+    - FR-042-002
+    - FR-042-003
+    - FR-042-004
+    - FR-042-005
+    - FR-042-006
+    - FR-042-007
+    - FR-042-008
+    - FR-042-009
+    - FR-042-010
+codebase_context:
+  existing_patterns:
+    - examples/refund
+    - examples/wecom_team_notice
+    - tests/business_examples.rs
+    - RELEASE_NOTES.md
+execution_constraints:
+  allowed_files:
+    - Cargo.toml
+    - Cargo.lock
+    - README.md
+    - README.zh-CN.md
+    - RELEASE_NOTES.md
+    - docs/**
+    - examples/commit_message_gate/**
+    - examples/bounded_file_patcher/**
+    - examples/readonly_diagnostics_runner/**
+    - tests/**
+    - .ai-platform/specs/v0.4.2-positioning-capsules/**
+    - .ai-platform/evidence/T047/**
+    - .ai-platform/docs/release-report.md
+  forbidden_changes:
+    - Runtime architecture changes.
+    - New language adapter implementation.
+    - Registry, marketplace, install or sandbox claims.
+  delegation: direct execute fallback because the user did not explicitly authorize subagents and the task is a bounded docs/examples slice.
+tdd_plan:
+  red: Add business example coverage for the v0.4.2 reference capsules.
+  green: Add docs and capsules until targeted tests pass.
+  refactor: Keep examples and docs scoped; update version expectations.
+validation_loop:
+  commands:
+    - cargo fmt --check
+    - git diff --check
+    - cargo test --test business_examples
+    - cargo test
+    - cargo clippy --all-targets -- -D warnings
+    - python D:\data\ai-rd-skill\ai-delivery-governor\scripts\validate_delivery_artifacts.py --root D:\data\skillrunv2 --task-id T047
+evidence_contract:
+  paths:
+    - .ai-platform/evidence/T047/summary.md
+    - .ai-platform/evidence/T047/test-results.md
+    - .ai-platform/evidence/T047/diff.patch
+review_contract:
+  spec_compliance: Verify FR-042 and NFR-042 coverage.
+  bug_quality: Verify tests, clippy and docs boundary claims.
+  qa_acceptance: User review required before marking Accepted.
+handoff:
+  status_after_execution: Needs_Review
+  merge_policy: User must explicitly approve merge/tag/publication.
+stop_conditions:
+  - Validation failure.
+  - Runtime architecture scope drift.
+  - User rejects trust model or official capsule positioning.

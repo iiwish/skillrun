@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.4.1.skr");
+    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "wecom pack");
-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.1.skr");
+    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.2.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked-wecom");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -274,6 +274,111 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
     assert_success(&unpacked_inspect, "unpacked wecom inspect");
     let unpacked_check = run_skillrun(&["check", "--cwd", &unpacked.to_string_lossy()]);
     assert_success(&unpacked_check, "unpacked wecom check");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
+    let output_root = temp_dir("business-v042-capsules");
+
+    for capsule_name in [
+        "commit_message_gate",
+        "bounded_file_patcher",
+        "readonly_diagnostics_runner",
+    ] {
+        let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("examples")
+            .join(capsule_name);
+        let capsule = output_root.join(capsule_name);
+        copy_dir(&source, &capsule);
+        let cwd = capsule.to_string_lossy().to_string();
+
+        let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
+        assert_success(&manifest, &format!("{capsule_name} manifest"));
+
+        let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
+        let inspect_stdout = assert_success(&inspect, &format!("{capsule_name} inspect"));
+        assert!(
+            inspect_stdout.contains(&format!("MCP tool: {capsule_name}")),
+            "inspect should expose the capsule MCP tool"
+        );
+
+        let check = run_skillrun(&["check", "--cwd", &cwd]);
+        assert_success(&check, &format!("{capsule_name} check"));
+
+        let test = run_skillrun(&["test", "--cwd", &cwd]);
+        let test_stdout = assert_success(&test, &format!("{capsule_name} test"));
+        let test_envelope: Value =
+            serde_json::from_str(&test_stdout).expect("reference capsule test JSON");
+        assert_eq!(test_envelope["ok"], true);
+        assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
+
+        let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
+        let serve_stdout = assert_success(&serve, &format!("{capsule_name} serve dry-run"));
+        let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
+        assert_eq!(contract["tools"][0]["name"], capsule_name);
+
+        let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+        assert_success(&pack, &format!("{capsule_name} pack"));
+        assert!(capsule
+            .join("dist")
+            .join(format!("{capsule_name}-0.4.2.skr"))
+            .is_file());
+    }
+
+    let commit_gate = output_root
+        .join("commit_message_gate")
+        .to_string_lossy()
+        .to_string();
+    let commit_violation = run_skillrun(&[
+        "run",
+        "--cwd",
+        &commit_gate,
+        "--input",
+        "examples/invalid.input.json",
+    ]);
+    let commit_envelope = error_envelope(&commit_violation, "PolicyViolation");
+    assert!(commit_envelope["error"]["llm_hint"]
+        .as_str()
+        .unwrap()
+        .contains("policy"));
+
+    let patcher = output_root
+        .join("bounded_file_patcher")
+        .to_string_lossy()
+        .to_string();
+    let blocked_path = run_skillrun(&[
+        "run",
+        "--cwd",
+        &patcher,
+        "--input",
+        "examples/blocked_path.input.json",
+    ]);
+    let path_envelope = error_envelope(&blocked_path, "PolicyViolation");
+    assert!(path_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("file_path"));
+
+    let diagnostics = output_root
+        .join("readonly_diagnostics_runner")
+        .to_string_lossy()
+        .to_string();
+    let list = run_skillrun(&[
+        "run",
+        "--cwd",
+        &diagnostics,
+        "--input",
+        "examples/list.input.json",
+    ]);
+    let list_stdout = assert_success(&list, "readonly diagnostics list");
+    let list_envelope: Value = serde_json::from_str(&list_stdout).expect("list JSON");
+    assert_eq!(list_envelope["output"]["diagnostic"], "list");
+    assert!(list_envelope["output"]["stdout"]
+        .as_str()
+        .unwrap()
+        .contains("SKILL.md"));
 
     fs::remove_dir_all(output_root).ok();
 }

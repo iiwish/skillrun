@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.4.1 is the current release-candidate version. The latest public release is v0.4.0; v0.4.1 prepares the WeCom Team Notice example and a narrow Python adapter process-environment fix.
+SkillRun v0.4.2 is the current release-candidate version. The latest public release is v0.4.0; v0.4.2 prepares positioning/trust-model documentation and three official example capsules on top of the v0.4.1 WeCom Team Notice work.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, and the v0.4.1 WeCom Team Notice example.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, the v0.4.1 WeCom Team Notice example, and v0.4.2 official reference capsules.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
@@ -178,7 +178,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Current local binary output:
 
 ```text
-skillrun 0.4.1
+skillrun 0.4.2
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -198,7 +198,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The v0.4.0 tag and public release have already been published. v0.4.1 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
+- The v0.4.0 tag and public release have already been published. v0.4.2 tag creation, remote push and package publication remain separate explicit decisions after merge approval.
 
 ## Security Model
 
@@ -243,15 +243,22 @@ SkillRun's business proof is intentionally narrow:
 - `B003: Access Request Approval` is a docs-level example showing approval boundaries, declared environment, and audit notes.
 - `B004: Vendor Risk Review` is a docs-level example showing artifact-first review summaries and package distribution without dependency vendoring.
 - `B005: WeCom Team Notice` is implemented in `examples/wecom_team_notice` as a v0.4.1 official runnable example. It shows dry-run previews, approval boundaries, declared `WECOM_WEBHOOK_URL`, structured `DependencyError`, markdown artifacts, and MCP usage for a real local notification workflow.
+- `B006: Commit Message Gate` is implemented in `examples/commit_message_gate` as a v0.4.2 official reference capsule. It validates concise Conventional Commits subjects without auto-staging files.
+- `B007: Bounded File Patcher` is implemented in `examples/bounded_file_patcher` as a v0.4.2 official reference capsule. It applies one exact text replacement inside declared project directories and records a patch artifact.
+- `B008: Read-only Diagnostics Runner` is implemented in `examples/readonly_diagnostics_runner` as a v0.4.2 official reference capsule. It runs only named, allowlisted diagnostics without accepting arbitrary shell strings.
 
-The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper.
+The runnable examples are intentionally narrow. `refund` proves safety and audit boundaries; `wecom_team_notice` proves a closer day-to-day local workflow without turning SkillRun into a WeCom adapter or API wrapper. The v0.4.2 reference capsules show reusable preflight patterns without claiming OS sandboxing, registry trust, or a general-purpose shell.
 
 ## Documentation
 
 - [Documentation index](docs/README.md)
 - [MVP contract](docs/mvp.md)
 - [Architecture SSOT](docs/ssot.md)
+- [Positioning](docs/positioning.md)
+- [Vision](docs/vision.md)
+- [Trust model](docs/trust-model.md)
 - [v0.4 Portable Consumer Checks](docs/v0.4-portable-consumer-checks.md)
+- [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)
