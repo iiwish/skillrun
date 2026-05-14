@@ -44,6 +44,7 @@ Completed the v0.4.2 documentation and official reference capsule slice:
 - `cargo test`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - Delivery artifact validator for `T047`: passed with non-blocking legacy-spec packet search warnings.
+- Detailed official capsule matrix: passed on fresh temporary copies for all three v0.4.2 reference capsules.
 
 ## Review
 

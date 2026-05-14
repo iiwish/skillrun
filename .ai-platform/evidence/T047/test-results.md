@@ -61,3 +61,26 @@ summary: 0 error(s), 4 warning(s), 0 info
 ```
 
 The warnings are legacy search warnings for older spec packet locations (`mvp`, `v0.2`, `v0.3`, `v0.4`). The v0.4.2 packet exists at `.ai-platform/specs/v0.4.2-positioning-capsules/packets/T047.yaml`.
+
+## Detailed Official Capsule Matrix
+
+Status: passed.
+
+The detailed matrix was run after the local commit on fresh temporary copies of each capsule, so generated manifests, run records and package archives did not modify repository examples.
+
+Coverage:
+
+- `commit_message_gate`: `manifest`, `inspect`, `check`, `test`, `serve --mcp --dry-run`, `pack`, default validation success, invalid message `PolicyViolation`, explicit `perform_commit=true` Git failure mapped to `DependencyError`.
+- `bounded_file_patcher`: `manifest`, `inspect`, `check`, `test`, `serve --mcp --dry-run`, `pack`, default exact replacement success, sample file changed to `Status: reviewed`, blocked path `PolicyViolation`.
+- `readonly_diagnostics_runner`: `manifest`, `inspect`, `check`, `test`, `serve --mcp --dry-run`, `pack`, `pwd`, `list` and `git_status` diagnostics return structured output with `exit_code`.
+
+Summary:
+
+```text
+PASS base matrix: commit_message_gate
+PASS base matrix: bounded_file_patcher
+PASS base matrix: readonly_diagnostics_runner
+PASS detail: commit_message_gate default, invalid policy, explicit git failure
+PASS detail: bounded_file_patcher patch success and blocked path
+PASS detail: readonly_diagnostics_runner pwd, list, git_status structured output
+```

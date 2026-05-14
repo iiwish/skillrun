@@ -34,6 +34,7 @@ The release story is deliberately constrained:
 - `cargo test --test business_examples`: passed, including the v0.4.2 reference capsule matrix.
 - `cargo test`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
+- Detailed official capsule matrix: passed for all three v0.4.2 reference capsules on fresh temporary copies.
 
 ### Review Summary
 
