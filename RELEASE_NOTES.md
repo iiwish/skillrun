@@ -1,5 +1,45 @@
 # SkillRun Release Notes
 
+## v0.5.0
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-14
+Publication: no v0.5.0 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter: any explicit argv command can act as a SkillRun action process when it obeys the IPC and output envelope contract.
+
+### What Is Included
+
+- `docs/adapter-protocol.md` as the public Adapter Protocol contract.
+- `docs/v0.5-adapter-protocol.md` as the v0.5 design and boundary document.
+- Adapter conformance tests that map Python stable and JS alpha behavior to the protocol contract.
+- Manifest generation for `runtime.adapter = "command"` with explicit argv command and static JSON schemas.
+- Consumer/readiness diagnostics for command executable presence without importing action source for metadata.
+- Runtime dispatch for Level 0 command adapter processes using standard SkillRun IPC environment variables.
+- stdout/stderr discipline for command adapter processes: logs only, never structured result fallback.
+- `examples/command_hello` as a runnable SDK-free command adapter reference capsule.
+- README, business example catalog, release report and version metadata updates.
+
+### Boundaries
+
+- This is an Adapter Protocol and Level 0 command adapter release, not a broad language-support release.
+- The command adapter uses explicit argv only. It does not accept shell strings.
+- It does not install Python, Node, Ruby, PHP, npm packages, virtualenvs or any command dependency.
+- It does not vendor dependencies into `.skr`.
+- It does not introduce registry, marketplace, `skillrun install`, signed capsules or trusted download behavior.
+- It does not turn SkillRun into an OS sandbox. Running a command adapter still executes host code.
+- Python remains the stable action adapter target; JS remains alpha; command adapter is protocol-level execution, not a new blessed SDK.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- Delivery artifact validator for T055
+
 ## v0.4.2
 
 Status: Ready_For_Release_Decision

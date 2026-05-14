@@ -1,5 +1,57 @@
 # SkillRun Release Report
 
+## v0.5.0 Release Candidate
+
+Version: v0.5.0
+Status: Ready_For_User_Review
+Last updated: 2026-05-14
+Review gate: T050-T055 evidence prepared on `codex/v0.5-integration`; merge, tag creation and publication remain pending explicit user command
+
+### Scope
+
+v0.5.0 is the Adapter Protocol release candidate. It moves “language support” from ad hoc Core behavior into a documented adapter boundary, then proves that boundary with a Level 0 command adapter.
+
+The release story is deliberately constrained:
+
+> Core reads Manifest, creates IPC, validates envelopes, and exposes MCP; adapters bridge action ecosystems back into that contract.
+
+### Included v0.5.0 Work
+
+- Public Adapter Protocol contract: `docs/adapter-protocol.md`.
+- v0.5 design boundary: `docs/v0.5-adapter-protocol.md`.
+- Conformance tests for Python stable and JS alpha adapter behavior.
+- Command adapter Manifest support with explicit argv command and static JSON schemas.
+- Command executable readiness diagnostics without source metadata import or dependency installation.
+- Level 0 command adapter runtime dispatch through standard SkillRun IPC env vars.
+- Command adapter stdout/stderr log discipline and Core envelope/artifact validation.
+- SDK-free command adapter example: `examples/command_hello`.
+- README, release notes, business example catalog and version metadata updates.
+- Version bump from `0.4.2` to `0.5.0`.
+
+### Validation Summary
+
+- `cargo fmt --check`: passed.
+- `git diff --check`: passed.
+- `cargo test --test runtime --test errors --test adapter_conformance`: passed during T053.
+- `cargo test --test business_examples`: passed during T054.
+- `cargo test`: passed after one transient business example empty-output failure was rerun successfully.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- Delivery artifact validator: passed with non-blocking legacy-spec scan warnings.
+
+### Review Summary
+
+- Spec compliance review: no blocking issue found against the v0.5 scope. The work defines Adapter Protocol, conformance coverage, command Manifest support, command runtime support and a runnable example.
+- Bug/code-quality review: runtime and business example suites pass; full suite passes on rerun.
+- QA acceptance review: ready for user review; merge, tag and publication decisions remain separate explicit user actions.
+
+### Known Limits
+
+- This release does not introduce registry, marketplace, `skillrun install`, signed capsules, trusted downloads, dependency vendoring or runtime images.
+- Command adapter uses explicit argv only; shell strings remain rejected.
+- Command adapter readiness diagnoses executable presence; it does not install command dependencies.
+- Command adapter is not an OS sandbox. Running third-party command actions still executes third-party code.
+- Python stable and JS alpha remain the only language adapters with authoring conveniences. Command adapter is protocol-level execution, not a new blessed SDK.
+
 ## v0.4.2 Release Candidate
 
 Version: v0.4.2

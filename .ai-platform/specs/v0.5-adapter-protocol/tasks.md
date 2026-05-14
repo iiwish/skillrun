@@ -325,7 +325,7 @@ Review:
 
 ### T055: Prepare v0.5.0 Release Readiness
 
-Status: Ready
+Status: Needs_Review
 Priority: P1
 Depends on: T054
 Blocks: release decision
@@ -344,12 +344,42 @@ Allowed files:
 - `RELEASE_NOTES.md`
 - `.ai-platform/docs/release-report.md`
 - `.ai-platform/specs/v0.5-adapter-protocol/tasks.md`
+- `tests/**`
+
+Test targets:
+- Version-sensitive CLI, Manifest, pack and business example tests.
+- Full workspace regression suite.
+
+Deliverables:
+- Version metadata updated to `0.5.0`.
+- README and README.zh-CN current-status updates.
+- v0.5.0 release notes.
+- v0.5.0 release report.
+- Version-sensitive test expectations updated for the new package version.
+
+Acceptance criteria:
+- `skillrun --version` reports `0.5.0`.
+- README and release notes describe v0.5.0 as Adapter Protocol and Level 0 command adapter release readiness.
+- Release docs do not claim sandboxing, dependency vendoring, registry trust or broad language support.
+- Full tests and clippy pass.
+
+Definition of Done:
+- `cargo fmt --check` passes.
+- `cargo test` passes.
+- `cargo clippy --all-targets -- -D warnings` passes.
+- `git diff --check` passes.
+- Delivery evidence captures release validation and residual risk.
 
 Validation commands:
 - `cargo fmt --check`
 - `cargo test`
 - `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
+
+TDD plan:
+- RED: Release-readiness docs/version task; use stale-version grep and release validation instead of behavior RED.
+- GREEN: Update version metadata, release docs and version-sensitive test expectations.
+- REFACTOR: Remove stale v0.4.2 current-release wording while preserving historical v0.4.2 references.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`
@@ -360,6 +390,10 @@ Evidence required:
 Readiness:
 - Dependencies satisfied by accepted T054 command adapter example.
 - Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T055.yaml`.
+
+Review:
+- Release readiness evidence recorded at `.ai-platform/evidence/T055/summary.md`.
+- Awaiting user acceptance before merge/tag decisions.
 
 ## User Review Gate
 

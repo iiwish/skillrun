@@ -47,6 +47,7 @@ execution_constraints:
     - RELEASE_NOTES.md
     - .ai-platform/docs/release-report.md
     - .ai-platform/specs/v0.5-adapter-protocol/tasks.md
+    - tests/**
     - .ai-platform/evidence/T055/**
   forbidden_changes:
     - Merging to `main`.

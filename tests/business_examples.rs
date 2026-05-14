@@ -134,7 +134,7 @@ fn refund_hero_example_proves_business_value_end_to_end() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.4.2.skr");
+    let archive_path = capsule.join("dist").join("refund-0.5.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -167,7 +167,7 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
 
     assert!(
         docs.contains("v0.1 MVP only implements the refund capsule")
-            || docs.contains("v0.1 MVP 只要求完整实现 `refund`")
+            || docs.contains("v0.1 MVP 鍙姹傚畬鏁村疄鐜?`refund`")
     );
     assert!(readme.contains("Support Triage"));
     assert!(readme.contains("Access Request Approval"));
@@ -265,7 +265,7 @@ fn wecom_team_notice_example_runs_locally_without_real_webhook() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "wecom pack");
-    let archive_path = capsule.join("dist").join("wecom_team_notice-0.4.2.skr");
+    let archive_path = capsule.join("dist").join("wecom_team_notice-0.5.0.skr");
     assert!(archive_path.is_file());
     let unpacked = output_root.join("unpacked-wecom");
     fs::create_dir_all(&unpacked).expect("unpack dir should be created");
@@ -323,7 +323,7 @@ fn v042_official_reference_capsules_run_without_registry_or_sandbox_claims() {
         assert_success(&pack, &format!("{capsule_name} pack"));
         assert!(capsule
             .join("dist")
-            .join(format!("{capsule_name}-0.4.2.skr"))
+            .join(format!("{capsule_name}-0.5.0.skr"))
             .is_file());
     }
 
@@ -427,7 +427,7 @@ fn command_adapter_example_capsule_proves_level_zero_ipc() {
     assert_success(&pack, "command adapter pack");
     assert!(capsule
         .join("dist")
-        .join("command_hello-0.4.2.skr")
+        .join("command_hello-0.5.0.skr")
         .is_file());
 
     fs::remove_dir_all(output_root).ok();
