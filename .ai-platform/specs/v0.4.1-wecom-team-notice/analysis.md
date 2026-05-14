@@ -40,4 +40,3 @@ Status: Pass.
 ## Recommendation
 
 Proceed after user approval with T041-T046. Keep v0.4.1 as an example-focused patch/minor follow-up unless implementation reveals a required runtime contract change.
-
