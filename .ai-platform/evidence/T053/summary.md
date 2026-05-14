@@ -3,7 +3,7 @@
 Task ID: T053
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -45,7 +45,7 @@ Pass. Missing output remains a `ProtocolViolation`, missing executable is caught
 
 ## User Acceptance
 
-Pending. T053 is in `Needs_Review` until the user accepts this implementation slice.
+Accepted by user's 2026-05-14 review/commit/continue request after the T053 review passed.
 
 ## Residual Risk
 

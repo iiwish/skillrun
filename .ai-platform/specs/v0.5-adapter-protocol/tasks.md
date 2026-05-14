@@ -198,7 +198,7 @@ Acceptance:
 
 ### T053: Implement Level 0 Command Adapter Runtime
 
-Status: Needs_Review
+Status: Accepted
 Priority: P0
 Depends on: T052
 Blocks: T054, T055
@@ -259,11 +259,11 @@ Evidence required:
 
 Review:
 - Implementation evidence recorded at `.ai-platform/evidence/T053/summary.md`.
-- Awaiting user acceptance before marking Accepted.
+- Accepted by user's 2026-05-14 review/commit/continue request after T053 evidence review passed.
 
 ### T054: Add Command Adapter Example Capsule
 
-Status: Draft
+Status: Ready
 Priority: P1
 Depends on: T053
 Blocks: T055
@@ -289,6 +289,10 @@ Packet path:
 
 Evidence required:
 - RED/GREEN test evidence, diff summary, residual risk.
+
+Readiness:
+- Dependencies satisfied by accepted T053 command adapter runtime.
+- Execution packet generated at `.ai-platform/specs/v0.5-adapter-protocol/packets/T054.yaml`.
 
 ### T055: Prepare v0.5.0 Release Readiness
 
