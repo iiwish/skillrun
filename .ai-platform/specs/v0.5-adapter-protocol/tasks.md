@@ -136,7 +136,7 @@ Acceptance:
 
 ### T052: Support Static Schema And Command Runtime Manifest Generation
 
-Status: Needs_Review
+Status: Accepted
 Priority: P0
 Depends on: T051
 Blocks: T053
@@ -193,9 +193,12 @@ Packet path:
 Evidence required:
 - RED/GREEN test evidence, diff summary, residual risk.
 
+Acceptance:
+- Accepted by user's 2026-05-14 review/commit/continue request after T052 evidence review passed.
+
 ### T053: Implement Level 0 Command Adapter Runtime
 
-Status: Draft
+Status: Ready
 Priority: P0
 Depends on: T052
 Blocks: T054, T055
@@ -216,9 +219,37 @@ Allowed files:
 - `tests/adapter_conformance.rs`
 - `tests/fixtures/**`
 
+Test targets:
+- `tests/runtime.rs`
+- `tests/errors.rs`
+- `tests/adapter_conformance.rs`
+
+Deliverables:
+- Runtime dispatch supports `runtime.adapter = "command"`.
+- Command adapter receives standard SkillRun IPC environment variables.
+- Command adapter stdout/stderr are captured as logs, not result.
+- Missing output, malformed output and artifact escape remain Core-validated failures.
+- Missing executable maps to structured dependency/runtime failure without shell execution.
+
+Acceptance criteria:
+- Command adapter can execute an argv command that writes a valid SkillRun output envelope.
+- Command adapter does not invoke a shell.
+- Command adapter missing executable produces a structured dependency-style failure.
+- Existing Python and JS adapter runtime tests remain green.
+
+Definition of Done:
+- `cargo test --test runtime --test errors --test adapter_conformance` passes.
+- `cargo test` passes.
+- Delivery evidence captures RED/GREEN results and residual risk.
+
 Validation commands:
 - `cargo test --test runtime --test errors --test adapter_conformance`
 - `cargo test`
+
+TDD plan:
+- RED: Add runtime tests for command adapter success, stdout logging and missing output/protocol violation.
+- GREEN: Add minimal command adapter process runner wired into existing adapter dispatch.
+- REFACTOR: Keep common process behavior small and avoid broad Python/Node refactors unless needed.
 
 Packet path:
 - `.ai-platform/specs/v0.5-adapter-protocol/packets/T053.yaml`

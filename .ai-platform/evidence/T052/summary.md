@@ -3,7 +3,7 @@
 Task ID: T052
 Executor: Codex direct execute fallback
 Branch: codex/v0.5-integration
-Status: Needs_Review
+Status: Accepted
 
 ## Files Changed
 
@@ -43,7 +43,7 @@ Pass. Command config is argv-only, static schema is required for command adapter
 
 ## User Acceptance
 
-Pending user review. T052 remains `Needs_Review` until the user accepts this slice.
+Accepted by user's 2026-05-14 review/commit/continue request after the T052 review passed.
 
 ## Residual Risk
 
