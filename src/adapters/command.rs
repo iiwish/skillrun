@@ -1,7 +1,6 @@
-use std::process::{Command, Output, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::process::{Command, Stdio};
 
+use crate::adapters::process::{self, TimeoutMessages};
 use crate::adapters::{ActionRunOutput, ActionRunRequest};
 
 pub fn run_action(request: &ActionRunRequest<'_>) -> Result<ActionRunOutput, String> {
@@ -26,8 +25,17 @@ pub fn run_action(request: &ActionRunRequest<'_>) -> Result<ActionRunOutput, Str
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let output = run_with_timeout(child, request.timeout)
-        .map_err(|error| format!("failed to run command adapter {program}: {error}"))?;
+    let output = process::run_with_timeout(
+        child,
+        request.timeout,
+        TimeoutMessages {
+            spawn: "failed to spawn command adapter",
+            poll: "failed to poll command adapter",
+            collect: "failed to collect command adapter output",
+            timeout: "command adapter timed out",
+        },
+    )
+    .map_err(|error| format!("failed to run command adapter {program}: {error}"))?;
 
     Ok(ActionRunOutput {
         success: output.status.success(),
@@ -52,35 +60,5 @@ fn apply_process_env(command: &mut Command) {
         if let Ok(value) = std::env::var(key) {
             command.env(key, value);
         }
-    }
-}
-
-fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("failed to spawn command adapter: {error}"))?;
-    let started_at = Instant::now();
-
-    loop {
-        if child
-            .try_wait()
-            .map_err(|error| format!("failed to poll command adapter: {error}"))?
-            .is_some()
-        {
-            return child
-                .wait_with_output()
-                .map_err(|error| format!("failed to collect command adapter output: {error}"));
-        }
-
-        if started_at.elapsed() >= timeout {
-            let _ = child.kill();
-            let _ = child.wait_with_output();
-            return Err(format!(
-                "command adapter timed out after {} ms",
-                timeout.as_millis()
-            ));
-        }
-
-        thread::sleep(Duration::from_millis(10));
     }
 }

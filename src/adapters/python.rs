@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
+use crate::adapters::process::{self, TimeoutMessages};
 use crate::adapters::{ActionRunOutput, ActionRunRequest, DiscoveredDependency, RuntimeDiscovery};
 use crate::schemas::Schemas;
 
@@ -130,7 +130,17 @@ print(json.dumps({
     apply_process_env(&mut command);
 
     let timeout = metadata_timeout();
-    let output = run_with_timeout(command, timeout).map_err(|error| {
+    let output = process::run_with_timeout(
+        command,
+        timeout,
+        TimeoutMessages {
+            spawn: "failed to spawn Python metadata extractor",
+            poll: "failed to poll Python metadata extractor",
+            collect: "failed to collect Python metadata output",
+            timeout: "metadata extraction timed out",
+        },
+    )
+    .map_err(|error| {
         format!(
             "failed to run Python metadata extractor for {}: {error}",
             action_path.display()
@@ -289,7 +299,17 @@ except Exception as exc:
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let output = run_with_timeout(command, request.timeout).map_err(|error| {
+    let output = process::run_with_timeout(
+        command,
+        request.timeout,
+        TimeoutMessages {
+            spawn: "failed to spawn Python action adapter",
+            poll: "failed to poll Python action adapter",
+            collect: "failed to collect Python action adapter output",
+            timeout: "Python action adapter timed out",
+        },
+    )
+    .map_err(|error| {
         format!(
             "failed to run Python action adapter for {}: {error}",
             action_path.display()
@@ -343,46 +363,5 @@ fn non_empty(value: String) -> Option<String> {
         None
     } else {
         Some(value)
-    }
-}
-
-fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, String> {
-    let mut child = command.spawn().map_err(|error| {
-        format!(
-            "failed to spawn Python metadata extractor: {}",
-            spawn_error_text(&error)
-        )
-    })?;
-    let started_at = Instant::now();
-
-    loop {
-        if child
-            .try_wait()
-            .map_err(|error| format!("failed to poll Python metadata extractor: {error}"))?
-            .is_some()
-        {
-            return child
-                .wait_with_output()
-                .map_err(|error| format!("failed to collect Python metadata output: {error}"));
-        }
-
-        if started_at.elapsed() >= timeout {
-            let _ = child.kill();
-            let _ = child.wait_with_output();
-            return Err(format!(
-                "metadata extraction timed out after {} ms",
-                timeout.as_millis()
-            ));
-        }
-
-        thread::sleep(Duration::from_millis(10));
-    }
-}
-
-fn spawn_error_text(error: &std::io::Error) -> String {
-    if error.kind() == std::io::ErrorKind::NotFound {
-        "program not found".to_string()
-    } else {
-        error.to_string()
     }
 }

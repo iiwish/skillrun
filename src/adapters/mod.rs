@@ -5,6 +5,7 @@ use crate::schemas::Schemas;
 
 pub mod command;
 pub mod node;
+mod process;
 pub mod python;
 
 pub struct RuntimeDiscovery {
