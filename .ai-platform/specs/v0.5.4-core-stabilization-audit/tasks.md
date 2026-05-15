@@ -143,7 +143,7 @@ Evidence:
 
 ### T065: Freeze Consumer JSON Fixtures
 
-Status: Ready
+Status: Completed
 Priority: P1
 Depends on: T064
 Blocks: T066
@@ -173,9 +173,18 @@ Validation commands:
 - `cargo test --test consumer_json_contracts`
 - `cargo test`
 
+Evidence:
+
+- Changed files: `tests/consumer_json_contracts.rs`, `tests/fixtures/contracts/**`, `docs/v0.5.2-consumer-json-surface.md`, `docs/v0.5.3-capsule-registry-switchboard.md`, `docs/v0.5.4-core-stabilization-audit.md`.
+- RED: `cargo test --test consumer_json_contracts -- --nocapture` initially failed before path normalization handled Windows canonical `//?/` paths.
+- GREEN: `cargo test --test consumer_json_contracts -- --nocapture` passed.
+- Fixture coverage: runnable `inspect/check/doctor`, instruction-only `inspect/check`, registry enabled, and switchboard enabled.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T066 still needs to freeze version semantics and Desktop/Core boundaries in release docs.
+
 ### T066: Document Version Semantics And Desktop Boundary
 
-Status: Ready_For_User_Review
+Status: Ready
 Priority: P1
 Depends on: T065
 Blocks: Desktop project start

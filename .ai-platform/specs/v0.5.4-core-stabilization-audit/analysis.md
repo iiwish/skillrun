@@ -126,6 +126,13 @@ Required fix:
 - Add stable JSON fixture/golden contract files for Consumer JSON and registry/switchboard JSON.
 - Document additive vs breaking JSON changes.
 
+Execution evidence:
+
+- RED: `cargo test --test consumer_json_contracts -- --nocapture` initially failed before path normalization handled Windows canonical `//?/` paths.
+- GREEN: `cargo test --test consumer_json_contracts -- --nocapture` passed.
+- Fixture coverage: runnable `inspect/check/doctor`, instruction-only `inspect/check`, registry enabled, and switchboard enabled.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+
 ### P1-003: version layers are not explicit enough for stable release
 
 Evidence:

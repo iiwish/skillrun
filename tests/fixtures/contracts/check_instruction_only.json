@@ -1,0 +1,38 @@
+{
+  "command": "check",
+  "ok": false,
+  "cwd": "<capsule>",
+  "status": "instruction-only",
+  "manifest": {
+    "path": ".skillrun/manifest.generated.yaml",
+    "present": false,
+    "freshness": "missing"
+  },
+  "files": {
+    "skill": true,
+    "python_action": false,
+    "node_action": false,
+    "typescript": false,
+    "config": false
+  },
+  "runtime": {
+    "adapter": null,
+    "entrypoint": null
+  },
+  "requirements": {
+    "present": false,
+    "executable": null,
+    "packages": []
+  },
+  "dependency_checks": [],
+  "source_checks": [],
+  "example_checks": [
+    {
+      "path": "examples/default.input.json",
+      "present": false
+    }
+  ],
+  "reason": "SkillRun does not infer actions from Markdown, scripts, references, assets, or examples.",
+  "next_step": "Add action.py or action.mjs, then run `skillrun manifest --cwd <capsule>`.",
+  "note": "readiness reads Manifest, files and hashes only; it does not run or import action source."
+}

@@ -1,0 +1,58 @@
+{
+  "command": "inspect",
+  "cwd": "<capsule>",
+  "status": "runnable",
+  "manifest": {
+    "path": ".skillrun/manifest.generated.yaml",
+    "present": true,
+    "freshness": "fresh"
+  },
+  "skill": {
+    "name": "refund",
+    "sop_hash": "<sha256>"
+  },
+  "sources": {
+    "skill": {
+      "path": "SKILL.md",
+      "sha256": "<sha256>"
+    },
+    "action": {
+      "path": "action.py",
+      "sha256": "<sha256>"
+    }
+  },
+  "schemas": {
+    "input": "present",
+    "output": "present"
+  },
+  "runtime": {
+    "adapter": "python",
+    "entrypoint": "action.py",
+    "timeout": "30s"
+  },
+  "permissions": {
+    "files": {
+      "read": [],
+      "write": [
+        ".skillrun/runs/**"
+      ]
+    },
+    "network": {
+      "outbound": []
+    },
+    "env": {
+      "read": []
+    }
+  },
+  "examples": [
+    {
+      "id": "default",
+      "input": "examples/default.input.json"
+    }
+  ],
+  "preflight": "present",
+  "tool": {
+    "name": "refund",
+    "description": "Execute the refund SkillRun capsule."
+  }
+}
