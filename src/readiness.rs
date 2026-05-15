@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::adapters;
 use crate::hashing;
 use crate::manifest;
-use crate::manifest_access::{string_at, value_at};
+use crate::manifest_access::{string_at, value_at, ManifestView};
 
 pub struct ReadinessReport {
     pub cwd: PathBuf,
@@ -187,11 +187,12 @@ fn report_with_manifest(
         .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
     let manifest: Value = serde_yaml::from_str(&text)
         .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
+    let manifest_view = ManifestView::new(&manifest);
 
-    let adapter = string_at(&manifest, &["runtime", "adapter"]).map(ToString::to_string);
-    let entrypoint = string_at(&manifest, &["runtime", "entrypoint"]).map(ToString::to_string);
-    let source_checks = source_checks(&cwd, &manifest);
-    let example_checks = example_checks(&cwd, &manifest);
+    let adapter = manifest_view.runtime_adapter().map(ToString::to_string);
+    let entrypoint = manifest_view.runtime_entrypoint().map(ToString::to_string);
+    let source_checks = source_checks(&cwd, &manifest_view);
+    let example_checks = example_checks(&cwd, &manifest_view);
     let requirements = requirements_view(&manifest);
     let dependency_checks = dependency_checks(adapter.as_deref(), &requirements);
     let runtime_present = adapter.is_some() && entrypoint.is_some();
@@ -243,7 +244,7 @@ fn report_with_manifest(
     })
 }
 
-fn source_checks(cwd: &Path, manifest: &Value) -> Vec<SourceCheck> {
+fn source_checks(cwd: &Path, manifest: &ManifestView<'_>) -> Vec<SourceCheck> {
     let mut checks = Vec::new();
     for (key, fallback_path, required) in [
         ("skill", "SKILL.md", true),
@@ -259,12 +260,12 @@ fn source_checks(cwd: &Path, manifest: &Value) -> Vec<SourceCheck> {
 
 fn source_check(
     cwd: &Path,
-    manifest: &Value,
+    manifest: &ManifestView<'_>,
     key: &str,
     fallback_path: &str,
     required: bool,
 ) -> Option<SourceCheck> {
-    let source_path = string_at(manifest, &["sources", key, "path"]);
+    let source_path = manifest.source_path(key);
     let should_check =
         required || source_path.is_some() || (key == "config" && cwd.join(fallback_path).is_file());
     if !should_check {
@@ -278,7 +279,7 @@ fn source_check(
         });
     };
 
-    let Some(expected) = string_at(manifest, &["sources", key, "sha256"]) else {
+    let Some(expected) = manifest.source_sha256(key) else {
         return Some(SourceCheck {
             path: path.to_string(),
             status: "missing-hash",
@@ -296,8 +297,8 @@ fn source_check(
     })
 }
 
-fn example_checks(cwd: &Path, manifest: &Value) -> Vec<ExampleCheck> {
-    let Some(Value::Sequence(items)) = value_at(manifest, &["examples"]) else {
+fn example_checks(cwd: &Path, manifest: &ManifestView<'_>) -> Vec<ExampleCheck> {
+    let Some(items) = manifest.examples() else {
         return vec![ExampleCheck {
             path: "examples/default.input.json".to_string(),
             present: cwd.join("examples").join("default.input.json").is_file(),
