@@ -228,6 +228,7 @@ The current integration scope is intentionally narrow:
 
 SkillRun is honest about trust boundaries:
 
+- "No guardrail, no execution" means Manifest contracts, input/output schemas, preflight checks, structured envelopes, artifact containment, run evidence, and Consumer Mode static checks. It does not mean OS sandboxing.
 - `stdout` and `stderr` are logs only. Structured results must come from output or error envelopes.
 - Consumer mode must not dynamically import untrusted source code to extract metadata.
 - `skillrun check` and `skillrun doctor` are Consumer Mode diagnostics; they do not import action source for metadata.
@@ -289,6 +290,8 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [v0.4.2 official example capsules](docs/v0.4.2-official-capsules.md)
 - [v0.4.3 CI and runtime error stabilization](docs/v0.4.3-ci-stabilization.md)
 - [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
+- [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
+- [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)
