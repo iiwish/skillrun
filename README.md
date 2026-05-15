@@ -13,10 +13,10 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter.
+SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface for headless inspection and readiness automation.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, and v0.5 Adapter Protocol with Level 0 command adapter runtime.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, and v0.5.2 Consumer JSON Surface.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
@@ -72,8 +72,11 @@ Manifest-driven contract
 
         |
         +-- skillrun inspect
+        +-- skillrun inspect --json
         +-- skillrun check
+        +-- skillrun check --json
         +-- skillrun doctor
+        +-- skillrun doctor --json
         +-- skillrun test
         +-- skillrun run --input examples/default.input.json
         +-- skillrun serve --mcp             # MCP stdio server
@@ -88,6 +91,8 @@ In v0.2, `skillrun serve --mcp` starts a real MCP stdio server whose tools and r
 In v0.4, `skillrun check` is the automation-grade readiness command. It reads the Manifest, source hashes, entrypoint, examples, and runtime requirements to explain whether the current host can consume or run a capsule. It does not import `action.py` or `action.mjs`, and it does not install dependencies.
 
 In v0.5, the Adapter Protocol makes the southbound runtime boundary explicit. Core still reads Manifest, creates IPC paths, validates envelopes and exposes MCP; adapters bridge user action ecosystems back into that contract.
+
+In v0.5.2, `inspect`, `check`, and `doctor` also expose `--json` for Desktop, Router, and automation consumers. `test` and `run` are unchanged because they already emit standard output/error envelope JSON.
 
 ## Release Candidate Workflow
 
@@ -190,8 +195,11 @@ cargo run -- --version
 cargo run -- init refund --python --output tmp/e2e-init
 cargo run -- manifest --cwd tmp/e2e-init/refund
 cargo run -- inspect --cwd tmp/e2e-init/refund
+cargo run -- inspect --json --cwd tmp/e2e-init/refund
 cargo run -- check --cwd tmp/e2e-init/refund
+cargo run -- check --json --cwd tmp/e2e-init/refund
 cargo run -- doctor --cwd tmp/e2e-init/refund
+cargo run -- doctor --json --cwd tmp/e2e-init/refund
 cargo run -- test --cwd tmp/e2e-init/refund
 cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
 cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
@@ -260,6 +268,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.3` | Adapter boundary, JS Action Alpha via `action.mjs`, `doctor`, and explicit TypeScript boundary |
 | `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
 | `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
+| `v0.5.2` | Consumer JSON Surface for `inspect`, `check`, and `doctor` |
 
 ## Classic Business Examples
 
@@ -291,6 +300,7 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [v0.4.3 CI and runtime error stabilization](docs/v0.4.3-ci-stabilization.md)
 - [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
 - [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
+- [v0.5.2 Consumer JSON Surface](docs/v0.5.2-consumer-json-surface.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

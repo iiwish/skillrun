@@ -74,7 +74,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun inspect [--cwd <dir>]");
+                eprintln!("usage: skillrun inspect [--json] [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -95,7 +95,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun check [--cwd <dir>]");
+                eprintln!("usage: skillrun check [--json] [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -116,7 +116,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun doctor [--cwd <dir>]");
+                eprintln!("usage: skillrun doctor [--json] [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -304,10 +304,15 @@ fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
 
 fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
     let mut cwd = PathBuf::from(".");
+    let mut json = false;
     let mut index = 0;
 
     while index < args.len() {
         match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
             "--cwd" => {
                 let Some(value) = args.get(index + 1) else {
                     return Err("--cwd requires a directory".to_string());
@@ -319,15 +324,20 @@ fn parse_inspect(args: Vec<String>) -> Result<InspectOptions, String> {
         }
     }
 
-    Ok(InspectOptions { cwd })
+    Ok(InspectOptions { cwd, json })
 }
 
 fn parse_doctor(args: Vec<String>) -> Result<DoctorOptions, String> {
     let mut cwd = PathBuf::from(".");
+    let mut json = false;
     let mut index = 0;
 
     while index < args.len() {
         match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
             "--cwd" => {
                 let Some(value) = args.get(index + 1) else {
                     return Err("--cwd requires a directory".to_string());
@@ -339,15 +349,20 @@ fn parse_doctor(args: Vec<String>) -> Result<DoctorOptions, String> {
         }
     }
 
-    Ok(DoctorOptions { cwd })
+    Ok(DoctorOptions { cwd, json })
 }
 
 fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     let mut cwd = PathBuf::from(".");
+    let mut json = false;
     let mut index = 0;
 
     while index < args.len() {
         match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
             "--cwd" => {
                 let Some(value) = args.get(index + 1) else {
                     return Err("--cwd requires a directory".to_string());
@@ -359,7 +374,7 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
         }
     }
 
-    Ok(CheckOptions { cwd })
+    Ok(CheckOptions { cwd, json })
 }
 
 fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
@@ -493,9 +508,9 @@ Implemented:
   init --py
   init --js (alpha)
   manifest
-  inspect
-  check
-  doctor
+  inspect [--json]
+  check [--json]
+  doctor [--json]
   test
   run
   serve --mcp

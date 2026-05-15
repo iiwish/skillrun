@@ -1,0 +1,67 @@
+schema_version: "1.0"
+packet_id: "v0.5.2-T057-A001"
+task_id: "T057"
+feature_id: "v0.5.2-consumer-json-surface"
+title: "Add check --json and doctor --json"
+status: "Ready_For_Execution"
+created_at: "2026-05-15"
+execution_mode: "direct"
+
+governance:
+  source_spec: ".ai-platform/specs/v0.5.2-consumer-json-surface/spec.md"
+  source_plan: ".ai-platform/specs/v0.5.2-consumer-json-surface/plan.md"
+  source_tasks: ".ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md"
+  source_analysis: ".ai-platform/specs/v0.5.2-consumer-json-surface/analysis.md"
+  prerequisite: "T056 completed with cargo test passing."
+  constraints:
+    - "Reuse readiness::evaluate data; do not invent a second readiness engine."
+    - "Do not change existing check/doctor human output."
+    - "Exit code must keep matching ReadinessReport.ok."
+    - "Do not run or import action source in JSON readiness mode."
+    - "Do not add router, daemon, registry, UI, or sandbox semantics."
+
+scope:
+  goal: "Expose shared machine-readable readiness JSON for skillrun check --json and skillrun doctor --json."
+  allowed_files:
+    - "src/cli.rs"
+    - "src/check.rs"
+    - "src/doctor.rs"
+    - "src/readiness.rs"
+    - "tests/consumer_guards.rs"
+    - "tests/instruction_only.rs"
+    - "tests/cli.rs"
+  forbidden_files:
+    - "src/inspect.rs"
+    - "tests/inspect.rs"
+    - "README.md"
+    - "README.zh-CN.md"
+    - "RELEASE_NOTES.md"
+
+acceptance_criteria:
+  - "check --json emits one valid JSON object with command=\"check\" and ok."
+  - "doctor --json emits the same readiness shape with command=\"doctor\"."
+  - "Exit code matches existing check/doctor semantics."
+  - "Existing human check/doctor tests remain compatible."
+  - "JSON mode does not import action source."
+
+tdd:
+  red:
+    - "Add failing tests for check --json and doctor --json readiness contracts."
+    - "Include stale/instruction-only coverage through existing readiness fixtures."
+  green:
+    - "Add json option parsing for check and doctor."
+    - "Add serializable readiness JSON report generated from ReadinessReport."
+    - "Route check and doctor to shared readiness JSON renderer."
+  refactor:
+    - "Keep check and doctor wrappers thin."
+    - "Avoid changing readiness evaluation behavior."
+
+validation:
+  required_commands:
+    - "cargo test --test consumer_guards --test instruction_only --test cli"
+    - "cargo test"
+  evidence_required:
+    - "Changed files"
+    - "RED/GREEN validation results"
+    - "Diff summary"
+    - "Residual risk"

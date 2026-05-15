@@ -1,0 +1,50 @@
+schema_version: "1.0"
+packet_id: "v0.5.2-T058-A001"
+task_id: "T058"
+feature_id: "v0.5.2-consumer-json-surface"
+title: "Finalize v0.5.2 docs and release validation"
+status: "Ready_For_Execution"
+created_at: "2026-05-15"
+execution_mode: "direct"
+
+governance:
+  source_spec: ".ai-platform/specs/v0.5.2-consumer-json-surface/spec.md"
+  source_plan: ".ai-platform/specs/v0.5.2-consumer-json-surface/plan.md"
+  source_tasks: ".ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md"
+  source_analysis: ".ai-platform/specs/v0.5.2-consumer-json-surface/analysis.md"
+  prerequisite: "T056 and T057 completed with cargo test passing."
+  constraints:
+    - "Do not introduce new runtime behavior."
+    - "Do not imply registry, router, daemon, UI, marketplace, signing, or sandbox support."
+    - "State clearly that run/test are already output/error envelope JSON and are not wrapped in v0.5.2."
+    - "Keep project-facing docs in Chinese unless existing file convention requires otherwise."
+
+scope:
+  goal: "Align public docs, release notes, and governance evidence with the implemented Consumer JSON Surface."
+  allowed_files:
+    - "README.md"
+    - "README.zh-CN.md"
+    - "docs/README.md"
+    - "docs/v0.5.2-consumer-json-surface.md"
+    - "RELEASE_NOTES.md"
+    - ".ai-platform/specs/v0.5.2-consumer-json-surface/analysis.md"
+    - ".ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md"
+  forbidden_files:
+    - "src/**"
+    - "tests/**"
+
+acceptance_criteria:
+  - "Docs mention inspect/check/doctor --json."
+  - "Docs explicitly keep run/test unchanged."
+  - "Release notes describe v0.5.2 as Consumer JSON Surface."
+  - "Final evidence includes git diff --check and cargo test."
+
+validation:
+  required_commands:
+    - "git diff --check"
+    - "cargo test"
+  evidence_required:
+    - "Changed files"
+    - "Validation results"
+    - "Diff summary"
+    - "Residual risk"

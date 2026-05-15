@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,6 +26,7 @@ pub struct ReadinessReport {
     pub ok: bool,
 }
 
+#[derive(Serialize)]
 pub struct FileStatus {
     pub skill: bool,
     pub python_action: bool,
@@ -33,34 +35,39 @@ pub struct FileStatus {
     pub config: bool,
 }
 
+#[derive(Serialize)]
 pub struct SourceCheck {
     pub path: String,
     pub status: &'static str,
 }
 
+#[derive(Serialize)]
 pub struct ExampleCheck {
     pub path: String,
     pub present: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct RequirementsView {
     pub present: bool,
     pub executable: Option<ExecutableView>,
     pub packages: Vec<PackageView>,
 }
 
+#[derive(Serialize)]
 pub struct ExecutableView {
     pub name: String,
     pub version: String,
 }
 
+#[derive(Serialize)]
 pub struct PackageView {
     pub name: String,
     pub version: String,
     pub required_for: Vec<String>,
 }
 
+#[derive(Serialize)]
 pub struct HostDependencyCheck {
     pub kind: &'static str,
     pub name: String,
@@ -612,6 +619,66 @@ note: doctor reads files and hashes only; it does not run or import action sourc
     )
 }
 
+#[derive(Serialize)]
+struct JsonReadinessReport<'a> {
+    command: &'a str,
+    ok: bool,
+    cwd: String,
+    status: &'a str,
+    manifest: JsonManifest,
+    files: &'a FileStatus,
+    runtime: JsonRuntime<'a>,
+    requirements: &'a RequirementsView,
+    dependency_checks: &'a [HostDependencyCheck],
+    source_checks: &'a [SourceCheck],
+    example_checks: &'a [ExampleCheck],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<&'a str>,
+    next_step: &'a str,
+    note: &'static str,
+}
+
+#[derive(Serialize)]
+struct JsonManifest {
+    path: String,
+    present: bool,
+    freshness: String,
+}
+
+#[derive(Serialize)]
+struct JsonRuntime<'a> {
+    adapter: Option<&'a str>,
+    entrypoint: Option<&'a str>,
+}
+
+pub fn render_json(command: &str, report: &ReadinessReport) -> Result<String, String> {
+    let json = JsonReadinessReport {
+        command,
+        ok: report.ok,
+        cwd: report.cwd.display().to_string(),
+        status: &report.status,
+        manifest: JsonManifest {
+            path: display_path(&report.cwd, &report.manifest_path),
+            present: report.manifest_present,
+            freshness: report.freshness.clone(),
+        },
+        files: &report.files,
+        runtime: JsonRuntime {
+            adapter: report.adapter.as_deref(),
+            entrypoint: report.entrypoint.as_deref(),
+        },
+        requirements: &report.requirements,
+        dependency_checks: &report.dependency_checks,
+        source_checks: &report.source_checks,
+        example_checks: &report.example_checks,
+        reason: report.reason.as_deref(),
+        next_step: &report.next_step,
+        note: "readiness reads Manifest, files and hashes only; it does not run or import action source.",
+    };
+
+    serde_json::to_string_pretty(&json).map_err(|error| error.to_string())
+}
+
 fn render_runtime(report: &ReadinessReport) -> String {
     match (&report.adapter, &report.entrypoint) {
         (Some(adapter), Some(entrypoint)) => {
@@ -739,6 +806,13 @@ fn yes_no(value: bool) -> &'static str {
     } else {
         "no"
     }
+}
+
+fn display_path(cwd: &Path, path: &Path) -> String {
+    path.strip_prefix(cwd)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 fn absolute_path(path: &Path) -> Result<PathBuf, String> {

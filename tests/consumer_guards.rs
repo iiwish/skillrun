@@ -177,6 +177,17 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_str(&stdout).expect("stdout should be JSON")
 }
 
+fn assert_failure_json(output: &std::process::Output, label: &str) -> Value {
+    assert!(
+        !output.status.success(),
+        "{label} should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8");
+    serde_json::from_str(&stdout).expect("stdout should be JSON")
+}
+
 fn assert_success_stdout(output: &std::process::Output, label: &str) -> String {
     assert!(
         output.status.success(),
@@ -397,6 +408,43 @@ fn check_reports_valid_python_and_js_capsules_without_language_flags() {
 }
 
 #[test]
+fn check_json_reports_valid_capsule_readiness_contract() {
+    let (output_root, capsule) = generated_capsule("check-json-valid-python");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let check = run_skillrun(&["check", "--json", "--cwd", &cwd_arg]);
+    let report = assert_success_json(&check);
+
+    assert_eq!(report["command"], "check");
+    assert_eq!(report["ok"], true);
+    assert_eq!(report["status"], "ok");
+    assert_eq!(report["manifest"]["present"], true);
+    assert_eq!(report["manifest"]["freshness"], "fresh");
+    assert_eq!(report["files"]["skill"], true);
+    assert_eq!(report["files"]["python_action"], true);
+    assert_eq!(report["runtime"]["adapter"], "python");
+    assert_eq!(report["runtime"]["entrypoint"], "action.py");
+    assert_eq!(report["requirements"]["present"], true);
+    assert_eq!(report["requirements"]["executable"]["name"], "python");
+    assert!(report["dependency_checks"]
+        .as_array()
+        .expect("dependency_checks should be an array")
+        .iter()
+        .any(|check| check["name"] == "pydantic"));
+    assert!(report["source_checks"]
+        .as_array()
+        .expect("source_checks should be an array")
+        .iter()
+        .any(|check| check["path"] == "action.py" && check["status"] == "fresh"));
+    assert!(report["note"]
+        .as_str()
+        .expect("note should be a string")
+        .contains("does not run or import action source"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn check_reports_missing_python_without_raw_program_not_found() {
     let (output_root, capsule) = generated_capsule("check-missing-python");
     let fake_path = output_root.join("empty-path");
@@ -533,6 +581,40 @@ fn doctor_reports_stale_manifest_without_creating_run_records() {
     assert!(
         !capsule.join(".skillrun").join("runs").exists(),
         "doctor must not create run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn doctor_json_reports_stale_manifest_without_creating_run_records() {
+    let (output_root, capsule) = generated_js_capsule("doctor-json-stale-js");
+    append_to(
+        &capsule.join("action.mjs"),
+        "\n// changed before doctor json\n",
+    );
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let doctor = run_skillrun(&["doctor", "--json", "--cwd", &cwd_arg]);
+    let report = assert_failure_json(&doctor, "stale JS doctor json");
+
+    assert_eq!(report["command"], "doctor");
+    assert_eq!(report["ok"], false);
+    assert_eq!(report["status"], "stale-manifest");
+    assert_eq!(report["manifest"]["present"], true);
+    assert_eq!(report["manifest"]["freshness"], "stale");
+    assert!(report["source_checks"]
+        .as_array()
+        .expect("source_checks should be an array")
+        .iter()
+        .any(|check| check["path"] == "action.mjs" && check["status"] == "stale"));
+    assert_eq!(
+        report["next_step"],
+        format!("Run `skillrun manifest --cwd {}`.", capsule.display())
+    );
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "doctor json must not create run records"
     );
 
     fs::remove_dir_all(output_root).ok();
