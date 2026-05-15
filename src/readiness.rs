@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::adapters;
 use crate::hashing;
 use crate::manifest;
+use crate::manifest_access::{string_at, value_at};
 
 pub struct ReadinessReport {
     pub cwd: PathBuf,
@@ -845,17 +846,4 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
             .map(|cwd| cwd.join(path))
             .map_err(|error| format!("failed to resolve current directory: {error}"))
     }
-}
-
-fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
-    let mut current = value;
-    for segment in path {
-        let key = Value::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
 }

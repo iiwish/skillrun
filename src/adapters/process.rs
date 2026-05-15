@@ -79,7 +79,12 @@ fn terminate_process_tree(child: &mut Child) {
         .stderr(Stdio::null())
         .status();
     thread::sleep(Duration::from_millis(50));
-    let _ = child.kill();
+    let _ = Command::new("kill")
+        .args(["-KILL", process_group.as_str()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
 }
 
 #[cfg(not(any(unix, windows)))]

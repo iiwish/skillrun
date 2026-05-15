@@ -2,6 +2,8 @@ use serde_json::Value;
 use serde_yaml::Value as YamlValue;
 use std::path::{Component, Path};
 
+use crate::manifest_access::value_at;
+
 pub fn declared_env_values(manifest: &YamlValue) -> Vec<(String, String)> {
     declared_env_keys(manifest)
         .into_iter()
@@ -52,7 +54,7 @@ pub fn validate_artifacts(envelope: &Value, artifact_dir: &Path) -> Result<(), S
 }
 
 fn declared_env_keys(manifest: &YamlValue) -> Vec<String> {
-    yaml_value_at(manifest, &["permissions", "env", "read"])
+    value_at(manifest, &["permissions", "env", "read"])
         .and_then(YamlValue::as_sequence)
         .map(|items| {
             items
@@ -91,13 +93,4 @@ fn validate_relative_artifact_path(path: &str) -> Result<(), &'static str> {
     } else {
         Err("must include a file name")
     }
-}
-
-fn yaml_value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
 }

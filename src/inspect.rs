@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::consumer;
 use crate::manifest;
+use crate::manifest_access::{string_at, value_at};
 
 #[derive(Debug)]
 pub struct InspectOptions {
@@ -400,19 +401,6 @@ missing:
 note: instruction-only Skill directories remain documentation until an action and Manifest are present.",
         cwd = cwd.display()
     ))
-}
-
-fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
-    let mut current = value;
-    for segment in path {
-        let key = Value::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
 }
 
 fn strings_at(value: &Value, path: &[&str]) -> Vec<String> {

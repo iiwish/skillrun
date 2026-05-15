@@ -5,6 +5,7 @@ use std::io::{self, BufRead, Write};
 use std::path::{Component, Path, PathBuf};
 
 use crate::consumer::ValidManifest;
+use crate::manifest_access::{json_value_at, string_at, value_at};
 use crate::runtime;
 
 const MCP_PROTOCOL_VERSION: &str = "2025-11-25";
@@ -184,7 +185,7 @@ fn resource_registry(capsule_dir: &Path, manifest: &ValidManifest) -> Vec<McpRes
 
     if let Some(YamlValue::Sequence(examples)) = value_at(&manifest.value, &["examples"]) {
         for example in examples {
-            let Some(input_path) = string_at_value(example, &["input"]) else {
+            let Some(input_path) = string_at(example, &["input"]) else {
                 continue;
             };
             let name = input_path
@@ -465,31 +466,4 @@ fn write_json_line(writer: &mut impl Write, value: &JsonValue) -> Result<(), Str
     writer
         .flush()
         .map_err(|error| format!("failed to flush MCP stdout: {error}"))
-}
-
-fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
-}
-
-fn string_at_value<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    current.as_str()
-}
-
-fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<JsonValue> {
-    let value = value_at(value, path)?;
-    serde_json::to_value(value).ok()
 }
