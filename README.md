@@ -13,14 +13,26 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers.
+SkillRun v0.5.0 is the current release-candidate binary/crate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers; v0.5.4 hardens Core contracts before a separate Desktop project consumes them.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, and v0.5.3 local registry/switchboard state.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, v0.5.3 local registry/switchboard state, and v0.5.4 Core contract hardening.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun registry add/list/inspect/remove`, `skillrun switchboard list/enable/disable`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/registry/switchboard/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
 - Level 0 `runtime.adapter = "command"` runs explicit argv commands that obey SkillRun IPC and envelope contracts. It is a protocol-native escape hatch, not a new blessed language SDK.
+
+## Version Layers
+
+SkillRun uses separate version layers:
+
+- `Cargo.toml` and `skillrun --version` identify the binary/crate version.
+- Git tags such as `v0.4.3` identify public release boundaries.
+- Milestone names such as v0.5.2, v0.5.3, and v0.5.4 describe integration scope before a release decision.
+- Manifest `manifest_version` identifies the Manifest IR schema.
+- IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
+
+The current local binary reports `skillrun 0.5.0`; the current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.4 hardens Core behavior and JSON contracts without automatically changing those protocol versions.
 
 ## Why SkillRun
 
@@ -97,6 +109,8 @@ In v0.5, the Adapter Protocol makes the southbound runtime boundary explicit. Co
 In v0.5.2, `inspect`, `check`, and `doctor` also expose `--json` for Desktop, Router, and automation consumers. `test` and `run` are unchanged because they already emit standard output/error envelope JSON.
 
 In v0.5.3, `registry` records local capsule inventory and `switchboard` records future exposure intent. It does not import `.skr`, expose MCP tools, mount clients, install dependencies, certify trust, or provide sandboxing.
+
+In v0.5.4, Core hardening makes command readiness non-executing, enforces Manifest schemas at runtime, isolates bad registry entries, and freezes Desktop-facing JSON fixtures. Desktop should be a separate project that consumes these stable Core surfaces; it should not redefine Manifest schema, execute actions directly, or parse MCP text as audit data.
 
 ## Release Candidate Workflow
 
@@ -237,6 +251,7 @@ The current integration scope is intentionally narrow:
 - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
 - `registry` is local inventory, not a marketplace, trust registry, or install source.
 - `switchboard enabled=true` is future Router exposure intent, not trust, sandboxing, dependency installation, or MCP client mounting.
+- Desktop is a separate future project. It should consume CLI JSON contracts, registry/switchboard state, run records, and a future Core API; it should not bypass `check`, read `.skillrun/` internals as a stable API, redefine Manifest semantics, or parse MCP text content as audit evidence.
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.

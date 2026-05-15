@@ -1,7 +1,7 @@
 # SkillRun v0.5.4 Work Graph: Core Stabilization Audit
 
 Version: v0.5.4
-Status: In_Progress
+Status: Completed
 Source analysis: `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
 Public doc: `docs/v0.5.4-core-stabilization-audit.md`
 Last updated: 2026-05-15
@@ -184,7 +184,7 @@ Evidence:
 
 ### T066: Document Version Semantics And Desktop Boundary
 
-Status: Ready
+Status: Completed
 Priority: P1
 Depends on: T065
 Blocks: Desktop project start
@@ -215,3 +215,11 @@ Validation commands:
 - `git diff --check`
 - `cargo test`
 - `cargo clippy --all-targets -- -D warnings`
+
+Evidence:
+
+- Changed files: `README.md`, `README.zh-CN.md`, `docs/release-policy.md`, `docs/v0.5.4-core-stabilization-audit.md`, `RELEASE_NOTES.md`.
+- Version semantics now separate binary/crate version, Git tag, milestone version, Manifest IR version, and IPC/Adapter Protocol version.
+- README and release notes state that binary/crate version remains `0.5.0`, while Manifest IR and IPC protocol remain `0.1.0`.
+- Desktop is documented as a separate project that consumes Core contracts rather than redefining Manifest semantics or parsing MCP text as audit data.
+- Final validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.

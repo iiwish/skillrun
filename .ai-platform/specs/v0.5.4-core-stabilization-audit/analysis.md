@@ -3,7 +3,7 @@
 **Metadata**
 
 - Version: v0.5.4 analysis
-- Status: In_Progress
+- Status: Completed
 - Audit date: 2026-05-15
 - Branch: `codex/v0.5.4-core-stabilization-audit`
 - Scope: whole `skillrun` project as Core
@@ -150,6 +150,12 @@ Required fix:
 
 - Document binary version, release line, Manifest IR version, and adapter protocol version separately.
 - Decide whether v0.5.4 updates `Cargo.toml` or remains an unreleased integration line.
+
+Execution evidence:
+
+- `docs/release-policy.md` now separates binary/crate version, Git tag, milestone version, Manifest IR version, and IPC/Adapter Protocol version.
+- README and `RELEASE_NOTES.md` now state that the local binary remains `0.5.0`, while Manifest IR and IPC protocol remain `0.1.0`.
+- Desktop boundary is documented as a separate project consuming Core contracts, not as UI code inside this repository.
 
 ## P2 Findings
 
