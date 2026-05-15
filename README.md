@@ -280,6 +280,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
 | `v0.5.2` | Consumer JSON Surface for `inspect`, `check`, and `doctor` |
 | `v0.5.3` | Local Capsule Registry and Switchboard exposure intent |
+| `v0.5.4` | Core Stabilization Audit before Desktop |
 
 ## Classic Business Examples
 
@@ -313,6 +314,7 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
 - [v0.5.2 Consumer JSON Surface](docs/v0.5.2-consumer-json-surface.md)
 - [v0.5.3 Capsule Registry + Switchboard](docs/v0.5.3-capsule-registry-switchboard.md)
+- [v0.5.4 Core Stabilization Audit](docs/v0.5.4-core-stabilization-audit.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

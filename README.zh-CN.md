@@ -280,6 +280,7 @@ SkillRun 对信任边界保持诚实：
 | `v0.5` | Language-agnostic Adapter Protocol 和 Level 0 command adapter |
 | `v0.5.2` | 面向 `inspect`、`check` 和 `doctor` 的 Consumer JSON Surface |
 | `v0.5.3` | 本地 Capsule Registry 与 Switchboard 暴露意图 |
+| `v0.5.4` | Desktop 前的 Core Stabilization Audit |
 
 ## 经典业务示例
 
@@ -313,6 +314,7 @@ SkillRun 的业务证明刻意保持收敛：
 - [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
 - [v0.5.2 Consumer JSON Surface](docs/v0.5.2-consumer-json-surface.md)
 - [v0.5.3 Capsule Registry + Switchboard](docs/v0.5.3-capsule-registry-switchboard.md)
+- [v0.5.4 Core Stabilization Audit](docs/v0.5.4-core-stabilization-audit.md)
 - [v0.6 Consumer Era 愿景](docs/v0.6-consumer-era-vision.md)
 - [经典业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
