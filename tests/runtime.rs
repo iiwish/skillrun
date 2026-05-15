@@ -2,7 +2,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
@@ -755,6 +755,87 @@ Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
         .contains("output schema"));
 
     fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_timeout_terminates_spawned_child_process() {
+    let marker_root = temp_dir("runtime-command-timeout-marker");
+    fs::create_dir_all(&marker_root).expect("marker root should be created");
+    let marker = marker_root.join("child-survived.txt");
+    let marker_literal =
+        serde_json::to_string(&marker.to_string_lossy().to_string()).expect("marker serializes");
+    let child_code = format!(
+        "import time\nfrom pathlib import Path\ntime.sleep(2)\nPath({marker_literal}).write_text('alive', encoding='utf-8')\n"
+    );
+    let child_code_literal = serde_json::to_string(&child_code).expect("child code serializes");
+    let action = format!(
+        r#"
+import subprocess
+import sys
+import time
+
+subprocess.Popen([sys.executable, "-c", {child_code_literal}])
+time.sleep(10)
+"#
+    );
+    let (output_root, capsule) =
+        generated_command_capsule("runtime-command-timeout-child", &action);
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "1s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be updated");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should regenerate\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "RuntimeError");
+    assert_contains(
+        envelope["error"]["message"]
+            .as_str()
+            .expect("message should be present"),
+        "command adapter timed out after 1000 ms",
+    );
+    std::thread::sleep(Duration::from_secs(3));
+    assert!(
+        !marker.exists(),
+        "timeout should terminate child processes before they can continue writing"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+    fs::remove_dir_all(marker_root).ok();
 }
 
 #[test]
