@@ -1,0 +1,77 @@
+{
+  "command": "check",
+  "ok": true,
+  "cwd": "<capsule>",
+  "status": "ok",
+  "manifest": {
+    "path": ".skillrun/manifest.generated.yaml",
+    "present": true,
+    "freshness": "fresh"
+  },
+  "files": {
+    "skill": true,
+    "python_action": true,
+    "node_action": false,
+    "typescript": false,
+    "config": true
+  },
+  "runtime": {
+    "adapter": "python",
+    "entrypoint": "action.py"
+  },
+  "requirements": {
+    "present": true,
+    "executable": {
+      "name": "python",
+      "version": ">=3.10"
+    },
+    "packages": [
+      {
+        "name": "pydantic",
+        "version": ">=2,<3",
+        "required_for": [
+          "metadata",
+          "runtime"
+        ]
+      }
+    ]
+  },
+  "dependency_checks": [
+    {
+      "kind": "executable",
+      "name": "python",
+      "required": ">=3.10",
+      "detected": "<detected>",
+      "status": "satisfied"
+    },
+    {
+      "kind": "package",
+      "name": "pydantic",
+      "required": ">=2,<3",
+      "detected": "<detected>",
+      "status": "satisfied"
+    }
+  ],
+  "source_checks": [
+    {
+      "path": "SKILL.md",
+      "status": "fresh"
+    },
+    {
+      "path": "action.py",
+      "status": "fresh"
+    },
+    {
+      "path": "skillrun.config.json",
+      "status": "fresh"
+    }
+  ],
+  "example_checks": [
+    {
+      "path": "examples/default.input.json",
+      "present": true
+    }
+  ],
+  "next_step": "none",
+  "note": "readiness reads Manifest, files and hashes only; it does not run or import action source."
+}

@@ -1,0 +1,61 @@
+schema_version: "1.0"
+packet_id: "v0.5.3-T060-A001"
+task_id: "T060"
+feature_id: "v0.5.3-capsule-registry-switchboard"
+title: "Add switchboard enable disable gates"
+status: "Ready_For_Execution"
+created_at: "2026-05-15"
+execution_mode: "direct"
+
+governance:
+  source_spec: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/spec.md"
+  source_plan: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/plan.md"
+  source_tasks: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/tasks.md"
+  source_analysis: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/analysis.md"
+  prerequisite: "T059 completed with cargo test passing."
+  constraints:
+    - "Enabled means future exposure intent, not trust or sandboxing."
+    - "Enable must fail unless readiness is ok."
+    - "Disable must not execute or import action source."
+    - "Do not add router, daemon, Desktop, MCP client config mutation, .skr import, dependency installation, or sandbox semantics."
+
+scope:
+  goal: "Implement skillrun switchboard list/enable/disable over registry state with fail-closed enable behavior."
+  allowed_files:
+    - "src/cli.rs"
+    - "src/registry.rs"
+    - "src/switchboard.rs"
+    - "src/main.rs"
+    - "tests/registry.rs"
+    - "tests/consumer_guards.rs"
+    - "tests/instruction_only.rs"
+
+acceptance_criteria:
+  - "switchboard list --json emits registered capsules and enabled state."
+  - "switchboard enable <id> succeeds only when readiness is ok."
+  - "stale Manifest cannot be enabled."
+  - "instruction-only capsule cannot be enabled."
+  - "dependency-error capsule cannot be enabled."
+  - "switchboard disable <id> succeeds without executing action source."
+
+tdd:
+  red:
+    - "Add failing switchboard tests for happy path and fail-closed enable gates."
+    - "Run cargo test --test registry --test consumer_guards --test instruction_only and capture expected failure."
+  green:
+    - "Add switchboard module and CLI routing."
+    - "Add registry state mutation helpers with readiness gates."
+    - "Run focused tests until passing."
+  refactor:
+    - "Keep router and MCP mount behavior out of scope."
+    - "Run cargo test."
+
+validation:
+  required_commands:
+    - "cargo test --test registry --test consumer_guards --test instruction_only"
+    - "cargo test"
+  evidence_required:
+    - "Changed files"
+    - "RED/GREEN validation results"
+    - "Diff summary"
+    - "Residual risk"

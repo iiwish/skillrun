@@ -599,6 +599,81 @@ print("FAKE_OK_FROM_STDOUT")
 }
 
 #[test]
+fn command_adapter_invalid_input_returns_validation_error_without_launching() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+Path("adapter-launched.txt").write_text("launched", encoding="utf-8")
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {"message": "adapter should not run"},
+    "display": {"markdown": "done"}
+}), encoding="utf-8")
+"#;
+    let (output_root, capsule) = generated_command_capsule("runtime-command-invalid-input", action);
+    fs::write(
+        capsule.join("examples").join("invalid.input.json"),
+        r#"{"unexpected":"field"}"#,
+    )
+    .expect("invalid input should be written");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let run = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd_arg,
+        "--input",
+        "examples/invalid.input.json",
+    ]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "ValidationError");
+    assert!(
+        !capsule.join("adapter-launched.txt").exists(),
+        "input schema validation must happen before adapter launch"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_invalid_success_output_returns_protocol_violation() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {"message": 42},
+    "display": {"markdown": "done"}
+}), encoding="utf-8")
+"#;
+    let (output_root, capsule) =
+        generated_command_capsule("runtime-command-invalid-output", action);
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "ProtocolViolation");
+    assert!(envelope["error"]["message"]
+        .as_str()
+        .expect("message should be present")
+        .contains("output schema"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn run_command_uses_explicit_input_and_unique_run_ids() {
     let (output_root, capsule) = generated_capsule("runtime-run-command");
     let cwd_arg = capsule.to_string_lossy().to_string();

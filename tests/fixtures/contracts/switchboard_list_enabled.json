@@ -1,0 +1,33 @@
+{
+  "command": "switchboard list",
+  "registry_path": "<skillrun_home>/registry.json",
+  "capsules": [
+    {
+      "id": "refund",
+      "path": "<capsule>",
+      "source_type": "local_path",
+      "enabled": true,
+      "registered_at": "<timestamp>",
+      "manifest": {
+        "path": ".skillrun/manifest.generated.yaml",
+        "present": true,
+        "freshness": "fresh"
+      },
+      "skill": {
+        "name": "refund"
+      },
+      "runtime": {
+        "adapter": "python",
+        "entrypoint": "action.py"
+      },
+      "tool": {
+        "name": "refund"
+      },
+      "readiness": {
+        "ok": true,
+        "status": "ok",
+        "next_step": "none"
+      }
+    }
+  ]
+}

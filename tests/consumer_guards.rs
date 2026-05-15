@@ -11,6 +11,14 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .expect("skillrun binary should run")
 }
 
+fn run_skillrun_with_home(args: &[&str], skillrun_home: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("SKILLRUN_HOME", skillrun_home)
+        .output()
+        .expect("skillrun binary should run")
+}
+
 fn run_skillrun_with_path(args: &[&str], path: &Path) -> std::process::Output {
     run_skillrun_with_path_and_env(args, path, &[])
 }
@@ -85,6 +93,111 @@ fi\n\
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).expect("fake python should be executable");
     }
+}
+
+fn write_fake_command_probe(fake_dir: &Path, marker: &Path) {
+    fs::create_dir_all(fake_dir).expect("fake command dir should be created");
+
+    #[cfg(windows)]
+    {
+        let marker = marker.to_string_lossy();
+        let script = format!(
+            "@echo off\r\n\
+echo readiness probe executed > \"{marker}\"\r\n\
+echo fake command 1.0.0\r\n\
+exit /b 0\r\n"
+        );
+        fs::write(fake_dir.join("skillrun-readiness-probe.cmd"), script)
+            .expect("fake command should be written");
+    }
+
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let marker = marker.to_string_lossy();
+        let script = format!(
+            "#!/bin/sh\n\
+printf '%s\\n' 'readiness probe executed' > '{marker}'\n\
+printf '%s\\n' 'fake command 1.0.0'\n"
+        );
+        let path = fake_dir.join("skillrun-readiness-probe");
+        fs::write(&path, script).expect("fake command should be written");
+        let mut permissions = fs::metadata(&path)
+            .expect("fake command metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions).expect("fake command should be executable");
+    }
+}
+
+fn fake_command_probe_name() -> &'static str {
+    if cfg!(windows) {
+        "skillrun-readiness-probe.cmd"
+    } else {
+        "skillrun-readiness-probe"
+    }
+}
+
+fn generated_command_probe_capsule(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let capsule = output_root.join("command_probe");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command probe\n").expect("skill should be written");
+    fs::write(
+        capsule.join("action.py"),
+        r#"
+import json
+import os
+from pathlib import Path
+
+payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+  "ok": True,
+  "output": {"message": payload["name"]},
+  "display": {"markdown": "ok"}
+}), encoding="utf-8")
+"#,
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    let command_name = fake_command_probe_name();
+    let config = r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["__COMMAND__", "action.py"]
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#
+    .replace("__COMMAND__", command_name);
+    fs::write(capsule.join("skillrun.config.json"), config).expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    (output_root, capsule)
 }
 
 fn generated_capsule(label: &str) -> (PathBuf, PathBuf) {
@@ -499,6 +612,33 @@ fn check_reports_missing_node_without_package_manager_checks() {
 }
 
 #[test]
+fn switchboard_enable_refuses_stale_manifest() {
+    let (output_root, capsule) = generated_js_capsule("switchboard-stale-js");
+    let skillrun_home = output_root.join("skillrun-home");
+    append_to(
+        &capsule.join("action.mjs"),
+        "\n// changed before switchboard enable\n",
+    );
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let add = run_skillrun_with_home(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        add.status.success(),
+        "registry add should allow disabled stale inventory\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let enable = run_skillrun_with_home(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable refund"));
+    assert!(stderr.contains("stale-manifest"));
+    assert!(stderr.contains("skillrun manifest"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn check_reports_missing_pydantic_without_importing_action_source() {
     let (output_root, capsule) = generated_capsule("check-missing-pydantic");
     let fake_path = output_root.join("fake-path");
@@ -531,6 +671,31 @@ fn check_reports_missing_pydantic_without_importing_action_source() {
         !fake_log.contains("action.py"),
         "pydantic probe must not receive action source path\n{fake_log}"
     );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn switchboard_enable_refuses_dependency_error() {
+    let (output_root, capsule) = generated_capsule("switchboard-missing-python");
+    let skillrun_home = output_root.join("skillrun-home");
+    let fake_path = output_root.join("empty-path");
+    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let add = run_skillrun_with_home(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+
+    let enable = run_skillrun_with_path_and_env(
+        &["switchboard", "enable", "refund"],
+        &fake_path,
+        &[("SKILLRUN_HOME", &skillrun_home.to_string_lossy())],
+    );
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable refund"));
+    assert!(stderr.contains("dependency-error"));
+    assert!(stderr.contains("runtime matching"));
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -779,6 +944,65 @@ fn check_reports_command_adapter_missing_executable_without_importing_action_sou
     assert!(
         !marker.exists(),
         "check must not import command action source"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn check_does_not_execute_command_adapter_readiness_probe() {
+    let (output_root, capsule) = generated_command_probe_capsule("check-command-no-probe-exec");
+    let fake_path = output_root.join("fake-command-path");
+    let marker = output_root.join("command-readiness-marker.txt");
+    write_fake_command_probe(&fake_path, &marker);
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let check = run_skillrun_with_path(&["check", "--cwd", &cwd_arg], &fake_path);
+    let stdout = assert_success_stdout(&check, "command adapter check");
+
+    assert!(stdout.contains("status: ok"));
+    assert!(stdout.contains(&format!(
+        "executable: {} required: present detected: present status: satisfied",
+        fake_command_probe_name()
+    )));
+    assert!(
+        !marker.exists(),
+        "command readiness must not execute the configured executable"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn switchboard_enable_does_not_execute_command_adapter_readiness_probe() {
+    let (output_root, capsule) =
+        generated_command_probe_capsule("switchboard-command-no-probe-exec");
+    let fake_path = output_root.join("fake-command-path");
+    let marker = output_root.join("command-readiness-marker.txt");
+    let skillrun_home = output_root.join("skillrun-home");
+    write_fake_command_probe(&fake_path, &marker);
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let add = run_skillrun_with_home(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        add.status.success(),
+        "registry add should succeed\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let enable = run_skillrun_with_path_and_env(
+        &["switchboard", "enable", "command_probe"],
+        &fake_path,
+        &[("SKILLRUN_HOME", &skillrun_home.to_string_lossy())],
+    );
+    assert!(
+        enable.status.success(),
+        "switchboard enable should succeed\nstderr: {}",
+        String::from_utf8_lossy(&enable.stderr)
+    );
+    assert!(
+        !marker.exists(),
+        "switchboard readiness must not execute the configured command executable"
     );
 
     fs::remove_dir_all(output_root).ok();

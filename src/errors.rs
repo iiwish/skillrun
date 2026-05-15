@@ -15,6 +15,15 @@ pub fn runtime_error(message: impl Into<String>) -> Value {
     envelope(RUNTIME_ERROR, message, false, None)
 }
 
+pub fn validation_error(message: impl Into<String>) -> Value {
+    envelope(
+        VALIDATION_ERROR,
+        message,
+        true,
+        Some("Fix the input so it matches the skill input schema before retrying."),
+    )
+}
+
 pub fn permission_denied(message: impl Into<String>) -> Value {
     envelope(PERMISSION_DENIED, message, false, None)
 }

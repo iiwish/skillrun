@@ -1,0 +1,15 @@
+{
+  "command": "inspect",
+  "cwd": "<capsule>",
+  "status": "instruction-only",
+  "manifest": {
+    "path": ".skillrun/manifest.generated.yaml",
+    "present": false,
+    "freshness": "missing"
+  },
+  "reason": "not a runnable capsule",
+  "missing": [
+    "missing action.py",
+    "missing .skillrun/manifest.generated.yaml"
+  ]
+}

@@ -1,5 +1,85 @@
 # SkillRun Release Notes
 
+## v0.5.4
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-15
+Publication: no v0.5.4 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun hardens Core contracts before Desktop: command readiness no longer executes arbitrary command adapter probes, Manifest schemas are enforced by Core, bad registry entries no longer poison inventory, and Desktop-facing JSON contracts are frozen as fixtures.
+
+### Version Layers
+
+- Binary/crate version remains `0.5.0` until an explicit release version decision.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- v0.5.4 is the stabilization milestone name for this integration line, not evidence that a public tag has been created.
+
+### What Is Included
+
+- Non-executing command adapter readiness: `check` and `switchboard enable` only resolve executable presence for Level 0 command capsules.
+- Core runtime input schema validation before adapter launch.
+- Core runtime output schema validation for successful adapter envelopes.
+- `ValidationError` for invalid user input and `ProtocolViolation` for invalid adapter output.
+- Registry/switchboard per-entry degradation for corrupt or unreadable Manifest entries.
+- Consumer JSON contract fixtures for runnable `inspect/check/doctor`, instruction-only `inspect/check`, registry enabled, and switchboard enabled states.
+- Documentation of JSON fixture compatibility rules and version-layer semantics.
+
+### Boundaries
+
+- v0.5.4 does not add Desktop, Tauri, Router, daemon, MCP client mounting, marketplace, signed package verification, dependency installation, or OS sandboxing.
+- JSON fixtures normalize paths, timestamps, hashes, and local dependency versions; they freeze contract shape and state semantics, not a single machine's environment.
+- Manifest schema enforcement is a pragmatic v0 subset and not a full JSON Schema engine claim.
+- Desktop should be a separate project consuming CLI JSON contracts, registry/switchboard state, run records, and a future Core API. It should not redefine Manifest schema, execute actions directly, or parse MCP text as audit evidence.
+
+### Validation
+
+- `cargo fmt --check`
+- `git diff --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `cargo test --test consumer_json_contracts`
+- `cargo test --test registry`
+- `cargo test --test runtime --test errors --test mcp_server`
+
+## v0.5.3
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-15
+Publication: no v0.5.3 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds a local Capsule Registry and Switchboard: users and future Router/Desktop consumers can see registered local capsules and explicitly enable or disable future exposure intent.
+
+### What Is Included
+
+- `skillrun registry add --cwd <capsule> [--id <id>]` for local capsule inventory.
+- `skillrun registry list --json` and `skillrun registry inspect <id> --json` for machine-readable inventory and readiness views.
+- `skillrun registry remove <id>` for removing local registry state without deleting capsule files.
+- `skillrun switchboard list --json` for enabled/disabled state.
+- `skillrun switchboard enable <id>` with fail-closed readiness gates.
+- `skillrun switchboard disable <id>` for turning off future exposure intent.
+- Missing registered capsule paths are represented as per-capsule `readiness.status="missing-path"` instead of failing the whole inventory command.
+- Tests for empty registry, duplicate ids, missing local paths, add/list/inspect/remove, enable/disable, stale Manifest, instruction-only, and dependency-error gates.
+
+### Boundaries
+
+- Registry is local inventory, not a marketplace, package index, trust registry, or install source.
+- Switchboard `enabled=true` means future Router exposure intent. It does not mean trust, sandboxing, dependency installation, or MCP client mounting.
+- v0.5.3 does not import or unpack `.skr`.
+- v0.5.3 does not add SkillRun Router, daemon, Tauri/Desktop, MCP client config mutation, signed packages, dependency vendoring, dependency installation, or OS sandboxing.
+- Enable gates use Consumer Mode readiness and do not import action source for metadata.
+
+### Validation
+
+- `cargo test --test registry`
+- `cargo test --test registry --test consumer_guards --test instruction_only`
+- `cargo test`
+- `git diff --check`
+
 ## v0.5.2
 
 Status: Ready_For_Release_Decision

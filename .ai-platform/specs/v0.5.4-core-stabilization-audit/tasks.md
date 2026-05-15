@@ -1,0 +1,225 @@
+# SkillRun v0.5.4 Work Graph: Core Stabilization Audit
+
+Version: v0.5.4
+Status: Completed
+Source analysis: `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+Public doc: `docs/v0.5.4-core-stabilization-audit.md`
+Last updated: 2026-05-15
+
+## Work Graph Summary
+
+```text
+T062 -> T063 -> T064 -> T065 -> T066
+```
+
+## Epic E010: Core Stabilization Before Desktop
+
+Goal:
+Make the whole `skillrun` project stable enough to be consumed by a separate Desktop project.
+
+### T062: Stop Command Readiness From Executing Arbitrary Commands
+
+Status: Completed
+Priority: P0
+Depends on: v0.5.4 audit approval
+Blocks: T063, T064, T065, T066
+Parallel: No
+
+Goal:
+For `runtime.adapter="command"`, readiness must detect executable presence without executing `<command> --version`.
+
+Allowed files:
+
+- `src/readiness.rs`
+- `tests/consumer_guards.rs`
+- `tests/runtime.rs`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/tasks.md`
+
+Acceptance criteria:
+
+- `skillrun check` for command adapter does not execute the configured command.
+- `skillrun switchboard enable` does not execute the configured command while checking readiness.
+- Missing command executable still reports `dependency-error`.
+- Python/Node dependency diagnostics remain unchanged.
+
+Validation commands:
+
+- `cargo test --test consumer_guards --test runtime --test registry`
+- `cargo test`
+
+Evidence:
+
+- Changed files: `src/readiness.rs`, `tests/consumer_guards.rs`.
+- RED: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` failed before the fix because readiness executed the fake command probe.
+- GREEN: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` passed.
+- Focused validation: `cargo test --test consumer_guards --test runtime --test registry` passed.
+- Residual risk: T063 still needs to enforce Manifest JSON schemas in Core runtime.
+
+### T063: Enforce Manifest JSON Schemas In Core Runtime
+
+Status: Completed
+Priority: P0
+Depends on: T062
+Blocks: T064, T065, T066
+Parallel: No
+
+Goal:
+Make Manifest input/output schemas real runtime contracts for every adapter, especially Level 0 command.
+
+Allowed files:
+
+- `Cargo.toml`
+- `Cargo.lock`
+- `src/schemas.rs`
+- `src/runtime.rs`
+- `src/errors.rs`
+- `tests/runtime.rs`
+- `tests/errors.rs`
+- `tests/mcp_server.rs`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/tasks.md`
+
+Acceptance criteria:
+
+- Invalid input fails before adapter launch with structured `ValidationError`.
+- Invalid successful adapter output fails as `ProtocolViolation`.
+- Command adapter static schemas are enforced.
+- Existing Python/JS adapter behavior remains compatible.
+- MCP `tools/call` surfaces schema failures without killing the server.
+
+Validation commands:
+
+- `cargo test --test runtime --test errors --test mcp_server`
+- `cargo test`
+
+Evidence:
+
+- Changed files: `src/errors.rs`, `src/schemas.rs`, `src/runtime.rs`, `tests/runtime.rs`, `tests/mcp_server.rs`.
+- RED: `cargo test --test runtime command_adapter_invalid -- --nocapture` exposed that command adapter input/output schemas were not enforced by Core before the fix.
+- GREEN: `cargo test --test runtime command_adapter_invalid -- --nocapture` passed.
+- MCP validation: `cargo test --test mcp_server mcp_stdio_invalid_command_input_returns_validation_error_before_adapter_launch -- --nocapture` passed.
+- Focused validation: `cargo test --test runtime --test errors --test mcp_server` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T064 still needs to make registry/switchboard inventory rendering robust against malformed Manifest entries.
+
+### T064: Make Registry And Switchboard List Robust Against Bad Entries
+
+Status: Completed
+Priority: P1
+Depends on: T063
+Blocks: T065, T066
+Parallel: No
+
+Goal:
+Inventory list commands should not fail entirely because one registered capsule has a malformed Manifest or unreadable metadata.
+
+Allowed files:
+
+- `src/registry.rs`
+- `tests/registry.rs`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/tasks.md`
+
+Acceptance criteria:
+
+- Corrupt Manifest is represented as per-capsule readiness state.
+- Missing path behavior from v0.5.3 remains intact.
+- `switchboard enable` continues fail-closed.
+
+Validation commands:
+
+- `cargo test --test registry`
+- `cargo test`
+
+Evidence:
+
+- Changed files: `src/registry.rs`, `tests/registry.rs`.
+- RED: `cargo test --test registry invalid_manifest -- --nocapture` failed before the fix because a corrupt Manifest made `registry list --json` fail as a whole.
+- GREEN: `cargo test --test registry invalid_manifest -- --nocapture` passed.
+- Focused validation: `cargo test --test registry` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T065 still needs stable JSON contract fixtures for Desktop-facing CLI output.
+
+### T065: Freeze Consumer JSON Fixtures
+
+Status: Completed
+Priority: P1
+Depends on: T064
+Blocks: T066
+Parallel: No
+
+Goal:
+Add Desktop-facing JSON contract fixtures and document compatibility rules.
+
+Allowed files:
+
+- `tests/consumer_json_contracts.rs`
+- `tests/fixtures/contracts/**`
+- `docs/v0.5.2-consumer-json-surface.md`
+- `docs/v0.5.3-capsule-registry-switchboard.md`
+- `docs/v0.5.4-core-stabilization-audit.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/tasks.md`
+
+Acceptance criteria:
+
+- Fixtures cover inspect/check/doctor JSON states.
+- Fixtures cover registry/switchboard JSON states.
+- Contract compatibility rule is documented.
+
+Validation commands:
+
+- `cargo test --test consumer_json_contracts`
+- `cargo test`
+
+Evidence:
+
+- Changed files: `tests/consumer_json_contracts.rs`, `tests/fixtures/contracts/**`, `docs/v0.5.2-consumer-json-surface.md`, `docs/v0.5.3-capsule-registry-switchboard.md`, `docs/v0.5.4-core-stabilization-audit.md`.
+- RED: `cargo test --test consumer_json_contracts -- --nocapture` initially failed before path normalization handled Windows canonical `//?/` paths.
+- GREEN: `cargo test --test consumer_json_contracts -- --nocapture` passed.
+- Fixture coverage: runnable `inspect/check/doctor`, instruction-only `inspect/check`, registry enabled, and switchboard enabled.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T066 still needs to freeze version semantics and Desktop/Core boundaries in release docs.
+
+### T066: Document Version Semantics And Desktop Boundary
+
+Status: Completed
+Priority: P1
+Depends on: T065
+Blocks: Desktop project start
+Parallel: No
+
+Goal:
+Make version semantics and Desktop/Core dependency boundaries explicit.
+
+Allowed files:
+
+- `README.md`
+- `README.zh-CN.md`
+- `docs/release-policy.md`
+- `docs/v0.5.4-core-stabilization-audit.md`
+- `RELEASE_NOTES.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
+- `.ai-platform/specs/v0.5.4-core-stabilization-audit/tasks.md`
+
+Acceptance criteria:
+
+- Binary/artifact version, release line, Manifest IR version, and Adapter Protocol version are distinct.
+- Desktop is documented as a separate project consuming Core contracts.
+- Release validation includes `cargo clippy --all-targets -- -D warnings`.
+
+Validation commands:
+
+- `cargo fmt --check`
+- `git diff --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+
+Evidence:
+
+- Changed files: `README.md`, `README.zh-CN.md`, `docs/release-policy.md`, `docs/v0.5.4-core-stabilization-audit.md`, `RELEASE_NOTES.md`.
+- Version semantics now separate binary/crate version, Git tag, milestone version, Manifest IR version, and IPC/Adapter Protocol version.
+- README and release notes state that binary/crate version remains `0.5.0`, while Manifest IR and IPC protocol remain `0.1.0`.
+- Desktop is documented as a separate project that consumes Core contracts rather than redefining Manifest semantics or parsing MCP text as audit data.
+- Final validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.

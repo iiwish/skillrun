@@ -12,6 +12,14 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .expect("skillrun binary should run")
 }
 
+fn run_skillrun_with_home(args: &[&str], skillrun_home: &PathBuf) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("SKILLRUN_HOME", skillrun_home)
+        .output()
+        .expect("skillrun binary should run")
+}
+
 fn temp_dir(label: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -233,6 +241,32 @@ fn check_reports_instruction_only_skill_without_inference() {
             "instruction-only check missing {expected:?}\n{stdout}"
         );
     }
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn switchboard_enable_refuses_instruction_only_skill() {
+    let (output_root, skill) = instruction_only_skill("instruction-switchboard");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = skill.to_string_lossy().to_string();
+
+    let add = run_skillrun_with_home(
+        &["registry", "add", "--cwd", &cwd_arg, "--id", "plain-skill"],
+        &skillrun_home,
+    );
+    assert!(
+        add.status.success(),
+        "registry add should allow disabled instruction-only inventory\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let enable = run_skillrun_with_home(&["switchboard", "enable", "plain-skill"], &skillrun_home);
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable plain-skill"));
+    assert!(stderr.contains("instruction-only"));
+    assert!(stderr.contains("skillrun manifest"));
 
     fs::remove_dir_all(output_root).ok();
 }
