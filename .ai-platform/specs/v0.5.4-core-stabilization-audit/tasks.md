@@ -58,7 +58,7 @@ Evidence:
 
 ### T063: Enforce Manifest JSON Schemas In Core Runtime
 
-Status: Ready
+Status: Completed
 Priority: P0
 Depends on: T062
 Blocks: T064, T065, T066
@@ -93,9 +93,19 @@ Validation commands:
 - `cargo test --test runtime --test errors --test mcp_server`
 - `cargo test`
 
+Evidence:
+
+- Changed files: `src/errors.rs`, `src/schemas.rs`, `src/runtime.rs`, `tests/runtime.rs`, `tests/mcp_server.rs`.
+- RED: `cargo test --test runtime command_adapter_invalid -- --nocapture` exposed that command adapter input/output schemas were not enforced by Core before the fix.
+- GREEN: `cargo test --test runtime command_adapter_invalid -- --nocapture` passed.
+- MCP validation: `cargo test --test mcp_server mcp_stdio_invalid_command_input_returns_validation_error_before_adapter_launch -- --nocapture` passed.
+- Focused validation: `cargo test --test runtime --test errors --test mcp_server` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T064 still needs to make registry/switchboard inventory rendering robust against malformed Manifest entries.
+
 ### T064: Make Registry And Switchboard List Robust Against Bad Entries
 
-Status: Ready_For_User_Review
+Status: Ready
 Priority: P1
 Depends on: T063
 Blocks: T065, T066

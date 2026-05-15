@@ -70,6 +70,14 @@ Required fix:
 - Validate successful output envelope against Manifest `schemas.output`.
 - Return `ValidationError` for bad input and `ProtocolViolation` for bad adapter output.
 
+Execution evidence:
+
+- RED: `cargo test --test runtime command_adapter_invalid -- --nocapture` exposed that invalid command adapter input/output were not enforced by Core before the fix.
+- GREEN: `cargo test --test runtime command_adapter_invalid -- --nocapture` passed.
+- MCP validation: `cargo test --test mcp_server mcp_stdio_invalid_command_input_returns_validation_error_before_adapter_launch -- --nocapture` passed.
+- Focused validation: `cargo test --test runtime --test errors --test mcp_server` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+
 ## P1 Findings
 
 ### P1-001: registry/switchboard list still fail as a whole for corrupt Manifest entries

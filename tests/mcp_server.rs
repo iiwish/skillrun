@@ -65,6 +65,62 @@ fn generated_capsule_with_flag(label: &str, flag: &str) -> (PathBuf, PathBuf) {
     (output_root, capsule)
 }
 
+fn generated_command_capsule(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello\n").expect("skill should be written");
+    fs::write(
+        capsule.join("action.py"),
+        r#"
+import json
+import os
+from pathlib import Path
+
+Path("mcp-command-launched.txt").write_text("launched", encoding="utf-8")
+payload = json.loads(Path(os.environ["SKILLRUN_INPUT_JSON"]).read_text(encoding="utf-8"))
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+  "ok": True,
+  "output": {"message": payload["name"]},
+  "display": {"markdown": "ok"}
+}), encoding="utf-8")
+"#,
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"name":"Ada"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"]
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+    write_manifest(&capsule);
+    (output_root, capsule)
+}
+
 fn assert_success_json(output: &std::process::Output) -> Value {
     assert!(
         output.status.success(),
@@ -415,6 +471,40 @@ fn mcp_stdio_dependency_error_keeps_server_alive() {
     let tools = client.read_response("tools/list after DependencyError response");
     assert_eq!(tools["id"], 11);
     assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn mcp_stdio_invalid_command_input_returns_validation_error_before_adapter_launch() {
+    let (output_root, capsule) = generated_command_capsule("mcp-command-invalid-input");
+    let mut client = ScriptedMcpClient::spawn(&capsule);
+    client.initialize();
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 20,
+        "method": "tools/call",
+        "params": {
+            "name": "command_hello",
+            "arguments": {
+                "unexpected": "field"
+            }
+        }
+    }));
+    let call = client.read_response("command ValidationError tools/call response");
+
+    assert_eq!(call["id"], 20);
+    assert_eq!(call["result"]["isError"], true);
+    let error_text = call["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(error_text.contains("ValidationError"));
+    assert!(
+        !capsule.join("mcp-command-launched.txt").exists(),
+        "MCP input schema validation must happen before adapter launch"
+    );
 
     fs::remove_dir_all(output_root).ok();
 }

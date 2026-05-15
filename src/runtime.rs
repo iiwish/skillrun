@@ -12,6 +12,7 @@ use crate::errors;
 use crate::permissions;
 use crate::readiness;
 use crate::run_record::{self, RunRecordInput};
+use crate::schemas;
 
 static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -103,6 +104,25 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     });
     write_json(&paths.context_json, &context)?;
 
+    if let Some(input_schema) = json_value_at(&manifest.value, &["schemas", "input"]) {
+        if let Err(error) = schemas::validate_value(&input_schema, &input_value) {
+            write_empty_logs(&paths)?;
+            return finish_run(
+                FinishRunInput {
+                    run_id: &run_id,
+                    mode,
+                    success: false,
+                    started_at,
+                    duration_started_at: started,
+                    capsule_dir,
+                    manifest: &manifest,
+                    paths: &paths,
+                },
+                errors::validation_error(format!("input schema validation failed: {error}")),
+            );
+        }
+    }
+
     if let Some(message) = dependency_failure_message(capsule_dir)? {
         fs::write(&paths.stdout_log, []).map_err(|write_error| {
             format!(
@@ -179,7 +199,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     fs::write(&paths.stderr_log, adapter_output.stderr)
         .map_err(|error| format!("failed to write {}: {error}", paths.stderr_log.display()))?;
 
-    let (envelope, success) = adapter_envelope(&paths, adapter_output.success);
+    let (envelope, success) = adapter_envelope(&paths, adapter_output.success, &manifest.value);
     finish_run(
         FinishRunInput {
             run_id: &run_id,
@@ -193,6 +213,13 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
         },
         envelope,
     )
+}
+
+fn write_empty_logs(paths: &RunPaths) -> Result<(), String> {
+    fs::write(&paths.stdout_log, [])
+        .map_err(|error| format!("failed to write {}: {error}", paths.stdout_log.display()))?;
+    fs::write(&paths.stderr_log, [])
+        .map_err(|error| format!("failed to write {}: {error}", paths.stderr_log.display()))
 }
 
 fn dependency_failure_message(capsule_dir: &Path) -> Result<Option<String>, String> {
@@ -292,7 +319,11 @@ fn finish_run(input: FinishRunInput<'_>, mut envelope: Value) -> Result<RunOutco
     })
 }
 
-fn adapter_envelope(paths: &RunPaths, adapter_success: bool) -> (Value, bool) {
+fn adapter_envelope(
+    paths: &RunPaths,
+    adapter_success: bool,
+    manifest: &YamlValue,
+) -> (Value, bool) {
     if !paths.output_json.is_file() {
         return (
             errors::protocol_violation(format!(
@@ -310,6 +341,17 @@ fn adapter_envelope(paths: &RunPaths, adapter_success: bool) -> (Value, bool) {
 
     match envelope.get("ok").and_then(Value::as_bool) {
         Some(true) if adapter_success => {
+            if let Some(output_schema) = json_value_at(manifest, &["schemas", "output"]) {
+                let output = envelope.get("output").unwrap_or(&Value::Null);
+                if let Err(error) = schemas::validate_value(&output_schema, output) {
+                    return (
+                        errors::protocol_violation(format!(
+                            "output schema validation failed: {error}"
+                        )),
+                        false,
+                    );
+                }
+            }
             match permissions::validate_artifacts(&envelope, &paths.artifact_dir) {
                 Ok(()) => (envelope, true),
                 Err(error) => (errors::permission_denied(error), false),
