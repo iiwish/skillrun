@@ -105,7 +105,7 @@ Evidence:
 
 ### T064: Make Registry And Switchboard List Robust Against Bad Entries
 
-Status: Ready
+Status: Completed
 Priority: P1
 Depends on: T063
 Blocks: T065, T066
@@ -132,9 +132,18 @@ Validation commands:
 - `cargo test --test registry`
 - `cargo test`
 
+Evidence:
+
+- Changed files: `src/registry.rs`, `tests/registry.rs`.
+- RED: `cargo test --test registry invalid_manifest -- --nocapture` failed before the fix because a corrupt Manifest made `registry list --json` fail as a whole.
+- GREEN: `cargo test --test registry invalid_manifest -- --nocapture` passed.
+- Focused validation: `cargo test --test registry` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+- Residual risk: T065 still needs stable JSON contract fixtures for Desktop-facing CLI output.
+
 ### T065: Freeze Consumer JSON Fixtures
 
-Status: Ready_For_User_Review
+Status: Ready
 Priority: P1
 Depends on: T064
 Blocks: T066

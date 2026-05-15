@@ -103,6 +103,13 @@ Required fix:
 - Convert corrupt Manifest/readiness errors into per-capsule readiness states for list/inspect.
 - Keep `switchboard enable` fail-closed.
 
+Execution evidence:
+
+- RED: `cargo test --test registry invalid_manifest -- --nocapture` failed because a corrupt Manifest made `registry list --json` exit instead of returning inventory.
+- GREEN: `cargo test --test registry invalid_manifest -- --nocapture` passed.
+- Focused validation: `cargo test --test registry` passed.
+- Full validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.
+
 ### P1-002: Consumer JSON contracts are tested but not frozen as fixtures
 
 Evidence:

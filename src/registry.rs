@@ -327,9 +327,29 @@ fn capsule_view(entry: &RegistryEntry) -> Result<CapsuleView, String> {
         ));
     }
 
-    let readiness = readiness::evaluate(&cwd)?;
     let manifest_path = manifest::generated_manifest_path(&cwd);
-    let manifest_value = read_manifest(&manifest_path)?;
+    let readiness = match readiness::evaluate(&cwd) {
+        Ok(readiness) => readiness,
+        Err(error) => {
+            return Ok(manifest_error_capsule_view(
+                entry,
+                &cwd,
+                &manifest_path,
+                error,
+            ));
+        }
+    };
+    let manifest_value = match read_manifest(&manifest_path) {
+        Ok(value) => value,
+        Err(error) => {
+            return Ok(manifest_error_capsule_view(
+                entry,
+                &cwd,
+                &manifest_path,
+                error,
+            ));
+        }
+    };
 
     Ok(CapsuleView {
         id: entry.id.clone(),
@@ -390,6 +410,59 @@ fn unavailable_capsule_view(
             present: false,
             freshness: "missing".to_string(),
         },
+        skill: None,
+        runtime: None,
+        tool: None,
+        readiness: ReadinessView {
+            ok: false,
+            status: status.to_string(),
+            reason: Some(reason),
+            next_step,
+        },
+    }
+}
+
+fn manifest_error_capsule_view(
+    entry: &RegistryEntry,
+    cwd: &Path,
+    manifest_path: &Path,
+    reason: String,
+) -> CapsuleView {
+    let (status, freshness) = if reason.contains("failed to parse") {
+        ("invalid-manifest", "invalid")
+    } else {
+        ("unreadable-manifest", "unreadable")
+    };
+    unavailable_capsule_view_with_manifest(
+        entry,
+        ManifestView {
+            path: relative_path(cwd, manifest_path),
+            present: manifest_path.is_file(),
+            freshness: freshness.to_string(),
+        },
+        status,
+        reason,
+        format!(
+            "Regenerate the Manifest with `skillrun manifest --cwd {}` or run `skillrun registry remove {}`.",
+            entry.path, entry.id
+        ),
+    )
+}
+
+fn unavailable_capsule_view_with_manifest(
+    entry: &RegistryEntry,
+    manifest: ManifestView,
+    status: &str,
+    reason: String,
+    next_step: String,
+) -> CapsuleView {
+    CapsuleView {
+        id: entry.id.clone(),
+        path: entry.path.clone(),
+        source_type: entry.source_type.clone(),
+        enabled: entry.enabled,
+        registered_at: entry.registered_at.clone(),
+        manifest,
         skill: None,
         runtime: None,
         tool: None,
