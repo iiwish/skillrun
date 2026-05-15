@@ -25,6 +25,7 @@
 - [v0.5 Adapter Protocol](v0.5-adapter-protocol.md)：语言无关 Adapter Protocol 和 Level 0 command adapter 的 v0.5 计划。
 - [v0.5.1 Contract Stabilization](v0.5.1-contract-stabilization.md)：统一 guardrail 定义、trust model、官网叙事和 `output` envelope 字段。
 - [v0.5.2 Consumer JSON Surface](v0.5.2-consumer-json-surface.md)：为 Desktop、Router 和自动化提供 `inspect/check/doctor --json` 的只读机器接口计划。
+- [v0.5.3 Capsule Registry + Switchboard](v0.5.3-capsule-registry-switchboard.md)：为 v0.6 建立本地 capsule inventory 与 enable/disable 控制面计划。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
