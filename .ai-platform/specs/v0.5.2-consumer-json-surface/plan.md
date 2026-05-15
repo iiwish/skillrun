@@ -3,10 +3,10 @@
 **Metadata**
 
 - Version: v0.5.2 technical plan
-- Status: Ready_For_User_Review
+- Status: Confirmed
 - Source spec: `.ai-platform/specs/v0.5.2-consumer-json-surface/spec.md`
 - Last updated: 2026-05-15
-- Review: Requires user approval before tasks become Ready or execution packets are generated.
+- Review: User requested review, local commit, and continuation on 2026-05-15; plan approved for execution.
 
 ---
 

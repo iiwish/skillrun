@@ -1,5 +1,39 @@
 # SkillRun Release Notes
 
+## v0.5.2
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-15
+Publication: no v0.5.2 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds the Consumer JSON Surface: `inspect`, `check`, and `doctor` now have stable `--json` output for Desktop, Router, and automation consumers without changing human CLI output.
+
+### What Is Included
+
+- `skillrun inspect --json` for Manifest contract summaries across runnable, invalid-runnable, and instruction-only capsule states.
+- `skillrun check --json` for readiness reports backed by the existing readiness engine.
+- `skillrun doctor --json` using the same readiness JSON schema as `check --json`, differing by `command`.
+- JSON contract tests for runnable, stale Manifest, dependency/readiness, and instruction-only states.
+- Governance packets and evidence for T056, T057, and T058.
+- README and v0.5.2 contract docs updated for the implemented surface.
+
+### Boundaries
+
+- Human text output remains the default.
+- `skillrun test` and `skillrun run` are not wrapped; they already output standard output/error envelope JSON.
+- Parser and filesystem errors remain stderr + non-zero exit code.
+- This release does not introduce registry, router, daemon, Tauri/Desktop UI, MCP client config mutation, signed packages, dependency installation, or sandbox semantics.
+- JSON readiness still reads Manifest, files, hashes, examples, and runtime probes; it does not import action source for metadata.
+
+### Validation
+
+- `cargo test --test inspect`
+- `cargo test --test consumer_guards --test instruction_only --test cli`
+- `cargo test`
+- `git diff --check`
+
 ## v0.5.0
 
 Status: Ready_For_Release_Decision

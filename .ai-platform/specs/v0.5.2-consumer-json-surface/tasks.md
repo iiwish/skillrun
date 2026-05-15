@@ -1,10 +1,10 @@
 # SkillRun v0.5.2 Work Graph: Consumer JSON Surface
 
 Version: v0.5.2
-Status: Ready_For_User_Review
+Status: Confirmed
 Source spec: `.ai-platform/specs/v0.5.2-consumer-json-surface/spec.md`
 Last updated: 2026-05-15
-Review: Requires user approval before task status can move to `Ready`.
+Review: User requested review, local commit, and continuation on 2026-05-15; work graph approved for sequenced execution.
 
 ## Work Graph Summary
 
@@ -19,7 +19,7 @@ Provide stable machine-readable JSON output for Consumer Mode report commands wi
 
 ### T056: Add `inspect --json`
 
-Status: Draft
+Status: Completed
 Priority: P0
 Depends on: v0.5.2 spec approval
 Blocks: T057, T058
@@ -74,9 +74,16 @@ Evidence required:
 - Diff summary.
 - Residual risk.
 
+Evidence:
+- Changed files: `src/cli.rs`, `src/inspect.rs`, `tests/inspect.rs`.
+- RED: `cargo test --test inspect` failed because `--json` was rejected by `parse_inspect`.
+- GREEN: `cargo test --test inspect` passed, 8 passed.
+- Full validation: `cargo test` passed.
+- Residual risk: JSON invalid-runnable currently reports structured Manifest presence and reason, but does not attempt to parse partial stale Manifest details.
+
 ### T057: Add `check --json` And `doctor --json`
 
-Status: Draft
+Status: Completed
 Priority: P0
 Depends on: T056
 Blocks: T058
@@ -137,9 +144,16 @@ Evidence required:
 - Diff summary.
 - Residual risk.
 
+Evidence:
+- Changed files: `src/cli.rs`, `src/check.rs`, `src/doctor.rs`, `src/readiness.rs`, `tests/consumer_guards.rs`, `tests/instruction_only.rs`.
+- RED: `cargo test --test consumer_guards --test instruction_only --test cli` failed because `--json` was rejected by `check` and `doctor`.
+- GREEN: focused readiness tests passed.
+- Full validation: `cargo test` passed.
+- Residual risk: JSON mode intentionally keeps parser/filesystem errors on stderr instead of introducing a global CLI error envelope.
+
 ### T058: Finalize v0.5.2 Docs And Release Validation
 
-Status: Draft
+Status: Completed
 Priority: P1
 Depends on: T056, T057
 Blocks: None
@@ -196,3 +210,8 @@ Evidence required:
 - Validation results.
 - Diff summary.
 - Residual risk.
+
+Evidence:
+- Changed files: `README.md`, `README.zh-CN.md`, `docs/v0.5.2-consumer-json-surface.md`, `RELEASE_NOTES.md`, `.ai-platform/specs/v0.5.2-consumer-json-surface/analysis.md`, `.ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md`.
+- Validation: `git diff --check` passed; `cargo test` passed.
+- Residual risk: release notes mark v0.5.2 as `Ready_For_Release_Decision`; no tag, push, or package publication has been performed.

@@ -3,7 +3,7 @@
 **Metadata**
 
 - Version: v0.5.2 analysis
-- Status: Ready_For_User_Review
+- Status: Completed
 - Source spec: `.ai-platform/specs/v0.5.2-consumer-json-surface/spec.md`
 - Source plan: `.ai-platform/specs/v0.5.2-consumer-json-surface/plan.md`
 - Source tasks: `.ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md`
@@ -13,9 +13,9 @@
 
 ## Summary
 
-No Critical or High findings were found. The v0.5.2 spec, checklist, plan, and work graph are consistent enough for user review.
+No Critical or High findings were found. The v0.5.2 spec, checklist, plan, and work graph are consistent enough for execution.
 
-Execution is still blocked until the user explicitly approves the plan and work graph. Tasks remain `Draft` by design.
+The user approved continuation on 2026-05-15. Execution may begin with T056 after generating the required execution packet.
 
 ## Findings Summary
 
@@ -115,15 +115,15 @@ No `result` envelope drift was found in v0.5.2 artifacts.
 
 ## Findings
 
-### LOW-001: Execution packets intentionally not generated yet
+### LOW-001: Execution packets intentionally generated per task
 
 Impact:
 
-Implementation cannot begin until tasks are approved and packets are generated.
+Implementation cannot begin for a task until its packet is generated.
 
 Recommended action:
 
-After user approval, generate packets for T056, T057, and T058 before execution.
+Generate each packet immediately before its task enters execution, starting with T056.
 
 ### LOW-002: Parser/filesystem error JSON remains out of scope
 
@@ -141,17 +141,37 @@ Current state:
 
 - Spec: Confirmed.
 - Checklist: Completed.
-- Plan: Ready_For_User_Review.
-- Tasks: Ready_For_User_Review.
-- Analysis: Ready_For_User_Review.
-- Packets: Not generated.
+- Plan: Confirmed.
+- Tasks: Confirmed.
+- Analysis: Completed.
+- Packets: T056, T057, and T058 generated.
 
 Execution allowed:
 
-- No.
+- All planned v0.5.2 tasks are completed.
 
 Blocking gate:
 
-- User must approve plan and work graph.
-- Then tasks can move to `Ready`.
-- Then execution packets must be generated before implementation.
+- None for local v0.5.2 implementation. Release tag, remote push, and publication remain separate explicit decisions.
+
+## Execution Evidence
+
+### T056
+
+- RED: `cargo test --test inspect` failed because `skillrun inspect --json` was rejected as an unexpected inspect argument.
+- GREEN: `cargo test --test inspect` passed with 8 tests.
+- Full validation: `cargo test` passed.
+- Notes: JSON inspect preserves the existing non-import behavior by validating Manifest hashes and reading source text only for preflight detection.
+
+### T057
+
+- RED: `cargo test --test consumer_guards --test instruction_only --test cli` failed because `check --json` and `doctor --json` were rejected as unexpected arguments.
+- GREEN: focused readiness tests passed.
+- Full validation: `cargo test` passed.
+- Notes: `check --json` and `doctor --json` share one readiness JSON renderer backed by `ReadinessReport`; exit code behavior remains tied to `ok`.
+
+### T058
+
+- Validation: `git diff --check` passed.
+- Full validation: `cargo test` passed.
+- Notes: README, Chinese README, release notes, and v0.5.2 contract docs now describe the implemented Consumer JSON Surface and explicitly keep `run` / `test`, registry, router, UI, sandbox, and dependency installation out of scope.

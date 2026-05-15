@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde_json::Value;
+
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
         .args(args)
@@ -76,6 +78,16 @@ fn assert_failure_stdout(output: &std::process::Output, command: &str) -> String
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8(output.stdout.clone()).expect("stdout should be utf-8")
+}
+
+fn assert_failure_json(output: &std::process::Output, command: &str) -> Value {
+    assert!(
+        !output.status.success(),
+        "{command} should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
 }
 
 #[test]
@@ -220,6 +232,49 @@ fn check_reports_instruction_only_skill_without_inference() {
             stdout.contains(expected),
             "instruction-only check missing {expected:?}\n{stdout}"
         );
+    }
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn check_and_doctor_json_share_instruction_only_readiness_schema() {
+    let (output_root, skill) = instruction_only_skill("instruction-json-readiness");
+    let cwd_arg = skill.to_string_lossy().to_string();
+
+    let check = assert_failure_json(
+        &run_skillrun(&["check", "--json", "--cwd", &cwd_arg]),
+        "instruction-only check json",
+    );
+    let doctor = assert_failure_json(
+        &run_skillrun(&["doctor", "--json", "--cwd", &cwd_arg]),
+        "instruction-only doctor json",
+    );
+
+    for (command, report) in [("check", check), ("doctor", doctor)] {
+        assert_eq!(report["command"], command);
+        assert_eq!(report["ok"], false);
+        assert_eq!(report["status"], "instruction-only");
+        assert_eq!(report["manifest"]["present"], false);
+        assert_eq!(report["manifest"]["freshness"], "missing");
+        assert_eq!(report["files"]["skill"], true);
+        assert_eq!(report["files"]["python_action"], false);
+        assert_eq!(report["files"]["node_action"], false);
+        assert!(report["reason"]
+            .as_str()
+            .expect("reason should be a string")
+            .contains("does not infer actions"));
+        assert!(report["next_step"]
+            .as_str()
+            .expect("next_step should be a string")
+            .contains("skillrun manifest"));
+        assert!(report["example_checks"]
+            .as_array()
+            .expect("example_checks should be an array")
+            .iter()
+            .any(
+                |check| check["path"] == "examples/default.input.json" && check["present"] == true
+            ));
     }
 
     fs::remove_dir_all(output_root).ok();

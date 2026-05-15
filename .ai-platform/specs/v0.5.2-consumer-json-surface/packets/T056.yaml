@@ -1,0 +1,62 @@
+schema_version: "1.0"
+packet_id: "v0.5.2-T056-A001"
+task_id: "T056"
+feature_id: "v0.5.2-consumer-json-surface"
+title: "Add inspect --json"
+status: "Ready_For_Execution"
+created_at: "2026-05-15"
+execution_mode: "direct"
+
+governance:
+  source_spec: ".ai-platform/specs/v0.5.2-consumer-json-surface/spec.md"
+  source_plan: ".ai-platform/specs/v0.5.2-consumer-json-surface/plan.md"
+  source_tasks: ".ai-platform/specs/v0.5.2-consumer-json-surface/tasks.md"
+  source_analysis: ".ai-platform/specs/v0.5.2-consumer-json-surface/analysis.md"
+  approval_basis: "User requested review, local commit, and continuation on 2026-05-15."
+  constraints:
+    - "Do not change default human inspect output."
+    - "Do not import action source in Consumer Mode inspect."
+    - "Do not add registry, router, daemon, UI, package signing, or sandbox semantics."
+    - "Do not change run/test output envelope behavior."
+
+scope:
+  goal: "Add additive JSON output mode for skillrun inspect covering runnable, invalid-runnable, and instruction-only capsule states."
+  allowed_files:
+    - "src/cli.rs"
+    - "src/inspect.rs"
+    - "tests/inspect.rs"
+  forbidden_files:
+    - "src/check.rs"
+    - "src/doctor.rs"
+    - "src/readiness.rs"
+    - "README.md"
+    - "README.zh-CN.md"
+    - "RELEASE_NOTES.md"
+
+acceptance_criteria:
+  - "Runnable capsule JSON includes command, cwd, status, manifest, skill, sources, schemas, runtime, permissions, examples, preflight, and tool."
+  - "Stale Manifest JSON returns status=\"invalid-runnable\" and includes reason."
+  - "Instruction-only JSON returns status=\"instruction-only\" and missing file details."
+  - "Existing human inspect tests continue to pass."
+
+tdd:
+  red:
+    - "Add failing tests in tests/inspect.rs for runnable, stale, and instruction-only inspect --json."
+    - "Run cargo test --test inspect and capture the expected failure."
+  green:
+    - "Add CLI parsing for inspect --json."
+    - "Add structured inspect report serialization."
+    - "Run cargo test --test inspect until passing."
+  refactor:
+    - "Keep implementation local to inspect and CLI parsing."
+    - "Run cargo test and document any unrelated failures."
+
+validation:
+  required_commands:
+    - "cargo test --test inspect"
+    - "cargo test"
+  evidence_required:
+    - "Changed files"
+    - "RED/GREEN validation results"
+    - "Diff summary"
+    - "Residual risk"
