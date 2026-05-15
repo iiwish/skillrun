@@ -1,0 +1,64 @@
+schema_version: "1.0"
+packet_id: "v0.5.3-T059-A001"
+task_id: "T059"
+feature_id: "v0.5.3-capsule-registry-switchboard"
+title: "Add local capsule registry"
+status: "Ready_For_Execution"
+created_at: "2026-05-15"
+execution_mode: "direct"
+
+governance:
+  source_spec: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/spec.md"
+  source_plan: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/plan.md"
+  source_tasks: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/tasks.md"
+  source_analysis: ".ai-platform/specs/v0.5.3-capsule-registry-switchboard/analysis.md"
+  approval_basis: "User requested v0.5.2 merge/push and continuation on 2026-05-15."
+  constraints:
+    - "Registry is local inventory, not marketplace or trust registry."
+    - "New entries are disabled by default."
+    - "registry add/list/inspect/remove must not execute or import action source."
+    - "Do not add switchboard enable/disable in T059."
+    - "Do not add router, daemon, Desktop, MCP client config mutation, .skr import, dependency installation, or sandbox semantics."
+
+scope:
+  goal: "Implement local registry storage and skillrun registry add/list/inspect/remove with JSON output."
+  allowed_files:
+    - "src/cli.rs"
+    - "src/registry.rs"
+    - "src/main.rs"
+    - "tests/registry.rs"
+  forbidden_files:
+    - "src/switchboard.rs"
+    - "README.md"
+    - "README.zh-CN.md"
+    - "RELEASE_NOTES.md"
+
+acceptance_criteria:
+  - "Empty registry is valid."
+  - "SKILLRUN_HOME controls registry location."
+  - "registry add --cwd <capsule> creates a disabled local_path entry."
+  - "registry list --json emits parseable JSON."
+  - "registry inspect <id> --json emits parseable JSON and includes readiness summary."
+  - "registry remove <id> removes state without deleting capsule files."
+  - "Duplicate ids are rejected."
+
+tdd:
+  red:
+    - "Add failing tests in tests/registry.rs for empty list, add/list/inspect/remove, and duplicate id rejection."
+    - "Run cargo test --test registry and capture the expected failure."
+  green:
+    - "Add registry module, storage resolver, JSON views, and CLI routing."
+    - "Run cargo test --test registry until passing."
+  refactor:
+    - "Keep registry independent from switchboard."
+    - "Run cargo test."
+
+validation:
+  required_commands:
+    - "cargo test --test registry"
+    - "cargo test"
+  evidence_required:
+    - "Changed files"
+    - "RED/GREEN validation results"
+    - "Diff summary"
+    - "Residual risk"

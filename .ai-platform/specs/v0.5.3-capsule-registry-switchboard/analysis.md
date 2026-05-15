@@ -3,7 +3,7 @@
 **Metadata**
 
 - Version: v0.5.3 analysis
-- Status: Ready_For_User_Review
+- Status: Completed
 - Source spec: `.ai-platform/specs/v0.5.3-capsule-registry-switchboard/spec.md`
 - Source plan: `.ai-platform/specs/v0.5.3-capsule-registry-switchboard/plan.md`
 - Source tasks: `.ai-platform/specs/v0.5.3-capsule-registry-switchboard/tasks.md`
@@ -15,7 +15,7 @@
 
 No Critical or High findings were found. The v0.5.3 scope is coherent if it remains a local state layer and does not expand into Router, `.skr import`, marketplace, or trust.
 
-Execution is blocked until the user explicitly approves the plan and work graph.
+The user requested v0.5.2 merge/push and continuation on 2026-05-15. Execution may begin with T059 after generating the required execution packet.
 
 ## Findings Summary
 
@@ -83,18 +83,39 @@ Command output and docs should state `registered`, `enabled`, and `ready` separa
 
 Current state:
 
-- Spec: Ready_For_User_Review.
+- Spec: Confirmed.
 - Checklist: Completed.
-- Plan: Ready_For_User_Review.
-- Tasks: Ready_For_User_Review.
-- Packets: Not generated.
+- Plan: Confirmed.
+- Tasks: Confirmed.
+- Packets: T059, T060, and T061 generated.
 
 Execution allowed:
 
-- No.
+- All planned v0.5.3 tasks are completed.
 
 Blocking gate:
 
-- User must approve spec, plan, and work graph.
-- Then tasks can move to `Ready`.
-- Then execution packets must be generated before implementation.
+- None for local v0.5.3 implementation. Release tag, remote push, package publication, Router, mount profile, and Desktop work remain separate explicit decisions.
+
+## Execution Evidence
+
+### T059
+
+- RED: `cargo test --test registry` failed because `registry` was an unknown command.
+- GREEN: `cargo test --test registry` passed with 3 tests.
+- Full validation: `cargo test` passed.
+- Notes: Registry entries are disabled by default, stored under `SKILLRUN_HOME` when provided, and remove only local registry state without deleting capsule files.
+
+### T060
+
+- RED: focused tests failed because `switchboard` was an unknown command.
+- GREEN: `cargo test --test registry --test consumer_guards --test instruction_only` passed.
+- Full validation: `cargo test` passed.
+- Notes: Enable fails closed for stale Manifest, instruction-only, and dependency-error capsules. Disable only changes local exposure intent.
+
+### T061
+
+- Validation: `cargo fmt --check` passed.
+- Validation: `git diff --check` passed.
+- Full validation: `cargo test` passed.
+- Notes: Docs and release notes now describe registry as local inventory and switchboard as future exposure intent, not marketplace, trust, sandbox, Router, mount profile, or dependency installation.

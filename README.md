@@ -13,10 +13,10 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface for headless inspection and readiness automation.
+SkillRun v0.5.0 is the current release-candidate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, and v0.5.2 Consumer JSON Surface.
-- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, and v0.5.3 local registry/switchboard state.
+- Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun registry add/list/inspect/remove`, `skillrun switchboard list/enable/disable`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/registry/switchboard/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
 - Python `action.py` is the stable action adapter target. JS `action.mjs` is an alpha adapter target. Both are user action languages, not the SkillRun implementation language.
@@ -77,6 +77,8 @@ Manifest-driven contract
         +-- skillrun check --json
         +-- skillrun doctor
         +-- skillrun doctor --json
+        +-- skillrun registry add/list/inspect/remove
+        +-- skillrun switchboard list/enable/disable
         +-- skillrun test
         +-- skillrun run --input examples/default.input.json
         +-- skillrun serve --mcp             # MCP stdio server
@@ -93,6 +95,8 @@ In v0.4, `skillrun check` is the automation-grade readiness command. It reads th
 In v0.5, the Adapter Protocol makes the southbound runtime boundary explicit. Core still reads Manifest, creates IPC paths, validates envelopes and exposes MCP; adapters bridge user action ecosystems back into that contract.
 
 In v0.5.2, `inspect`, `check`, and `doctor` also expose `--json` for Desktop, Router, and automation consumers. `test` and `run` are unchanged because they already emit standard output/error envelope JSON.
+
+In v0.5.3, `registry` records local capsule inventory and `switchboard` records future exposure intent. It does not import `.skr`, expose MCP tools, mount clients, install dependencies, certify trust, or provide sandboxing.
 
 ## Release Candidate Workflow
 
@@ -200,6 +204,10 @@ cargo run -- check --cwd tmp/e2e-init/refund
 cargo run -- check --json --cwd tmp/e2e-init/refund
 cargo run -- doctor --cwd tmp/e2e-init/refund
 cargo run -- doctor --json --cwd tmp/e2e-init/refund
+cargo run -- registry add --cwd tmp/e2e-init/refund
+cargo run -- registry list --json
+cargo run -- switchboard enable refund
+cargo run -- switchboard list --json
 cargo run -- test --cwd tmp/e2e-init/refund
 cargo run -- run --cwd tmp/e2e-init/refund --input examples/default.input.json
 cargo run -- serve --mcp --cwd tmp/e2e-init/refund --dry-run
@@ -227,6 +235,8 @@ The current integration scope is intentionally narrow:
 - `runtime.adapter = "command"` is Level 0 protocol execution with explicit argv and static schema. It is not shell-string execution, package installation, sandboxing, or a newly blessed language adapter.
 - `action.ts`, direct TypeScript runtime execution, `ts-node`, `tsx`, type-to-schema extraction, source maps, CJS compatibility, shell-string commands, npm install flows, and dependency vendoring are out of scope.
 - `.skr` is a source + Manifest archive, not a signed package, registry package, dependency bundle, or runtime image.
+- `registry` is local inventory, not a marketplace, trust registry, or install source.
+- `switchboard enabled=true` is future Router exposure intent, not trust, sandboxing, dependency installation, or MCP client mounting.
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
@@ -269,6 +279,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.4` | Portable Consumer Checks, dependency-aware Consumer Mode, `check`, and structured `DependencyError` |
 | `v0.5` | Language-agnostic Adapter Protocol and Level 0 command adapter |
 | `v0.5.2` | Consumer JSON Surface for `inspect`, `check`, and `doctor` |
+| `v0.5.3` | Local Capsule Registry and Switchboard exposure intent |
 
 ## Classic Business Examples
 
@@ -301,6 +312,7 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [v0.5 Adapter Protocol plan](docs/v0.5-adapter-protocol.md)
 - [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
 - [v0.5.2 Consumer JSON Surface](docs/v0.5.2-consumer-json-surface.md)
+- [v0.5.3 Capsule Registry + Switchboard](docs/v0.5.3-capsule-registry-switchboard.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

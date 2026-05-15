@@ -3,10 +3,10 @@
 **Metadata**
 
 - Version: v0.5.3 technical plan
-- Status: Ready_For_User_Review
+- Status: Confirmed
 - Source spec: `.ai-platform/specs/v0.5.3-capsule-registry-switchboard/spec.md`
 - Last updated: 2026-05-15
-- Review: Requires user approval before tasks become Ready or execution packets are generated.
+- Review: User requested v0.5.2 merge/push and continuation on 2026-05-15; plan approved for sequenced execution.
 
 ---
 

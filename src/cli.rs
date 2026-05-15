@@ -9,7 +9,9 @@ use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
 use crate::pack::{self, PackOptions};
+use crate::registry::{self, RegistryCommand, RegistryOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
+use crate::switchboard::{self, SwitchboardCommand, SwitchboardOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn run<I>(args: I) -> ExitCode
@@ -117,6 +119,40 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun doctor [--json] [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("registry") => match parse_registry(args.collect()) {
+            Ok(options) => match registry::run(&options) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun registry <add|list|inspect|remove> [options]");
+                ExitCode::from(2)
+            }
+        },
+        Some("switchboard") => match parse_switchboard(args.collect()) {
+            Ok(options) => match switchboard::run(&options) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun switchboard <list|enable|disable> [options]");
                 ExitCode::from(2)
             }
         },
@@ -377,6 +413,136 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     Ok(CheckOptions { cwd, json })
 }
 
+fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("registry requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    let command = match command {
+        "add" => parse_registry_add(rest)?,
+        "list" => parse_registry_list(rest)?,
+        "inspect" => parse_registry_inspect(rest)?,
+        "remove" => parse_registry_remove(rest)?,
+        value => return Err(format!("unknown registry subcommand: {value}")),
+    };
+    Ok(RegistryOptions { command })
+}
+
+fn parse_registry_add(args: Vec<String>) -> Result<RegistryCommand, String> {
+    let mut cwd = None;
+    let mut id = None;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--id" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--id requires a value".to_string());
+                };
+                id = Some(value.to_string());
+                index += 2;
+            }
+            value => return Err(format!("unexpected registry add argument: {value}")),
+        }
+    }
+
+    let cwd = cwd.ok_or_else(|| "registry add requires --cwd <capsule>".to_string())?;
+    Ok(RegistryCommand::Add { cwd, id })
+}
+
+fn parse_registry_list(args: Vec<String>) -> Result<RegistryCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected registry list argument: {value}")),
+        }
+    }
+
+    Ok(RegistryCommand::List { json })
+}
+
+fn parse_registry_inspect(args: Vec<String>) -> Result<RegistryCommand, String> {
+    let mut id = None;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!("unexpected registry inspect argument: {value}"));
+            }
+            value => {
+                if id.is_some() {
+                    return Err(format!("unexpected registry inspect argument: {value}"));
+                }
+                id = Some(value.to_string());
+            }
+        }
+    }
+
+    let id = id.ok_or_else(|| "registry inspect requires an id".to_string())?;
+    Ok(RegistryCommand::Inspect { id, json })
+}
+
+fn parse_registry_remove(args: Vec<String>) -> Result<RegistryCommand, String> {
+    if args.len() != 1 {
+        return Err("registry remove requires exactly one id".to_string());
+    }
+    Ok(RegistryCommand::Remove {
+        id: args[0].clone(),
+    })
+}
+
+fn parse_switchboard(args: Vec<String>) -> Result<SwitchboardOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("switchboard requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    let command = match command {
+        "list" => parse_switchboard_list(rest)?,
+        "enable" => parse_switchboard_toggle(rest, true)?,
+        "disable" => parse_switchboard_toggle(rest, false)?,
+        value => return Err(format!("unknown switchboard subcommand: {value}")),
+    };
+    Ok(SwitchboardOptions { command })
+}
+
+fn parse_switchboard_list(args: Vec<String>) -> Result<SwitchboardCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected switchboard list argument: {value}")),
+        }
+    }
+
+    Ok(SwitchboardCommand::List { json })
+}
+
+fn parse_switchboard_toggle(args: Vec<String>, enable: bool) -> Result<SwitchboardCommand, String> {
+    if args.len() != 1 {
+        let command = if enable { "enable" } else { "disable" };
+        return Err(format!("switchboard {command} requires exactly one id"));
+    }
+
+    let id = args[0].clone();
+    if enable {
+        Ok(SwitchboardCommand::Enable { id })
+    } else {
+        Ok(SwitchboardCommand::Disable { id })
+    }
+}
+
 fn parse_test(args: Vec<String>) -> Result<TestOptions, String> {
     let mut cwd = PathBuf::from(".");
     let mut index = 0;
@@ -498,6 +664,8 @@ MVP commands:
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+  registry   manage local capsule inventory
+  switchboard enable or disable registered capsules
   test       run the default example through the runtime contract
   run        run a capsule with an explicit input file
   serve      expose Manifest-driven MCP tools
@@ -511,6 +679,8 @@ Implemented:
   inspect [--json]
   check [--json]
   doctor [--json]
+  registry add/list/inspect/remove
+  switchboard list/enable/disable
   test
   run
   serve --mcp

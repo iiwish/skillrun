@@ -15,9 +15,11 @@ mod mcp;
 mod pack;
 mod permissions;
 mod readiness;
+mod registry;
 mod run_record;
 mod runtime;
 mod schemas;
+mod switchboard;
 
 fn main() -> ExitCode {
     cli::run(std::env::args())

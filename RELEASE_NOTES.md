@@ -1,5 +1,40 @@
 # SkillRun Release Notes
 
+## v0.5.3
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-15
+Publication: no v0.5.3 tag, remote push, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds a local Capsule Registry and Switchboard: users and future Router/Desktop consumers can see registered local capsules and explicitly enable or disable future exposure intent.
+
+### What Is Included
+
+- `skillrun registry add --cwd <capsule> [--id <id>]` for local capsule inventory.
+- `skillrun registry list --json` and `skillrun registry inspect <id> --json` for machine-readable inventory and readiness views.
+- `skillrun registry remove <id>` for removing local registry state without deleting capsule files.
+- `skillrun switchboard list --json` for enabled/disabled state.
+- `skillrun switchboard enable <id>` with fail-closed readiness gates.
+- `skillrun switchboard disable <id>` for turning off future exposure intent.
+- Tests for empty registry, duplicate ids, add/list/inspect/remove, enable/disable, stale Manifest, instruction-only, and dependency-error gates.
+
+### Boundaries
+
+- Registry is local inventory, not a marketplace, package index, trust registry, or install source.
+- Switchboard `enabled=true` means future Router exposure intent. It does not mean trust, sandboxing, dependency installation, or MCP client mounting.
+- v0.5.3 does not import or unpack `.skr`.
+- v0.5.3 does not add SkillRun Router, daemon, Tauri/Desktop, MCP client config mutation, signed packages, dependency vendoring, dependency installation, or OS sandboxing.
+- Enable gates use Consumer Mode readiness and do not import action source for metadata.
+
+### Validation
+
+- `cargo test --test registry`
+- `cargo test --test registry --test consumer_guards --test instruction_only`
+- `cargo test`
+- `git diff --check`
+
 ## v0.5.2
 
 Status: Ready_For_Release_Decision

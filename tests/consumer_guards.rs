@@ -11,6 +11,14 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .expect("skillrun binary should run")
 }
 
+fn run_skillrun_with_home(args: &[&str], skillrun_home: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("SKILLRUN_HOME", skillrun_home)
+        .output()
+        .expect("skillrun binary should run")
+}
+
 fn run_skillrun_with_path(args: &[&str], path: &Path) -> std::process::Output {
     run_skillrun_with_path_and_env(args, path, &[])
 }
@@ -499,6 +507,33 @@ fn check_reports_missing_node_without_package_manager_checks() {
 }
 
 #[test]
+fn switchboard_enable_refuses_stale_manifest() {
+    let (output_root, capsule) = generated_js_capsule("switchboard-stale-js");
+    let skillrun_home = output_root.join("skillrun-home");
+    append_to(
+        &capsule.join("action.mjs"),
+        "\n// changed before switchboard enable\n",
+    );
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let add = run_skillrun_with_home(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        add.status.success(),
+        "registry add should allow disabled stale inventory\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let enable = run_skillrun_with_home(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable refund"));
+    assert!(stderr.contains("stale-manifest"));
+    assert!(stderr.contains("skillrun manifest"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn check_reports_missing_pydantic_without_importing_action_source() {
     let (output_root, capsule) = generated_capsule("check-missing-pydantic");
     let fake_path = output_root.join("fake-path");
@@ -531,6 +566,31 @@ fn check_reports_missing_pydantic_without_importing_action_source() {
         !fake_log.contains("action.py"),
         "pydantic probe must not receive action source path\n{fake_log}"
     );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn switchboard_enable_refuses_dependency_error() {
+    let (output_root, capsule) = generated_capsule("switchboard-missing-python");
+    let skillrun_home = output_root.join("skillrun-home");
+    let fake_path = output_root.join("empty-path");
+    fs::create_dir_all(&fake_path).expect("empty PATH dir should be created");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let add = run_skillrun_with_home(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+
+    let enable = run_skillrun_with_path_and_env(
+        &["switchboard", "enable", "refund"],
+        &fake_path,
+        &[("SKILLRUN_HOME", &skillrun_home.to_string_lossy())],
+    );
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable refund"));
+    assert!(stderr.contains("dependency-error"));
+    assert!(stderr.contains("runtime matching"));
 
     fs::remove_dir_all(output_root).ok();
 }
