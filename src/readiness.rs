@@ -2,7 +2,6 @@ use serde::Serialize;
 use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::adapters;
 use crate::hashing;
@@ -443,21 +442,44 @@ fn command_dependency_checks(requirements: &RequirementsView) -> Vec<HostDepende
 }
 
 fn detect_command_executable(name: &str) -> Option<String> {
-    let output = Command::new(name).arg("--version").output().ok()?;
-    if !output.status.success() {
-        return Some("present".to_string());
+    if name.trim().is_empty() {
+        return None;
     }
-    let text = if output.stdout.is_empty() {
-        String::from_utf8_lossy(&output.stderr).to_string()
-    } else {
-        String::from_utf8_lossy(&output.stdout).to_string()
-    };
-    let detected = text.lines().next().unwrap_or("present").trim();
-    if detected.is_empty() {
-        Some("present".to_string())
-    } else {
-        Some(detected.to_string())
+
+    if has_path_separator(name) {
+        return Path::new(name).is_file().then(|| "present".to_string());
     }
+
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .flat_map(|directory| command_candidates(&directory, name))
+        .any(|candidate| candidate.is_file())
+        .then(|| "present".to_string())
+}
+
+fn has_path_separator(name: &str) -> bool {
+    name.contains('/') || name.contains('\\')
+}
+
+fn command_candidates(directory: &Path, name: &str) -> Vec<PathBuf> {
+    let path = Path::new(name);
+    if path.extension().is_some() {
+        return vec![directory.join(path)];
+    }
+
+    let mut candidates = vec![directory.join(path)];
+    if cfg!(windows) {
+        let extensions = std::env::var("PATHEXT").unwrap_or_else(|_| {
+            ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC".to_string()
+        });
+        candidates.extend(
+            extensions
+                .split(';')
+                .filter(|extension| !extension.trim().is_empty())
+                .map(|extension| directory.join(format!("{name}{extension}"))),
+        );
+    }
+    candidates
 }
 
 fn host_dependency_check(

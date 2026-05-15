@@ -1,7 +1,7 @@
 # SkillRun v0.5.4 Work Graph: Core Stabilization Audit
 
 Version: v0.5.4
-Status: Ready_For_User_Review
+Status: In_Progress
 Source analysis: `.ai-platform/specs/v0.5.4-core-stabilization-audit/analysis.md`
 Public doc: `docs/v0.5.4-core-stabilization-audit.md`
 Last updated: 2026-05-15
@@ -19,7 +19,7 @@ Make the whole `skillrun` project stable enough to be consumed by a separate Des
 
 ### T062: Stop Command Readiness From Executing Arbitrary Commands
 
-Status: Ready_For_User_Review
+Status: Completed
 Priority: P0
 Depends on: v0.5.4 audit approval
 Blocks: T063, T064, T065, T066
@@ -48,9 +48,17 @@ Validation commands:
 - `cargo test --test consumer_guards --test runtime --test registry`
 - `cargo test`
 
+Evidence:
+
+- Changed files: `src/readiness.rs`, `tests/consumer_guards.rs`.
+- RED: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` failed before the fix because readiness executed the fake command probe.
+- GREEN: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` passed.
+- Focused validation: `cargo test --test consumer_guards --test runtime --test registry` passed.
+- Residual risk: T063 still needs to enforce Manifest JSON schemas in Core runtime.
+
 ### T063: Enforce Manifest JSON Schemas In Core Runtime
 
-Status: Ready_For_User_Review
+Status: Ready
 Priority: P0
 Depends on: T062
 Blocks: T064, T065, T066

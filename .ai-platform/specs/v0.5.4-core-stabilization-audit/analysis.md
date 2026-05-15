@@ -3,7 +3,7 @@
 **Metadata**
 
 - Version: v0.5.4 analysis
-- Status: Ready_For_User_Review
+- Status: In_Progress
 - Audit date: 2026-05-15
 - Branch: `codex/v0.5.4-core-stabilization-audit`
 - Scope: whole `skillrun` project as Core
@@ -42,6 +42,12 @@ Required fix:
 - Use non-executing executable presence detection for `runtime.adapter="command"`.
 - Keep version execution only for blessed runtime probes such as Python/Node.
 - Add regression test with a command executable that would create a marker if executed during `check`.
+
+Execution evidence:
+
+- RED: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` failed because command readiness executed the fake command probe.
+- GREEN: `cargo test --test consumer_guards command_adapter_readiness_probe -- --nocapture` passed.
+- Validation: `cargo test --test consumer_guards --test runtime --test registry` passed.
 
 ### P0-002: Core does not enforce Manifest input/output JSON schemas
 
