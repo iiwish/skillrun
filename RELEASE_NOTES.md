@@ -18,7 +18,8 @@ SkillRun adds a local Capsule Registry and Switchboard: users and future Router/
 - `skillrun switchboard list --json` for enabled/disabled state.
 - `skillrun switchboard enable <id>` with fail-closed readiness gates.
 - `skillrun switchboard disable <id>` for turning off future exposure intent.
-- Tests for empty registry, duplicate ids, add/list/inspect/remove, enable/disable, stale Manifest, instruction-only, and dependency-error gates.
+- Missing registered capsule paths are represented as per-capsule `readiness.status="missing-path"` instead of failing the whole inventory command.
+- Tests for empty registry, duplicate ids, missing local paths, add/list/inspect/remove, enable/disable, stale Manifest, instruction-only, and dependency-error gates.
 
 ### Boundaries
 

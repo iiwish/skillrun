@@ -41,6 +41,7 @@ Acceptance criteria:
 - `registry add --cwd <capsule>` creates a disabled local_path entry.
 - `registry list --json` emits parseable JSON.
 - `registry inspect <id> --json` emits parseable JSON and includes readiness summary.
+- Missing registered capsule paths are listed as per-capsule `readiness.status="missing-path"` instead of failing the whole command.
 - `registry remove <id>` removes state without deleting capsule files.
 - Duplicate ids are rejected.
 
@@ -55,6 +56,7 @@ Evidence:
 - Changed files: `src/cli.rs`, `src/main.rs`, `src/registry.rs`, `tests/registry.rs`.
 - RED: `cargo test --test registry` failed because `registry` was an unknown command.
 - GREEN: `cargo test --test registry` passed, 3 passed.
+- Pre-merge hardening RED/GREEN: `cargo test --test registry registry_and_switchboard_lists_tolerate_missing_capsule_paths` failed before the fix and passed after missing paths were represented as capsule readiness state.
 - Full validation: `cargo test` passed.
 - Residual risk: Registry records local inventory only; enable/disable exposure intent is intentionally deferred to T060.
 

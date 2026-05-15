@@ -41,6 +41,7 @@ As a user, I want enable to fail when the capsule is stale, instruction-only, un
 - FR-010: `skillrun switchboard disable <id>` sets enabled false without executing action source.
 - FR-011: duplicate ids are rejected unless a future explicit update command is added.
 - FR-012: missing registry file is treated as an empty registry.
+- FR-013: stale local inventory entries whose capsule path no longer exists are represented as per-capsule `readiness.status="missing-path"` in `registry list`, `registry inspect`, and `switchboard list`; they must not make the whole JSON command fail.
 
 ## Non-Functional Requirements
 

@@ -57,6 +57,26 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
 }
 
+fn assert_missing_capsule(entry: &Value) {
+    assert_eq!(entry["id"], "refund");
+    assert_eq!(entry["enabled"], false);
+    assert_eq!(entry["manifest"]["present"], false);
+    assert_eq!(entry["manifest"]["freshness"], "missing");
+    assert!(entry.get("skill").is_none());
+    assert!(entry.get("runtime").is_none());
+    assert!(entry.get("tool").is_none());
+    assert_eq!(entry["readiness"]["ok"], false);
+    assert_eq!(entry["readiness"]["status"], "missing-path");
+    assert!(entry["readiness"]["reason"]
+        .as_str()
+        .expect("missing path should include reason")
+        .contains("cwd does not exist"));
+    assert!(entry["readiness"]["next_step"]
+        .as_str()
+        .expect("missing path should include next step")
+        .contains("registry remove"));
+}
+
 #[test]
 fn registry_list_json_treats_missing_registry_as_empty() {
     let skillrun_home = temp_dir("registry-empty-home");
@@ -184,6 +204,45 @@ fn switchboard_enable_disable_and_list_json_updates_registry_state() {
         &skillrun_home,
     ));
     assert_eq!(disabled["capsules"][0]["enabled"], false);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn registry_and_switchboard_lists_tolerate_missing_capsule_paths() {
+    let (output_root, capsule) = generated_capsule("registry-missing-path");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+    fs::remove_dir_all(&capsule).expect("test should remove registered capsule path");
+
+    let list = assert_success_json(&run_skillrun(
+        &["registry", "list", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(list["capsules"].as_array().unwrap().len(), 1);
+    assert_missing_capsule(&list["capsules"][0]);
+
+    let inspect = assert_success_json(&run_skillrun(
+        &["registry", "inspect", "refund", "--json"],
+        &skillrun_home,
+    ));
+    assert_missing_capsule(&inspect["capsule"]);
+
+    let switchboard = assert_success_json(&run_skillrun(
+        &["switchboard", "list", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(switchboard["capsules"].as_array().unwrap().len(), 1);
+    assert_missing_capsule(&switchboard["capsules"][0]);
+
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(!enable.status.success());
+    let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains("cannot enable refund"));
+    assert!(stderr.contains("missing-path"));
 
     fs::remove_dir_all(output_root).ok();
 }

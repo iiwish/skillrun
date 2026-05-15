@@ -304,6 +304,29 @@ pub fn disable(id: &str) -> Result<RegistryOutput, String> {
 
 fn capsule_view(entry: &RegistryEntry) -> Result<CapsuleView, String> {
     let cwd = PathBuf::from(&entry.path);
+    if !cwd.exists() {
+        return Ok(unavailable_capsule_view(
+            entry,
+            "missing-path",
+            format!("cwd does not exist: {}", cwd.display()),
+            format!(
+                "Restore the capsule path or run `skillrun registry remove {}`.",
+                entry.id
+            ),
+        ));
+    }
+    if !cwd.is_dir() {
+        return Ok(unavailable_capsule_view(
+            entry,
+            "invalid-path",
+            format!("cwd is not a directory: {}", cwd.display()),
+            format!(
+                "Restore the capsule directory or run `skillrun registry remove {}`.",
+                entry.id
+            ),
+        ));
+    }
+
     let readiness = readiness::evaluate(&cwd)?;
     let manifest_path = manifest::generated_manifest_path(&cwd);
     let manifest_value = read_manifest(&manifest_path)?;
@@ -348,6 +371,35 @@ fn capsule_view(entry: &RegistryEntry) -> Result<CapsuleView, String> {
             next_step: readiness.next_step,
         },
     })
+}
+
+fn unavailable_capsule_view(
+    entry: &RegistryEntry,
+    status: &str,
+    reason: String,
+    next_step: String,
+) -> CapsuleView {
+    CapsuleView {
+        id: entry.id.clone(),
+        path: entry.path.clone(),
+        source_type: entry.source_type.clone(),
+        enabled: entry.enabled,
+        registered_at: entry.registered_at.clone(),
+        manifest: ManifestView {
+            path: ".skillrun/manifest.generated.yaml".to_string(),
+            present: false,
+            freshness: "missing".to_string(),
+        },
+        skill: None,
+        runtime: None,
+        tool: None,
+        readiness: ReadinessView {
+            ok: false,
+            status: status.to_string(),
+            reason: Some(reason),
+            next_step,
+        },
+    }
 }
 
 fn default_id(capsule_path: &Path) -> Result<String, String> {

@@ -40,6 +40,7 @@ The user requested v0.5.2 merge/push and continuation on 2026-05-15. Execution m
 | FR-010 disable no import | T060 |
 | FR-011 duplicate id rejection | T059 |
 | FR-012 empty registry | T059 |
+| FR-013 missing path list tolerance | T059, T060 |
 
 Coverage status: Complete.
 
@@ -119,3 +120,10 @@ Blocking gate:
 - Validation: `git diff --check` passed.
 - Full validation: `cargo test` passed.
 - Notes: Docs and release notes now describe registry as local inventory and switchboard as future exposure intent, not marketplace, trust, sandbox, Router, mount profile, or dependency installation.
+
+### Pre-Merge Hardening
+
+- Finding: stale local inventory entries whose registered capsule directory was moved or deleted caused `registry list --json`, `registry inspect <id> --json`, and `switchboard list --json` to fail as whole commands.
+- Fix: missing capsule paths are now represented as per-capsule `readiness.status="missing-path"`, `ok=false`, `manifest.present=false`, and a remediation `next_step`; `switchboard enable <id>` remains fail-closed.
+- RED: `cargo test --test registry registry_and_switchboard_lists_tolerate_missing_capsule_paths` failed with `cwd does not exist`.
+- GREEN: `cargo test --test registry registry_and_switchboard_lists_tolerate_missing_capsule_paths` passed.
