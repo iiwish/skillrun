@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use crate::adapters::{self, ActionRunRequest};
 use crate::consumer;
 use crate::errors;
+use crate::manifest_access::{json_value_at, string_array_at, string_at};
 use crate::permissions;
 use crate::readiness;
 use crate::run_record::{self, RunRecordInput};
@@ -471,39 +472,4 @@ fn parse_timeout(value: &str) -> Option<Duration> {
         return seconds.parse::<u64>().ok().map(Duration::from_secs);
     }
     value.parse::<u64>().ok().map(Duration::from_secs)
-}
-
-fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
-}
-
-fn string_array_at(value: &YamlValue, path: &[&str]) -> Result<Option<Vec<String>>, String> {
-    let Some(value) = value_at(value, path) else {
-        return Ok(None);
-    };
-    let sequence = value
-        .as_sequence()
-        .ok_or_else(|| format!("{} must be an array of strings", path.join(".")))?;
-    let mut strings = Vec::with_capacity(sequence.len());
-    for item in sequence {
-        let Some(string) = item.as_str() else {
-            return Err(format!("{} must contain only strings", path.join(".")));
-        };
-        strings.push(string.to_string());
-    }
-    Ok(Some(strings))
-}
-
-fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<Value> {
-    let value = value_at(value, path)?;
-    serde_json::to_value(value).ok()
 }
