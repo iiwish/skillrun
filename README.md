@@ -13,7 +13,7 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.0 is the current release-candidate binary/crate version. The latest completed mainline patch release is v0.4.3; v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers; v0.5.4 hardens Core contracts before a separate Desktop project consumes them.
+SkillRun v0.5.4 is the current release binary/crate version. v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers; v0.5.4 hardens Core contracts before a separate Desktop project consumes them.
 
 - Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, v0.5.3 local registry/switchboard state, and v0.5.4 Core contract hardening.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun registry add/list/inspect/remove`, `skillrun switchboard list/enable/disable`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/registry/switchboard/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
@@ -32,7 +32,7 @@ SkillRun uses separate version layers:
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current local binary reports `skillrun 0.5.0`; the current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.4 hardens Core behavior and JSON contracts without automatically changing those protocol versions.
+The current local binary reports `skillrun 0.5.4`; the current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.4 hardens Core behavior and JSON contracts without changing those protocol versions.
 
 ## Why SkillRun
 
@@ -231,7 +231,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Current local binary output:
 
 ```text
-skillrun 0.5.0
+skillrun 0.5.4
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -255,7 +255,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The v0.4.3 mainline patch release is complete. v0.5.0 merge, tag creation, remote push and package publication remain separate explicit decisions after review approval.
+- The v0.5.4 release handoff is explicit: merge, tag creation, and remote push are release actions; package publication remains a separate explicit decision.
 
 ## Security Model
 

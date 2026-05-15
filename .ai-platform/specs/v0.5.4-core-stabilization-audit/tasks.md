@@ -220,6 +220,6 @@ Evidence:
 
 - Changed files: `README.md`, `README.zh-CN.md`, `docs/release-policy.md`, `docs/v0.5.4-core-stabilization-audit.md`, `RELEASE_NOTES.md`.
 - Version semantics now separate binary/crate version, Git tag, milestone version, Manifest IR version, and IPC/Adapter Protocol version.
-- README and release notes state that binary/crate version remains `0.5.0`, while Manifest IR and IPC protocol remain `0.1.0`.
+- README and release notes state that binary/crate version is `0.5.4`, while Manifest IR and IPC protocol remain `0.1.0`.
 - Desktop is documented as a separate project that consumes Core contracts rather than redefining Manifest semantics or parsing MCP text as audit data.
 - Final validation: `cargo fmt --check`, `git diff --check`, `cargo test`, and `cargo clippy --all-targets -- -D warnings` passed.

@@ -154,7 +154,7 @@ Required fix:
 Execution evidence:
 
 - `docs/release-policy.md` now separates binary/crate version, Git tag, milestone version, Manifest IR version, and IPC/Adapter Protocol version.
-- README and `RELEASE_NOTES.md` now state that the local binary remains `0.5.0`, while Manifest IR and IPC protocol remain `0.1.0`.
+- README and `RELEASE_NOTES.md` now state that the local binary is `0.5.4`, while Manifest IR and IPC protocol remain `0.1.0`.
 - Desktop boundary is documented as a separate project consuming Core contracts, not as UI code inside this repository.
 
 ## P2 Findings

@@ -12,7 +12,7 @@ SkillRun hardens Core contracts before Desktop: command readiness no longer exec
 
 ### Version Layers
 
-- Binary/crate version remains `0.5.0` until an explicit release version decision.
+- Binary/crate version is `0.5.4`.
 - Manifest IR `manifest_version` remains `0.1.0`.
 - IPC / Adapter `protocol_version` remains `0.1.0`.
 - v0.5.4 is the stabilization milestone name for this integration line, not evidence that a public tag has been created.
