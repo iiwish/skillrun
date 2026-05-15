@@ -22,6 +22,9 @@ fn validate_at(schema: &Value, value: &Value, path: &str) -> Result<(), String> 
         validate_type(type_value, value, path)?;
     }
 
+    validate_string_constraints(schema, value, path)?;
+    validate_number_constraints(schema, value, path)?;
+
     if schema_type_allows_object(schema) && value.is_object() {
         validate_object(schema, value, path)?;
     }
@@ -89,6 +92,12 @@ fn validate_type(type_value: &Value, value: &Value, path: &str) -> Result<(), St
         _ => return Ok(()),
     };
 
+    for expected in &allowed {
+        if !is_supported_type(expected) {
+            return Err(format!("{path} uses unsupported schema type {expected}"));
+        }
+    }
+
     if allowed
         .iter()
         .any(|expected| value_matches_type(value, expected))
@@ -108,8 +117,43 @@ fn value_matches_type(value: &Value, expected: &str) -> bool {
         "number" => value.is_number(),
         "integer" => value.as_i64().is_some() || value.as_u64().is_some(),
         "null" => value.is_null(),
-        _ => true,
+        _ => false,
     }
+}
+
+fn is_supported_type(expected: &str) -> bool {
+    matches!(
+        expected,
+        "object" | "array" | "string" | "boolean" | "number" | "integer" | "null"
+    )
+}
+
+fn validate_string_constraints(schema: &Value, value: &Value, path: &str) -> Result<(), String> {
+    let Some(min_length) = schema.get("minLength").and_then(Value::as_u64) else {
+        return Ok(());
+    };
+    let Some(text) = value.as_str() else {
+        return Ok(());
+    };
+    if text.chars().count() < min_length as usize {
+        return Err(format!(
+            "{path} string length must be at least {min_length}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_number_constraints(schema: &Value, value: &Value, path: &str) -> Result<(), String> {
+    let Some(minimum) = schema.get("minimum").and_then(Value::as_f64) else {
+        return Ok(());
+    };
+    let Some(number) = value.as_f64() else {
+        return Ok(());
+    };
+    if number < minimum {
+        return Err(format!("{path} number must be at least {minimum}"));
+    }
+    Ok(())
 }
 
 fn schema_type_allows_object(schema: &Value) -> bool {
@@ -134,4 +178,42 @@ fn render_enum(values: &[Value]) -> String {
         .map(|value| value.to_string())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_value;
+    use serde_json::json;
+
+    #[test]
+    fn validates_min_length() {
+        let schema = json!({ "type": "string", "minLength": 2 });
+
+        assert!(validate_value(&schema, &json!("ab")).is_ok());
+        assert_eq!(
+            validate_value(&schema, &json!("a")).unwrap_err(),
+            "$ string length must be at least 2"
+        );
+    }
+
+    #[test]
+    fn validates_minimum_for_numbers_and_integers() {
+        let schema = json!({ "type": "integer", "minimum": 2 });
+
+        assert!(validate_value(&schema, &json!(2)).is_ok());
+        assert_eq!(
+            validate_value(&schema, &json!(1)).unwrap_err(),
+            "$ number must be at least 2"
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_schema_types() {
+        let schema = json!({ "type": "date" });
+
+        assert_eq!(
+            validate_value(&schema, &json!("2026-05-15")).unwrap_err(),
+            "$ uses unsupported schema type date"
+        );
+    }
 }

@@ -117,6 +117,8 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     } else {
         None
     };
+    let skill_text = fs::read_to_string(&skill_path)
+        .map_err(|error| format!("failed to read {}: {error}", skill_path.display()))?;
     let name = capsule_dir
         .file_name()
         .and_then(|value| value.to_str())
@@ -140,7 +142,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
         },
         skill: SkillInfo {
             name: name.clone(),
-            sop_summary: "Generated from SKILL.md. Inspect support lands in T004.".to_string(),
+            sop_summary: sop_summary_from_skill(&skill_text),
             skill_hash,
         },
         tool: ToolInfo {
@@ -187,6 +189,27 @@ fn require_file(path: &Path, message: &str) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("{message}: {}", path.display()))
+    }
+}
+
+fn sop_summary_from_skill(text: &str) -> String {
+    text.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(|line| line.trim_start_matches('#').trim())
+        .find(|line| !line.is_empty())
+        .map(limit_summary)
+        .unwrap_or_else(|| "SOP-backed SkillRun capsule.".to_string())
+}
+
+fn limit_summary(value: &str) -> String {
+    const MAX_CHARS: usize = 160;
+    let mut chars = value.chars();
+    let summary = chars.by_ref().take(MAX_CHARS).collect::<String>();
+    if chars.next().is_some() {
+        format!("{summary}...")
+    } else {
+        summary
     }
 }
 

@@ -642,6 +642,90 @@ Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
 }
 
 #[test]
+fn core_schema_min_length_rejects_input_before_adapter_launch() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+Path("adapter-launched.txt").write_text("launched", encoding="utf-8")
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {"message": "adapter should not run"},
+    "display": {"markdown": "done"}
+}), encoding="utf-8")
+"#;
+    let (output_root, capsule) = generated_command_capsule("runtime-command-min-length", action);
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string", "minLength": 2 }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be updated");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should regenerate\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    fs::write(
+        capsule
+            .join("examples")
+            .join("invalid-min-length.input.json"),
+        r#"{"name":"A"}"#,
+    )
+    .expect("invalid input should be written");
+
+    let run = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd_arg,
+        "--input",
+        "examples/invalid-min-length.input.json",
+    ]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "ValidationError");
+    assert_contains(
+        envelope["error"]["message"]
+            .as_str()
+            .expect("message should be present"),
+        "$.name string length must be at least 2",
+    );
+    assert!(
+        !capsule.join("adapter-launched.txt").exists(),
+        "schema constraints must be enforced before adapter launch"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn command_adapter_invalid_success_output_returns_protocol_violation() {
     let action = r#"
 import json
