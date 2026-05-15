@@ -1,6 +1,6 @@
 # SkillRun SSOT: SOP-backed Skill Capsule Runtime
 
-**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已公开发布；v0.4.1 合入 WeCom Team Notice 示例与 Python adapter process-environment 修复；v0.4.2 合入定位/trust model 文档与官方参考胶囊；v0.4.3 准备 CI 与 runtime 错误稳定化 patch release；v0.1 未单独公开发布。
+**文档状态**：v0.1.0 architecture baseline；v0.2.0 是第一版 public release candidate；v0.3.0 是 JS Action Alpha 的本地 release handoff；v0.4.0 Portable Consumer Checks 已公开发布；v0.4.1 合入 WeCom Team Notice 示例与 Python adapter process-environment 修复；v0.4.2 合入定位/trust model 文档与官方参考胶囊；v0.4.3 合入 CI 与 runtime 错误稳定化 patch release；v0.5.0 合入 Adapter Protocol 与 Level 0 command adapter；v0.5.1 作为合同与叙事稳定化版本，统一 guardrail、trust model 与 envelope 字段；v0.1 未单独公开发布。
 **核心定位**：SkillRun 是用 Rust 实现的本地 CLI/Core，把 `SOP + code + schema + examples + permissions` 编译成可检查、可测试、可运行、可分发 Skill Manifest。  
 **一句话**：**用一份 SOP 和一个 Action，把业务经验变成 Agent 可调用、可验证、可分发的技能。**
 
@@ -551,7 +551,7 @@ def run(input: Input, ctx: Context) -> Output:
 ```json
 {
   "ok": true,
-  "result": {
+  "output": {
     "status": "success",
     "amount": 100
   },
@@ -573,7 +573,7 @@ Core 必须校验：
 
 - output file 存在。
 - `ok` 是布尔值。
-- `result` 符合 output schema。
+- `output` 符合 output schema。
 - artifact path 位于 `SKILLRUN_ARTIFACT_DIR` 内。
 - artifact 文件存在。
 - artifact hash、size、mime 可记录。
@@ -629,7 +629,7 @@ ProtocolViolation
 原则：
 
 - Stack trace 只能进入 debug logs。
-- MCP tool result 应优先返回 structured error。
+- MCP tool response 应优先返回 structured error。
 - `llm_hint` 是给 Agent 的恢复建议，不是给终端用户的最终话术。
 
 ---

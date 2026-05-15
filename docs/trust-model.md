@@ -1,8 +1,8 @@
 ﻿# SkillRun Trust Model
 
 **文档状态**：Ready_For_User_Review
-**版本**：v0.4.2 trust baseline
-**最后更新**：2026-05-14
+**版本**：v0.5.1 trust baseline
+**最后更新**：2026-05-15
 
 ---
 
@@ -12,9 +12,25 @@ SkillRun 提供的是 **manifest-bound execution and inspection layer**，不是
 
 它能减少 Agent 裸调 action 的风险，但不能把任意第三方代码变成安全代码。运行别人分发的 action 仍然意味着执行别人写的代码。
 
+## Guardrail 定义
+
+“无护栏，不执行”可以作为 SkillRun 的公开叙事，但这里的 guardrail 必须被精确定义为代码级和合同级边界：
+
+```text
+Manifest contract
++ input/output schema
++ preflight checks
++ structured output/error envelope
++ artifact containment
++ run evidence
++ Consumer Mode static checks
+```
+
+Guardrail 不是 OS sandbox、恶意代码检测、依赖封装、网络强隔离或 signed registry trust。它的真实收益是让 Agent 不再裸调一个函数，而是通过可检查、可拒绝、可追溯的 Skill Capsule 执行动作。
+
 ## 当前可信边界
 
-v0.4.2 可以诚实承诺以下边界：
+v0.5.1 可以诚实承诺以下边界：
 
 - Consumer Mode 不为 metadata extraction 动态 import 未信任源码。
 - Manifest 缺失、过期或 source hash 不匹配时 fail closed。
@@ -27,7 +43,7 @@ v0.4.2 可以诚实承诺以下边界：
 
 ## 当前不承诺
 
-v0.4.2 不承诺：
+v0.5.1 不承诺：
 
 - 完整 OS sandbox。
 - 网络 egress 强制隔离。

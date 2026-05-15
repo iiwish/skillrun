@@ -227,6 +227,7 @@ skillrun 0.5.0
 
 SkillRun 对信任边界保持诚实：
 
+- “无护栏，不执行”中的护栏指 Manifest contract、input/output schema、preflight、structured envelope、artifact containment、run evidence 和 Consumer Mode static checks；它不是 OS sandbox。
 - `stdout` 和 `stderr` 只作为日志。结构化结果必须来自 output/error envelope。
 - Consumer Mode 不应该为了提取 metadata 而动态 import 未信任源码。
 - `skillrun check` 和 `skillrun doctor` 是 Consumer Mode diagnostics；它们不会为了 metadata import action source。
@@ -288,6 +289,8 @@ SkillRun 的业务证明刻意保持收敛：
 - [v0.4.2 官方参考胶囊](docs/v0.4.2-official-capsules.md)
 - [v0.4.3 CI 与 runtime 错误稳定化](docs/v0.4.3-ci-stabilization.md)
 - [v0.5 Adapter Protocol 计划](docs/v0.5-adapter-protocol.md)
+- [v0.5.1 Contract Stabilization](docs/v0.5.1-contract-stabilization.md)
+- [v0.6 Consumer Era 愿景](docs/v0.6-consumer-era-vision.md)
 - [经典业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
 - [发布策略](docs/release-policy.md)
