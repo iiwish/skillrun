@@ -2,7 +2,7 @@
 
 ## v0.5.6
 
-Status: In_Progress
+Status: Ready_For_Release_Decision
 Prepared on: 2026-05-17
 Publication: no v0.5.6 tag, main merge, GitHub Release, package publication, registry entry, or artifact publication has been performed
 
@@ -40,7 +40,15 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 
 ### Validation
 
-- Pending final release validation.
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- `cargo test --test registry`
+- `cargo test --test mount_plan`
+- `cargo test --test consumer_json_contracts`
+- docs relative links check
+- Remote CI passed on `codex/v0.5.6-release-polish`: https://github.com/iiwish/skillrun/actions/runs/25991247448
 
 ## v0.5.5
 
