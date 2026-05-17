@@ -13,6 +13,7 @@ mod inspect;
 mod manifest;
 mod manifest_access;
 mod mcp;
+mod mount_plan;
 mod pack;
 mod permissions;
 mod readiness;
