@@ -4,6 +4,7 @@ use serde_yaml::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::hashing;
 use crate::manifest;
 use crate::manifest_access::string_at;
 use crate::readiness;
@@ -69,6 +70,24 @@ struct ConsumerInventoryView {
     version: u32,
     registry_path: String,
     capsules: Vec<CapsuleView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ConsumerExposureView {
+    command: &'static str,
+    schema_version: &'static str,
+    registry_path: String,
+    tools: Vec<ExposureToolView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ExposureToolView {
+    capsule_id: String,
+    tool_name: String,
+    enabled: bool,
+    exposed: bool,
+    readiness_status: String,
+    manifest_hash: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -309,6 +328,63 @@ pub fn consumer_inventory(json: bool) -> Result<RegistryOutput, String> {
             .collect::<Vec<_>>()
             .join("\n");
         format!("SkillRun Consumer Inventory\ncapsules:\n{items}")
+    };
+    Ok(RegistryOutput { output })
+}
+
+pub fn consumer_exposure(json: bool) -> Result<RegistryOutput, String> {
+    let registry = load_registry()?;
+    let registry_path = registry_path()?;
+    let mut tools = Vec::new();
+
+    for entry in &registry.capsules {
+        let capsule = capsule_view(entry)?;
+        if !capsule.enabled || !capsule.readiness.ok {
+            continue;
+        }
+
+        let Some(tool) = &capsule.tool else {
+            continue;
+        };
+
+        let manifest_path = manifest::generated_manifest_path(Path::new(&entry.path));
+        let manifest_hash = hashing::sha256_file(&manifest_path).map_err(|error| {
+            format!(
+                "failed to hash exposed Manifest for {} at {}: {error}",
+                entry.id,
+                manifest_path.display()
+            )
+        })?;
+
+        tools.push(ExposureToolView {
+            capsule_id: capsule.id,
+            tool_name: tool.name.clone(),
+            enabled: true,
+            exposed: true,
+            readiness_status: capsule.readiness.status,
+            manifest_hash,
+        });
+    }
+
+    if json {
+        let view = ConsumerExposureView {
+            command: "consumer exposure",
+            schema_version: "consumer.exposure.v1",
+            registry_path: display_path(&registry_path),
+            tools,
+        };
+        return json_output(&view);
+    }
+
+    let output = if tools.is_empty() {
+        "SkillRun Consumer Exposure\ntools: none".to_string()
+    } else {
+        let items = tools
+            .iter()
+            .map(|item| format!("- {} capsule: {}", item.tool_name, item.capsule_id))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("SkillRun Consumer Exposure\ntools:\n{items}")
     };
     Ok(RegistryOutput { output })
 }

@@ -134,10 +134,20 @@ where
                         ExitCode::from(2)
                     }
                 },
+                ConsumerCommand::Exposure { json } => match registry::consumer_exposure(json) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun consumer <inventory> [options]");
+                eprintln!("usage: skillrun consumer <inventory|exposure> [options]");
                 ExitCode::from(2)
             }
         },
@@ -281,6 +291,7 @@ struct ServeOptions {
 
 enum ConsumerCommand {
     Inventory { json: bool },
+    Exposure { json: bool },
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -443,6 +454,7 @@ fn parse_consumer(args: Vec<String>) -> Result<ConsumerCommand, String> {
     let rest = args[1..].to_vec();
     match command {
         "inventory" => parse_consumer_inventory(rest),
+        "exposure" => parse_consumer_exposure(rest),
         value => Err(format!("unknown consumer subcommand: {value}")),
     }
 }
@@ -458,6 +470,19 @@ fn parse_consumer_inventory(args: Vec<String>) -> Result<ConsumerCommand, String
     }
 
     Ok(ConsumerCommand::Inventory { json })
+}
+
+fn parse_consumer_exposure(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected consumer exposure argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::Exposure { json })
 }
 
 fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
@@ -728,6 +753,7 @@ Implemented:
   check [--json]
   doctor [--json]
   consumer inventory [--json]
+  consumer exposure [--json]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test

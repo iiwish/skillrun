@@ -8,7 +8,7 @@ Publication: no v0.5.6 tag, main merge, GitHub Release, package publication, reg
 
 ### Headline
 
-SkillRun adds release polish and the first explicit headless consumer control-plane contract before Desktop: `skillrun consumer inventory --json`.
+SkillRun adds release polish and the first explicit headless consumer control-plane contracts before Desktop: `skillrun consumer inventory --json` and `skillrun consumer exposure --json`.
 
 ### What Is Included
 
@@ -16,13 +16,15 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - CI failure diagnostics review for `cargo test` GitHub annotations.
 - Headless consumer contract documentation for future Desktop, Router, mount planning, exposure, and run history surfaces.
 - `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
+- `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for future Router consumers.
 - Contract fixture coverage for enabled consumer inventory output.
 - Registry degradation coverage showing consumer inventory tolerates missing capsule paths and invalid Manifest entries without failing the whole list.
+- Exposure coverage showing disabled capsules and no-longer-ready enabled capsules are not exposed.
 
 ### Boundaries
 
 - v0.5.6 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
-- `consumer inventory --json` is a read-only control-plane surface over local registry readiness semantics.
+- `consumer inventory --json` and `consumer exposure --json` are read-only control-plane surfaces over local registry readiness semantics.
 - Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
 - `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
 

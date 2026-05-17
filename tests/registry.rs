@@ -198,6 +198,14 @@ fn switchboard_enable_disable_and_list_json_updates_registry_state() {
     assert_eq!(before["capsules"][0]["enabled"], false);
     assert_eq!(before["capsules"][0]["readiness"]["ok"], true);
 
+    let exposure_before = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(exposure_before["command"], "consumer exposure");
+    assert_eq!(exposure_before["schema_version"], "consumer.exposure.v1");
+    assert_eq!(exposure_before["tools"].as_array().unwrap().len(), 0);
+
     let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
     assert!(
         enable.status.success(),
@@ -213,6 +221,17 @@ fn switchboard_enable_disable_and_list_json_updates_registry_state() {
     ));
     assert_eq!(enabled["capsules"][0]["enabled"], true);
 
+    let exposure_enabled = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(exposure_enabled["tools"].as_array().unwrap().len(), 1);
+    assert_eq!(exposure_enabled["tools"][0]["capsule_id"], "refund");
+    assert_eq!(exposure_enabled["tools"][0]["tool_name"], "refund");
+    assert_eq!(exposure_enabled["tools"][0]["enabled"], true);
+    assert_eq!(exposure_enabled["tools"][0]["exposed"], true);
+    assert_eq!(exposure_enabled["tools"][0]["readiness_status"], "ok");
+
     let disable = run_skillrun(&["switchboard", "disable", "refund"], &skillrun_home);
     assert!(
         disable.status.success(),
@@ -224,6 +243,12 @@ fn switchboard_enable_disable_and_list_json_updates_registry_state() {
         &skillrun_home,
     ));
     assert_eq!(disabled["capsules"][0]["enabled"], false);
+
+    let exposure_disabled = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(exposure_disabled["tools"].as_array().unwrap().len(), 0);
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -329,6 +354,45 @@ fn registry_and_switchboard_lists_tolerate_invalid_manifest_entries() {
     let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
     assert!(stderr.contains("cannot enable refund"));
     assert!(stderr.contains("invalid-manifest"));
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn consumer_exposure_hides_enabled_capsules_that_are_no_longer_ready() {
+    let (output_root, capsule) = generated_capsule("consumer-exposure-not-ready");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(enable.status.success());
+
+    fs::write(
+        capsule.join(".skillrun").join("manifest.generated.yaml"),
+        "skill: [unterminated",
+    )
+    .expect("test should corrupt manifest after enablement");
+
+    let inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(inventory["capsules"][0]["enabled"], true);
+    assert_eq!(inventory["capsules"][0]["manifest"]["present"], true);
+    assert_eq!(inventory["capsules"][0]["manifest"]["freshness"], "invalid");
+    assert_eq!(inventory["capsules"][0]["readiness"]["ok"], false);
+    assert_eq!(
+        inventory["capsules"][0]["readiness"]["status"],
+        "invalid-manifest"
+    );
+
+    let exposure = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(exposure["tools"].as_array().unwrap().len(), 0);
 
     fs::remove_dir_all(output_root).ok();
 }
