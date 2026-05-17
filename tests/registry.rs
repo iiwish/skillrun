@@ -258,6 +258,17 @@ fn registry_and_switchboard_lists_tolerate_missing_capsule_paths() {
     assert_eq!(switchboard["capsules"].as_array().unwrap().len(), 1);
     assert_missing_capsule(&switchboard["capsules"][0]);
 
+    let consumer_inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(
+        consumer_inventory["schema_version"],
+        "consumer.inventory.v1"
+    );
+    assert_eq!(consumer_inventory["capsules"].as_array().unwrap().len(), 1);
+    assert_missing_capsule(&consumer_inventory["capsules"][0]);
+
     let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
     assert!(!enable.status.success());
     let stderr = String::from_utf8(enable.stderr).expect("stderr should be utf-8");
@@ -300,6 +311,18 @@ fn registry_and_switchboard_lists_tolerate_invalid_manifest_entries() {
     ));
     assert_eq!(switchboard["capsules"].as_array().unwrap().len(), 1);
     assert_invalid_manifest_capsule(&switchboard["capsules"][0]);
+
+    let consumer_inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(consumer_inventory["command"], "consumer inventory");
+    assert_eq!(
+        consumer_inventory["schema_version"],
+        "consumer.inventory.v1"
+    );
+    assert_eq!(consumer_inventory["capsules"].as_array().unwrap().len(), 1);
+    assert_invalid_manifest_capsule(&consumer_inventory["capsules"][0]);
 
     let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
     assert!(!enable.status.success());

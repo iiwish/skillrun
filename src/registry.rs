@@ -63,6 +63,15 @@ struct SwitchboardListView {
 }
 
 #[derive(Debug, Serialize)]
+struct ConsumerInventoryView {
+    command: &'static str,
+    schema_version: &'static str,
+    version: u32,
+    registry_path: String,
+    capsules: Vec<CapsuleView>,
+}
+
+#[derive(Debug, Serialize)]
 struct CapsuleView {
     id: String,
     path: String,
@@ -262,6 +271,44 @@ pub fn switchboard_list(json: bool) -> Result<RegistryOutput, String> {
             .collect::<Vec<_>>()
             .join("\n");
         format!("SkillRun Switchboard\ncapsules:\n{items}")
+    };
+    Ok(RegistryOutput { output })
+}
+
+pub fn consumer_inventory(json: bool) -> Result<RegistryOutput, String> {
+    let registry = load_registry()?;
+    let registry_path = registry_path()?;
+    let capsules = registry
+        .capsules
+        .iter()
+        .map(capsule_view)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if json {
+        let view = ConsumerInventoryView {
+            command: "consumer inventory",
+            schema_version: "consumer.inventory.v1",
+            version: registry.version,
+            registry_path: display_path(&registry_path),
+            capsules,
+        };
+        return json_output(&view);
+    }
+
+    let output = if capsules.is_empty() {
+        "SkillRun Consumer Inventory\ncapsules: none".to_string()
+    } else {
+        let items = capsules
+            .iter()
+            .map(|item| {
+                format!(
+                    "- {} enabled: {} status: {}",
+                    item.id, item.enabled, item.readiness.status
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("SkillRun Consumer Inventory\ncapsules:\n{items}")
     };
     Ok(RegistryOutput { output })
 }

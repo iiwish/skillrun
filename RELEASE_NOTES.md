@@ -1,5 +1,35 @@
 # SkillRun Release Notes
 
+## v0.5.6
+
+Status: In_Progress
+Prepared on: 2026-05-17
+Publication: no v0.5.6 tag, main merge, GitHub Release, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds release polish and the first explicit headless consumer control-plane contract before Desktop: `skillrun consumer inventory --json`.
+
+### What Is Included
+
+- Maintainer-oriented release checklist documentation.
+- CI failure diagnostics review for `cargo test` GitHub annotations.
+- Headless consumer contract documentation for future Desktop, Router, mount planning, exposure, and run history surfaces.
+- `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
+- Contract fixture coverage for enabled consumer inventory output.
+- Registry degradation coverage showing consumer inventory tolerates missing capsule paths and invalid Manifest entries without failing the whole list.
+
+### Boundaries
+
+- v0.5.6 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- `consumer inventory --json` is a read-only control-plane surface over local registry readiness semantics.
+- Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
+- `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
+
+### Validation
+
+- Pending final release validation.
+
 ## v0.5.5
 
 Status: Released

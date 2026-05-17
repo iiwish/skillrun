@@ -114,6 +114,8 @@ In v0.5.4, Core hardening makes command readiness non-executing, enforces Manife
 
 In v0.5.5, Consumer Mode uses a shared Manifest static contract before execution, MCP exposure, and `.skr` distribution. Invalid runtime fields or schema contracts fail closed before run records, MCP tool contracts, or package archives are created.
 
+The v0.5.6 release-polish line adds `skillrun consumer inventory --json` as the first explicit headless consumer control-plane surface. It reuses registry readiness semantics and does not add Desktop, daemon, sandboxing, signed package trust, or marketplace behavior.
+
 ## Release Candidate Workflow
 
 ```bash

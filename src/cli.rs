@@ -122,6 +122,25 @@ where
                 ExitCode::from(2)
             }
         },
+        Some("consumer") => match parse_consumer(args.collect()) {
+            Ok(command) => match command {
+                ConsumerCommand::Inventory { json } => match registry::consumer_inventory(json) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun consumer <inventory> [options]");
+                ExitCode::from(2)
+            }
+        },
         Some("registry") => match parse_registry(args.collect()) {
             Ok(options) => match registry::run(&options) {
                 Ok(output) => {
@@ -258,6 +277,10 @@ where
 struct ServeOptions {
     cwd: PathBuf,
     dry_run: bool,
+}
+
+enum ConsumerCommand {
+    Inventory { json: bool },
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -411,6 +434,30 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     }
 
     Ok(CheckOptions { cwd, json })
+}
+
+fn parse_consumer(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "inventory" => parse_consumer_inventory(rest),
+        value => Err(format!("unknown consumer subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_inventory(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected consumer inventory argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::Inventory { json })
 }
 
 fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
@@ -664,6 +711,7 @@ MVP commands:
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+  consumer   expose headless consumer control-plane JSON
   registry   manage local capsule inventory
   switchboard enable or disable registered capsules
   test       run the default example through the runtime contract
@@ -679,6 +727,7 @@ Implemented:
   inspect [--json]
   check [--json]
   doctor [--json]
+  consumer inventory [--json]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test
