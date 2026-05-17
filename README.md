@@ -36,13 +36,13 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current public release: `v0.5.6`.
+Current public release: `v0.5.7`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.5.6
+# skillrun 0.5.7
 ```
 
 Available today:
@@ -62,7 +62,7 @@ Available today:
   - `skillrun consumer runs list --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.6 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, real MCP client config mutation, signed package trust, dependency installation, marketplace behavior, or OS sandboxing.
+v0.5.7 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, real MCP client config mutation, signed package trust, dependency installation, marketplace behavior, or OS sandboxing.
 
 ## Quickstart
 
@@ -171,12 +171,12 @@ The key rule for one-click mounting is: mount the future SkillRun Router, not in
 SkillRun uses separate version layers:
 
 - `Cargo.toml` and `skillrun --version` identify the binary/crate version.
-- Git tags such as `v0.5.6` identify public release boundaries.
-- Milestone names such as v0.5.4, v0.5.5, and v0.5.6 describe delivery scope.
+- Git tags such as `v0.5.7` identify public release boundaries.
+- Milestone names such as v0.5.4, v0.5.5, v0.5.6, and v0.5.7 describe delivery scope.
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.6 adds headless consumer control-plane JSON surfaces without changing those protocol versions.
+The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.7 is a public surface release over the v0.5.6 headless consumer control-plane contracts and does not change those protocol versions.
 
 ## Roadmap
 
@@ -189,7 +189,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 | `v0.5.4` | Core Stabilization Audit before Desktop |
 | `v0.5.5` | Manifest-driven Consumer Mode contract hardening |
 | `v0.5.6` | Headless consumer JSON contracts before Desktop |
-| `v0.5.7` | Proposed public narrative and contract-surface polish |
+| `v0.5.7` | Public narrative and contract-surface polish before Desktop |
 | `v0.5.8` | Proposed Router runtime MVP for real one-click mounting |
 | `v0.6` | Proposed Consumer Era Desktop and local control plane |
 
@@ -203,6 +203,8 @@ The runnable examples are intentionally narrow. They prove SkillRun boundaries w
 - `examples/bounded_file_patcher`: exact text replacement inside declared directories with patch artifacts.
 - `examples/readonly_diagnostics_runner`: named allowlist diagnostics without arbitrary shell strings.
 - `examples/command_hello`: Level 0 command adapter contract without a SkillRun SDK.
+
+Docs-level business patterns remain part of the narrative without expanding current runtime scope: Support Triage, Access Request Approval, and Vendor Risk Review show how a portable Agent skill can carry stable routing labels, approval boundaries, and artifact-backed review evidence.
 
 ## Documentation
 

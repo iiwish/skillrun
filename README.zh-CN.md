@@ -36,13 +36,13 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前公开 release：`v0.5.6`。
+当前公开 release：`v0.5.7`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.5.6
+# skillrun 0.5.7
 ```
 
 当前已经可用：
@@ -62,7 +62,7 @@ skillrun --version
   - `skillrun consumer runs list --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.6 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon、Router runtime、真实 MCP client config mutation、signed package trust、dependency installation、marketplace 或 OS sandbox。
+v0.5.7 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon、Router runtime、真实 MCP client config mutation、signed package trust、dependency installation、marketplace 或 OS sandbox。
 
 ## 快速开始
 
@@ -171,12 +171,12 @@ skillrun-desktop
 SkillRun 同时存在几类版本：
 
 - `Cargo.toml` 和 `skillrun --version` 标识 binary/crate version。
-- `v0.5.6` 这类 Git tag 标识公开 release 边界。
-- v0.5.4、v0.5.5、v0.5.6 这类 milestone 描述交付范围。
+- `v0.5.7` 这类 Git tag 标识公开 release 边界。
+- v0.5.4、v0.5.5、v0.5.6、v0.5.7 这类 milestone 描述交付范围。
 - Manifest `manifest_version` 标识 Manifest IR schema。
 - IPC / Adapter `protocol_version` 标识 Core 到 adapter process 的文件协议。
 
-当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.6 增加 headless consumer control-plane JSON surface，但不改变这些协议版本。
+当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.7 是基于 v0.5.6 headless consumer control-plane contracts 的公开表层发布，不改变这些协议版本。
 
 ## 路线图
 
@@ -189,7 +189,7 @@ SkillRun 同时存在几类版本：
 | `v0.5.4` | Desktop 前的 Core Stabilization Audit |
 | `v0.5.5` | Manifest-driven Consumer Mode contract hardening |
 | `v0.5.6` | Desktop 前置的 headless consumer JSON contracts |
-| `v0.5.7` | 建议：public narrative 与 contract-surface polish |
+| `v0.5.7` | Desktop 前的 public narrative 与 contract-surface polish |
 | `v0.5.8` | 建议：Router runtime MVP，支撑真实一键挂载 |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
@@ -203,6 +203,8 @@ SkillRun 同时存在几类版本：
 - `examples/bounded_file_patcher`：在声明目录内执行精确文本替换，并记录 patch artifact。
 - `examples/readonly_diagnostics_runner`：只运行命名 allowlist 诊断，不接受任意 shell 字符串。
 - `examples/command_hello`：Level 0 command adapter contract，不依赖 SkillRun SDK。
+
+文档级业务模式仍保留在项目叙事中，但不扩大当前 runtime scope：Support Triage、Access Request Approval 和 Vendor Risk Review 用来说明一个 portable Agent skill 如何携带稳定分流标签、审批边界和 artifact-backed review evidence。
 
 ## 文档
 

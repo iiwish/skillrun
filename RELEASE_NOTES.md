@@ -2,9 +2,9 @@
 
 ## v0.5.7
 
-Status: In progress
+Status: Release candidate
 Prepared on: 2026-05-17
-Publication: Not released; draft release entry for `codex/v0.5.7-public-surface`
+Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
 
 ### Headline
 
@@ -12,15 +12,15 @@ SkillRun sharpens its public project surface before Desktop: README, docs index,
 
 ### Version Layers
 
-- Binary/crate version is pending release preparation; if this branch is published as `v0.5.7`, `Cargo.toml`, `Cargo.lock`, CLI `--version`, tag, and release notes must agree on `0.5.7`.
-- Manifest IR `manifest_version` is expected to remain `0.1.0`.
-- IPC / Adapter `protocol_version` is expected to remain `0.1.0`.
-- Adapter Protocol is expected to remain `adapter.v1` for Level 0 command adapters.
+- Binary/crate version is `0.5.7`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
 
 ### What Is Included So Far
 
 - English README rewritten as a first-class project entry instead of a historical changelog surface.
-- Chinese README aligned with the same public positioning, current v0.5.6 capabilities, Desktop boundary, trust model, and roadmap.
+- Chinese README aligned with the same public positioning, current v0.5.7 release surface, Desktop boundary, trust model, and roadmap.
 - v0.5.7 public surface planning document covering the main repository, website handoff, Desktop readiness, release gates, and pre-Desktop gap decision.
 - Docs index entry for the v0.5.7 public surface plan.
 - Website version and homepage alignment prepared in the external `skillrun-www` project for user-managed submission.
@@ -35,10 +35,15 @@ SkillRun sharpens its public project surface before Desktop: README, docs index,
 
 ### Validation
 
+- `cargo fmt --check`
+- `cargo test --test business_examples`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
 - docs relative links check
+- `cargo run --quiet -- --version` -> `skillrun 0.5.7`
 - Website external validation: `pnpm build` in `skillrun-www`
-- Final release validation pending before any `v0.5.7` tag
+- Release branch CI, main CI, tag, and GitHub Release publication are pending
 
 ## v0.5.6
 
