@@ -686,3 +686,25 @@ fn mcp_dry_run_fails_closed_when_manifest_is_stale() {
 
     fs::remove_dir_all(output_root).ok();
 }
+
+#[test]
+fn mcp_dry_run_fails_closed_when_manifest_schema_contract_is_invalid() {
+    let (output_root, capsule) = generated_capsule("mcp-invalid-schema-contract");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd_arg, "--dry-run"]);
+
+    assert!(!serve.status.success());
+    let stderr = String::from_utf8(serve.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains(
+        "invalid Manifest: schemas.input $ schema type must be a string or string array"
+    ));
+    assert!(!stderr.contains("\"tools\""));
+
+    fs::remove_dir_all(output_root).ok();
+}

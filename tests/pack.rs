@@ -407,6 +407,34 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
 }
 
 #[test]
+fn pack_refuses_invalid_schema_contract_before_archive_creation() {
+    let (output_root, capsule) = generated_capsule("pack-invalid-schema", "refund");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+
+    assert!(
+        !pack.status.success(),
+        "pack should fail when Manifest schema contract is invalid"
+    );
+    let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains(
+        "invalid Manifest: schemas.input $ schema type must be a string or string array"
+    ));
+    assert!(
+        !capsule.join("dist").join("refund-0.5.4.skr").exists(),
+        "invalid schema pack must not create an archive"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn pack_rejects_manifest_name_that_would_escape_dist() {
     let (output_root, capsule) = generated_capsule("pack-bad-name", "refund");
     let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
