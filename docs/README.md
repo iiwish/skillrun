@@ -29,6 +29,7 @@
 - [v0.5.4 Core Stabilization Audit](v0.5.4-core-stabilization-audit.md)：进入 Desktop 前对整个 `skillrun` Core 的稳定化审核、风险清单和修复 work graph。
 - [v0.5.5 Core Contract Hardening](v0.5.5-core-contract-hardening.md)：进入 Desktop / v0.6 前的 Manifest、schema 与 adapter lifecycle 合同硬化。
 - [v0.5.5 Release Gate Review](v0.5.5-release-gate-review.md)：用命令合同矩阵确认 Consumer Mode 执行、MCP 暴露和 `.skr` 分发共享 Manifest 静态合同。
+- [v0.5.5 发布后复盘](v0.5.5-post-release-review.md)：记录 v0.5.5 发布事实、远端 CI 暴露的问题、修复结论和 v0.5.6 推荐边界。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
