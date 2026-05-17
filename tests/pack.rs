@@ -137,10 +137,10 @@ fn pack_creates_skr_with_sources_manifest_examples_and_no_run_history() {
     );
     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
     assert!(stdout.contains("created"));
-    assert!(stdout.contains("refund-0.5.4.skr"));
+    assert!(stdout.contains("refund-0.5.5.skr"));
     assert!(stdout.contains("does not vendor dependencies"));
 
-    let archive_path = capsule.join("dist").join("refund-0.5.4.skr");
+    let archive_path = capsule.join("dist").join("refund-0.5.5.skr");
     assert!(archive_path.is_file(), "archive should exist");
 
     let entries = archive_entries(&archive_path);
@@ -261,10 +261,10 @@ fn pack_creates_js_skr_with_action_mjs_manifest_examples_and_no_dependencies_or_
     );
     let stdout = String::from_utf8(pack.stdout).expect("stdout should be utf-8");
     assert!(stdout.contains("created"));
-    assert!(stdout.contains("refund-0.5.4.skr"));
+    assert!(stdout.contains("refund-0.5.5.skr"));
     assert!(stdout.contains("does not vendor dependencies"));
 
-    let archive_path = capsule.join("dist").join("refund-0.5.4.skr");
+    let archive_path = capsule.join("dist").join("refund-0.5.5.skr");
     assert!(archive_path.is_file(), "archive should exist");
 
     let entries = archive_entries(&archive_path);
@@ -375,7 +375,7 @@ fn pack_uses_capsule_name_for_archive_filename() {
         String::from_utf8_lossy(&pack.stderr)
     );
 
-    assert!(capsule.join("dist").join("triage-0.5.4.skr").is_file());
+    assert!(capsule.join("dist").join("triage-0.5.5.skr").is_file());
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -399,8 +399,36 @@ fn pack_refuses_stale_manifest_before_archive_creation() {
     assert!(stderr.contains("action.py"));
     assert!(!stderr.contains("command not implemented yet"));
     assert!(
-        !capsule.join("dist").join("refund-0.5.4.skr").exists(),
+        !capsule.join("dist").join("refund-0.5.5.skr").exists(),
         "stale pack must not create an archive"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn pack_refuses_invalid_schema_contract_before_archive_creation() {
+    let (output_root, capsule) = generated_capsule("pack-invalid-schema", "refund");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg]);
+
+    assert!(
+        !pack.status.success(),
+        "pack should fail when Manifest schema contract is invalid"
+    );
+    let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
+    assert!(stderr.contains(
+        "invalid Manifest: schemas.input $ schema type must be a string or string array"
+    ));
+    assert!(
+        !capsule.join("dist").join("refund-0.5.5.skr").exists(),
+        "invalid schema pack must not create an archive"
     );
 
     fs::remove_dir_all(output_root).ok();
@@ -423,11 +451,11 @@ fn pack_rejects_manifest_name_that_would_escape_dist() {
     let stderr = String::from_utf8(pack.stderr).expect("stderr should be utf-8");
     assert!(stderr.contains("invalid package name from Manifest"));
     assert!(
-        !capsule.join("escape-0.5.4.skr").exists(),
+        !capsule.join("escape-0.5.5.skr").exists(),
         "invalid Manifest name must not escape dist"
     );
     assert!(
-        !capsule.join("dist").join("escape-0.5.4.skr").exists(),
+        !capsule.join("dist").join("escape-0.5.5.skr").exists(),
         "invalid Manifest name must not create a package"
     );
 

@@ -132,7 +132,7 @@ fn manifest_generates_yaml_with_hashes_and_pydantic_schemas() {
     let manifest_text = fs::read_to_string(&manifest_path).expect("manifest should be readable");
 
     assert_contains(&manifest_text, "manifest_version: 0.1.0");
-    assert_contains(&manifest_text, "generated_by: skillrun@0.5.4");
+    assert_contains(&manifest_text, "generated_by: skillrun@0.5.5");
     assert_contains(&manifest_text, "name: refund");
     assert_contains(&manifest_text, "adapter: python");
     assert_contains(&manifest_text, "entrypoint: action.py");
@@ -504,6 +504,39 @@ fn manifest_generates_command_adapter_with_static_schemas_and_argv() {
         &fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable"),
         "action.rb",
     );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn manifest_rejects_invalid_static_schema_contract() {
+    let output_root = temp_dir("manifest-invalid-static-schema");
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
+    fs::write(capsule.join("action.rb"), "puts 'not imported'\n")
+        .expect("action should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["ruby", "action.rb"]
+  },
+  "input_schema": { "type": 42 },
+  "output_schema": { "type": "object" }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr
+        .contains("input schema contract invalid: $ schema type must be a string or string array"));
+    assert!(!generated_manifest(&capsule).exists());
 
     fs::remove_dir_all(output_root).ok();
 }

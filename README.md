@@ -13,9 +13,9 @@ SkillRun is for teams that need the business context, recovery rules, audit trai
 
 ## Status
 
-SkillRun v0.5.4 is the current release binary/crate version. v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers; v0.5.4 hardens Core contracts before a separate Desktop project consumes them.
+SkillRun v0.5.5 is the current release binary/crate version. v0.5.0 defines the language-agnostic Adapter Protocol and proves it with a Level 0 command adapter. The v0.5.2 integration line adds the Consumer JSON Surface; v0.5.3 adds local capsule registry and switchboard state for future Router/Desktop consumers; v0.5.4 stabilizes Core contracts; v0.5.5 hardens Manifest-driven Consumer Mode before a separate Desktop project consumes it.
 
-- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, v0.5.3 local registry/switchboard state, and v0.5.4 Core contract hardening.
+- Current implementation: v0.2 MCP stdio behavior, v0.3 JS Action Alpha, v0.4 Portable Consumer Checks, v0.4.1 WeCom Team Notice, v0.4.2 official reference capsules, v0.4.3 CI/runtime error stabilization, v0.5 Adapter Protocol with Level 0 command adapter runtime, v0.5.2 Consumer JSON Surface, v0.5.3 local registry/switchboard state, v0.5.4 Core stabilization, and v0.5.5 Manifest-driven Consumer Mode hardening.
 - Available today: `skillrun --help`, `skillrun --version`, `skillrun init <name> --python`, `skillrun init <name> --py`, `skillrun init <name> --js`, `skillrun manifest --cwd <capsule>`, `skillrun inspect --cwd <capsule>`, `skillrun inspect --json --cwd <capsule>`, `skillrun check --cwd <capsule>`, `skillrun check --json --cwd <capsule>`, `skillrun doctor --cwd <capsule>`, `skillrun doctor --json --cwd <capsule>`, `skillrun registry add/list/inspect/remove`, `skillrun switchboard list/enable/disable`, `skillrun test --cwd <capsule>`, `skillrun run --cwd <capsule> --input <file>`, `skillrun serve --mcp --cwd <capsule>`, `skillrun serve --mcp --cwd <capsule> --dry-run`, `skillrun pack --cwd <capsule>`, structured error envelopes, `DependencyError`, artifact validation, declared env injection, stale Manifest guards, instruction-only guards, Manifest-derived MCP tools/resources, `.skr` package generation, and release tests for the skeleton/init/manifest/inspect/check/doctor/registry/switchboard/runtime/error/artifact/permission/consumer-guard/MCP/pack paths.
 - v0.2 keeps `serve --mcp --dry-run` for contract inspection, but the normal `serve --mcp` path is now a long-running MCP stdio server.
 - The SkillRun core, CLI, Manifest, IPC, MCP exposure, and packaging path are implemented in Rust.
@@ -28,11 +28,11 @@ SkillRun uses separate version layers:
 
 - `Cargo.toml` and `skillrun --version` identify the binary/crate version.
 - Git tags such as `v0.4.3` identify public release boundaries.
-- Milestone names such as v0.5.2, v0.5.3, and v0.5.4 describe integration scope before a release decision.
+- Milestone names such as v0.5.2, v0.5.3, v0.5.4, and v0.5.5 describe integration scope before a release decision.
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current local binary reports `skillrun 0.5.4`; the current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.4 hardens Core behavior and JSON contracts without changing those protocol versions.
+The current local binary reports `skillrun 0.5.5`; the current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.5 hardens Manifest-driven runtime behavior and Consumer Mode contracts without changing those protocol versions.
 
 ## Why SkillRun
 
@@ -111,6 +111,8 @@ In v0.5.2, `inspect`, `check`, and `doctor` also expose `--json` for Desktop, Ro
 In v0.5.3, `registry` records local capsule inventory and `switchboard` records future exposure intent. It does not import `.skr`, expose MCP tools, mount clients, install dependencies, certify trust, or provide sandboxing.
 
 In v0.5.4, Core hardening makes command readiness non-executing, enforces Manifest schemas at runtime, isolates bad registry entries, and freezes Desktop-facing JSON fixtures. Desktop should be a separate project that consumes these stable Core surfaces; it should not redefine Manifest schema, execute actions directly, or parse MCP text as audit data.
+
+In v0.5.5, Consumer Mode uses a shared Manifest static contract before execution, MCP exposure, and `.skr` distribution. Invalid runtime fields or schema contracts fail closed before run records, MCP tool contracts, or package archives are created.
 
 ## Release Candidate Workflow
 
@@ -231,7 +233,7 @@ cargo run -- pack --cwd tmp/e2e-init/refund
 Current local binary output:
 
 ```text
-skillrun 0.5.4
+skillrun 0.5.5
 ```
 
 The real `serve --mcp` command is a long-running stdio server and is validated by the scripted MCP client release matrix.
@@ -255,7 +257,7 @@ The current integration scope is intentionally narrow:
 - `check` diagnoses dependency readiness; it does not install Python, Node, Pydantic, command executables, npm packages, or create virtual environments.
 - Missing runtime dependencies are reported as structured `DependencyError` results for CLI runtime paths and MCP tool calls.
 - SkillRun does not provide an OS sandbox. Running a third-party action still means executing third-party code.
-- The v0.5.4 release handoff is explicit: merge, tag creation, and remote push are release actions; package publication remains a separate explicit decision.
+- The v0.5.5 release handoff is explicit: merge, tag creation, remote push, and GitHub Release publication are release actions; package publication remains a separate explicit decision.
 
 ## Security Model
 
@@ -296,6 +298,7 @@ The goal is a small, hard boundary: no implicit execution of instruction-only sk
 | `v0.5.2` | Consumer JSON Surface for `inspect`, `check`, and `doctor` |
 | `v0.5.3` | Local Capsule Registry and Switchboard exposure intent |
 | `v0.5.4` | Core Stabilization Audit before Desktop |
+| `v0.5.5` | Manifest-driven Consumer Mode contract hardening |
 
 ## Classic Business Examples
 
@@ -330,6 +333,8 @@ The runnable examples are intentionally narrow. `refund` proves safety and audit
 - [v0.5.2 Consumer JSON Surface](docs/v0.5.2-consumer-json-surface.md)
 - [v0.5.3 Capsule Registry + Switchboard](docs/v0.5.3-capsule-registry-switchboard.md)
 - [v0.5.4 Core Stabilization Audit](docs/v0.5.4-core-stabilization-audit.md)
+- [v0.5.5 Core Contract Hardening](docs/v0.5.5-core-contract-hardening.md)
+- [v0.5.5 Release Gate Review](docs/v0.5.5-release-gate-review.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

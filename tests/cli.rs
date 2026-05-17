@@ -38,7 +38,7 @@ fn version_uses_approved_project_name() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).expect("version output should be utf-8"),
-        "skillrun 0.5.4\n"
+        "skillrun 0.5.5\n"
     );
 }
 

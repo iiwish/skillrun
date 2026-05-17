@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::hashing;
 use crate::manifest;
+use crate::manifest_access::{string_at, value_at, ManifestView};
+use crate::schemas;
 
 pub struct ValidManifest {
     pub value: Value,
@@ -41,6 +43,7 @@ pub fn validate(cwd: &Path, command: &str) -> Result<ValidManifest, String> {
         }
         _ => {}
     }
+    validate_manifest_contract(&value)?;
 
     let sha256 = hashing::sha256_file(&manifest_path)?;
     Ok(ValidManifest {
@@ -48,6 +51,28 @@ pub fn validate(cwd: &Path, command: &str) -> Result<ValidManifest, String> {
         path: manifest_path,
         sha256,
     })
+}
+
+fn validate_manifest_contract(manifest: &Value) -> Result<(), String> {
+    let manifest_view = ManifestView::new(manifest);
+    manifest_view
+        .runtime_adapter()
+        .ok_or_else(|| "invalid Manifest: missing runtime.adapter".to_string())?;
+    manifest_view
+        .runtime_entrypoint()
+        .ok_or_else(|| "invalid Manifest: missing runtime.entrypoint".to_string())?;
+
+    let input_schema = manifest_view
+        .input_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.input".to_string())?;
+    schemas::validate_schema_contract(&input_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.input {error}"))?;
+
+    let output_schema = manifest_view
+        .output_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.output".to_string())?;
+    schemas::validate_schema_contract(&output_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.output {error}"))
 }
 
 fn validate_source(
@@ -147,17 +172,4 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
             .map(|cwd| cwd.join(path))
             .map_err(|error| format!("failed to resolve current directory: {error}"))
     }
-}
-
-fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
-    let mut current = value;
-    for segment in path {
-        let key = Value::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
 }

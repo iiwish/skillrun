@@ -2,7 +2,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn run_skillrun(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_skillrun"))
@@ -281,6 +281,88 @@ fn runtime_rejects_unknown_adapter_before_creating_run_records() {
     assert!(
         !capsule.join(".skillrun").join("runs").exists(),
         "unsupported adapter should fail before creating run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn runtime_rejects_missing_runtime_contract_before_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("runtime-missing-runtime-contract");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path).expect("manifest should be readable");
+    let runtime_start = manifest
+        .find("runtime:\n")
+        .expect("manifest should contain runtime block");
+    let permissions_start = manifest[runtime_start..]
+        .find("permissions:\n")
+        .map(|index| runtime_start + index)
+        .expect("manifest should contain permissions block");
+    let manifest = format!(
+        "{}{}",
+        &manifest[..runtime_start],
+        &manifest[permissions_start..]
+    );
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert_contains(&stderr, "invalid Manifest: missing runtime.adapter");
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "missing runtime contract should fail before creating run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn runtime_rejects_missing_runtime_entrypoint_before_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("runtime-missing-entrypoint");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replace("  entrypoint: action.py\n", "");
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert_contains(&stderr, "invalid Manifest: missing runtime.entrypoint");
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "missing runtime entrypoint should fail before creating run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn runtime_rejects_invalid_schema_contract_before_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("runtime-invalid-schema-contract");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert_contains(
+        &stderr,
+        "invalid Manifest: schemas.input $ schema type must be a string or string array",
+    );
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "invalid schema contract should fail before creating run records"
     );
 
     fs::remove_dir_all(output_root).ok();
@@ -642,6 +724,90 @@ Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
 }
 
 #[test]
+fn core_schema_min_length_rejects_input_before_adapter_launch() {
+    let action = r#"
+import json
+import os
+from pathlib import Path
+
+Path("adapter-launched.txt").write_text("launched", encoding="utf-8")
+Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
+    "ok": True,
+    "output": {"message": "adapter should not run"},
+    "display": {"markdown": "done"}
+}), encoding="utf-8")
+"#;
+    let (output_root, capsule) = generated_command_capsule("runtime-command-min-length", action);
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string", "minLength": 2 }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be updated");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should regenerate\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    fs::write(
+        capsule
+            .join("examples")
+            .join("invalid-min-length.input.json"),
+        r#"{"name":"A"}"#,
+    )
+    .expect("invalid input should be written");
+
+    let run = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd_arg,
+        "--input",
+        "examples/invalid-min-length.input.json",
+    ]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "ValidationError");
+    assert_contains(
+        envelope["error"]["message"]
+            .as_str()
+            .expect("message should be present"),
+        "$.name string length must be at least 2",
+    );
+    assert!(
+        !capsule.join("adapter-launched.txt").exists(),
+        "schema constraints must be enforced before adapter launch"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn command_adapter_invalid_success_output_returns_protocol_violation() {
     let action = r#"
 import json
@@ -671,6 +837,87 @@ Path(os.environ["SKILLRUN_OUTPUT_JSON"]).write_text(json.dumps({
         .contains("output schema"));
 
     fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn command_adapter_timeout_terminates_spawned_child_process() {
+    let marker_root = temp_dir("runtime-command-timeout-marker");
+    fs::create_dir_all(&marker_root).expect("marker root should be created");
+    let marker = marker_root.join("child-survived.txt");
+    let marker_literal =
+        serde_json::to_string(&marker.to_string_lossy().to_string()).expect("marker serializes");
+    let child_code = format!(
+        "import time\nfrom pathlib import Path\ntime.sleep(2)\nPath({marker_literal}).write_text('alive', encoding='utf-8')\n"
+    );
+    let child_code_literal = serde_json::to_string(&child_code).expect("child code serializes");
+    let action = format!(
+        r#"
+import subprocess
+import sys
+import time
+
+subprocess.Popen([sys.executable, "-c", {child_code_literal}])
+time.sleep(10)
+"#
+    );
+    let (output_root, capsule) =
+        generated_command_capsule("runtime-command-timeout-child", &action);
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["python", "action.py"],
+    "timeout": "1s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["message"],
+    "additionalProperties": false,
+    "properties": {
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be updated");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+    assert!(
+        manifest.status.success(),
+        "manifest should regenerate\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!run.status.success());
+    let stdout = String::from_utf8(run.stdout.clone()).expect("stdout should be utf-8");
+    let envelope: Value = serde_json::from_str(&stdout).expect("stdout should be JSON");
+    assert_eq!(envelope["ok"], false);
+    assert_eq!(envelope["error"]["code"], "RuntimeError");
+    assert_contains(
+        envelope["error"]["message"]
+            .as_str()
+            .expect("message should be present"),
+        "command adapter timed out after 1000 ms",
+    );
+    std::thread::sleep(Duration::from_secs(3));
+    assert!(
+        !marker.exists(),
+        "timeout should terminate child processes before they can continue writing"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+    fs::remove_dir_all(marker_root).ok();
 }
 
 #[test]

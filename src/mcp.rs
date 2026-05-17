@@ -1,25 +1,28 @@
 use serde_json::{json, Value as JsonValue};
-use serde_yaml::Value as YamlValue;
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::{Component, Path, PathBuf};
 
 use crate::consumer::ValidManifest;
+use crate::manifest_access::{string_at, ManifestView};
 use crate::runtime;
 
 const MCP_PROTOCOL_VERSION: &str = "2025-11-25";
 
 pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<String, String> {
-    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
-    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
-    let tool_description =
-        string_at(&manifest.value, &["tool", "description"]).unwrap_or("SkillRun MCP tool.");
-    let input_schema =
-        json_value_at(&manifest.value, &["schemas", "input"]).unwrap_or_else(|| json!({}));
-    let output_schema =
-        json_value_at(&manifest.value, &["schemas", "output"]).unwrap_or_else(|| json!({}));
-    let skill_path =
-        string_at(&manifest.value, &["sources", "skill", "path"]).unwrap_or("SKILL.md");
+    let manifest_view = ManifestView::new(&manifest.value);
+    let skill_name = manifest_view.skill_name().unwrap_or("skill");
+    let tool_name = manifest_view.tool_name().unwrap_or(skill_name);
+    let tool_description = manifest_view
+        .tool_description()
+        .unwrap_or("SkillRun MCP tool.");
+    let input_schema = manifest_view
+        .input_schema_json()
+        .unwrap_or_else(|| json!({}));
+    let output_schema = manifest_view
+        .output_schema_json()
+        .unwrap_or_else(|| json!({}));
+    let skill_path = manifest_view.source_path("skill").unwrap_or("SKILL.md");
     let skill_text = fs::read_to_string(capsule_dir.join(skill_path))
         .map_err(|error| format!("failed to read MCP resource {skill_path}: {error}"))?;
 
@@ -173,18 +176,18 @@ struct McpResource {
 }
 
 fn resource_registry(capsule_dir: &Path, manifest: &ValidManifest) -> Vec<McpResource> {
-    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
+    let manifest_view = ManifestView::new(&manifest.value);
+    let skill_name = manifest_view.skill_name().unwrap_or("skill");
     let mut resources = Vec::new();
 
-    let skill_path =
-        string_at(&manifest.value, &["sources", "skill", "path"]).unwrap_or("SKILL.md");
+    let skill_path = manifest_view.source_path("skill").unwrap_or("SKILL.md");
     if let Some(resource) = resource_for_path(skill_name, "SKILL.md", skill_path, "text/markdown") {
         resources.push(resource);
     }
 
-    if let Some(YamlValue::Sequence(examples)) = value_at(&manifest.value, &["examples"]) {
+    if let Some(examples) = manifest_view.examples() {
         for example in examples {
-            let Some(input_path) = string_at_value(example, &["input"]) else {
+            let Some(input_path) = string_at(example, &["input"]) else {
                 continue;
             };
             let name = input_path
@@ -325,14 +328,18 @@ fn safe_relative_path(value: &str) -> Result<PathBuf, String> {
 }
 
 fn tools_list_result(manifest: &ValidManifest) -> JsonValue {
-    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
-    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
-    let tool_description =
-        string_at(&manifest.value, &["tool", "description"]).unwrap_or("SkillRun MCP tool.");
-    let input_schema =
-        json_value_at(&manifest.value, &["schemas", "input"]).unwrap_or_else(|| json!({}));
-    let output_schema =
-        json_value_at(&manifest.value, &["schemas", "output"]).unwrap_or_else(|| json!({}));
+    let manifest_view = ManifestView::new(&manifest.value);
+    let skill_name = manifest_view.skill_name().unwrap_or("skill");
+    let tool_name = manifest_view.tool_name().unwrap_or(skill_name);
+    let tool_description = manifest_view
+        .tool_description()
+        .unwrap_or("SkillRun MCP tool.");
+    let input_schema = manifest_view
+        .input_schema_json()
+        .unwrap_or_else(|| json!({}));
+    let output_schema = manifest_view
+        .output_schema_json()
+        .unwrap_or_else(|| json!({}));
 
     json!({
         "tools": [
@@ -359,8 +366,9 @@ fn handle_tools_call(
         return error_response(id, -32602, "Invalid params: tools/call requires name");
     };
 
-    let skill_name = string_at(&manifest.value, &["skill", "name"]).unwrap_or("skill");
-    let tool_name = string_at(&manifest.value, &["tool", "name"]).unwrap_or(skill_name);
+    let manifest_view = ManifestView::new(&manifest.value);
+    let skill_name = manifest_view.skill_name().unwrap_or("skill");
+    let tool_name = manifest_view.tool_name().unwrap_or(skill_name);
     if name != tool_name {
         return error_response(id, -32602, format!("Unknown tool: {name}"));
     }
@@ -465,31 +473,4 @@ fn write_json_line(writer: &mut impl Write, value: &JsonValue) -> Result<(), Str
     writer
         .flush()
         .map_err(|error| format!("failed to flush MCP stdout: {error}"))
-}
-
-fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
-}
-
-fn string_at_value<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    current.as_str()
-}
-
-fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<JsonValue> {
-    let value = value_at(value, path)?;
-    serde_json::to_value(value).ok()
 }

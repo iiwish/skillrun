@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use crate::adapters;
 use crate::hashing;
 use crate::manifest;
+use crate::manifest_access::{string_at, value_at, ManifestView};
+use crate::schemas;
 
 pub struct ReadinessReport {
     pub cwd: PathBuf,
@@ -186,14 +188,21 @@ fn report_with_manifest(
         .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
     let manifest: Value = serde_yaml::from_str(&text)
         .map_err(|error| format!("failed to parse {}: {error}", manifest_path.display()))?;
+    let manifest_view = ManifestView::new(&manifest);
 
-    let adapter = string_at(&manifest, &["runtime", "adapter"]).map(ToString::to_string);
-    let entrypoint = string_at(&manifest, &["runtime", "entrypoint"]).map(ToString::to_string);
-    let source_checks = source_checks(&cwd, &manifest);
-    let example_checks = example_checks(&cwd, &manifest);
+    let adapter = manifest_view.runtime_adapter().map(ToString::to_string);
+    let entrypoint = manifest_view.runtime_entrypoint().map(ToString::to_string);
+    let source_checks = source_checks(&cwd, &manifest_view);
+    let example_checks = example_checks(&cwd, &manifest_view);
     let requirements = requirements_view(&manifest);
     let dependency_checks = dependency_checks(adapter.as_deref(), &requirements);
     let runtime_present = adapter.is_some() && entrypoint.is_some();
+    let schema_contract_error = schema_contract_error(&manifest_view);
+    let invalid_manifest_reason = if !runtime_present {
+        Some("missing runtime.adapter or runtime.entrypoint".to_string())
+    } else {
+        schema_contract_error
+    };
     let all_fresh = source_checks.iter().all(|check| check.status == "fresh");
     let examples_present = example_checks.iter().all(|check| check.present);
     let dependencies_ready = dependency_checks
@@ -201,7 +210,7 @@ fn report_with_manifest(
         .all(|check| check.status == "satisfied");
     let status = if !all_fresh {
         "stale-manifest"
-    } else if !runtime_present {
+    } else if invalid_manifest_reason.is_some() {
         "invalid-manifest"
     } else if !examples_present {
         "missing-examples"
@@ -222,6 +231,11 @@ fn report_with_manifest(
         "dependency-error" => "Install or select a runtime matching the declared requirements, then retry `skillrun check`.".to_string(),
         _ => format!("Run `skillrun manifest --cwd {}`.", cwd.display()),
     };
+    let reason = if status == "invalid-manifest" {
+        invalid_manifest_reason
+    } else {
+        None
+    };
 
     Ok(ReadinessReport {
         cwd,
@@ -230,7 +244,7 @@ fn report_with_manifest(
         manifest_present: true,
         status: status.to_string(),
         freshness: freshness.to_string(),
-        reason: None,
+        reason,
         next_step,
         adapter,
         entrypoint,
@@ -242,7 +256,27 @@ fn report_with_manifest(
     })
 }
 
-fn source_checks(cwd: &Path, manifest: &Value) -> Vec<SourceCheck> {
+fn schema_contract_error(manifest: &ManifestView<'_>) -> Option<String> {
+    let input_schema = match manifest.input_schema_json() {
+        Some(schema) => schema,
+        None => return Some("missing schemas.input".to_string()),
+    };
+    if let Err(error) = schemas::validate_schema_contract(&input_schema) {
+        return Some(format!("schemas.input {error}"));
+    }
+
+    let output_schema = match manifest.output_schema_json() {
+        Some(schema) => schema,
+        None => return Some("missing schemas.output".to_string()),
+    };
+    if let Err(error) = schemas::validate_schema_contract(&output_schema) {
+        return Some(format!("schemas.output {error}"));
+    }
+
+    None
+}
+
+fn source_checks(cwd: &Path, manifest: &ManifestView<'_>) -> Vec<SourceCheck> {
     let mut checks = Vec::new();
     for (key, fallback_path, required) in [
         ("skill", "SKILL.md", true),
@@ -258,12 +292,12 @@ fn source_checks(cwd: &Path, manifest: &Value) -> Vec<SourceCheck> {
 
 fn source_check(
     cwd: &Path,
-    manifest: &Value,
+    manifest: &ManifestView<'_>,
     key: &str,
     fallback_path: &str,
     required: bool,
 ) -> Option<SourceCheck> {
-    let source_path = string_at(manifest, &["sources", key, "path"]);
+    let source_path = manifest.source_path(key);
     let should_check =
         required || source_path.is_some() || (key == "config" && cwd.join(fallback_path).is_file());
     if !should_check {
@@ -277,7 +311,7 @@ fn source_check(
         });
     };
 
-    let Some(expected) = string_at(manifest, &["sources", key, "sha256"]) else {
+    let Some(expected) = manifest.source_sha256(key) else {
         return Some(SourceCheck {
             path: path.to_string(),
             status: "missing-hash",
@@ -295,8 +329,8 @@ fn source_check(
     })
 }
 
-fn example_checks(cwd: &Path, manifest: &Value) -> Vec<ExampleCheck> {
-    let Some(Value::Sequence(items)) = value_at(manifest, &["examples"]) else {
+fn example_checks(cwd: &Path, manifest: &ManifestView<'_>) -> Vec<ExampleCheck> {
+    let Some(items) = manifest.examples() else {
         return vec![ExampleCheck {
             path: "examples/default.input.json".to_string(),
             present: cwd.join("examples").join("default.input.json").is_file(),
@@ -845,17 +879,4 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
             .map(|cwd| cwd.join(path))
             .map_err(|error| format!("failed to resolve current directory: {error}"))
     }
-}
-
-fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
-    let mut current = value;
-    for segment in path {
-        let key = Value::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
 }

@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use crate::adapters::{self, ActionRunRequest};
 use crate::consumer;
 use crate::errors;
+use crate::manifest_access::ManifestView;
 use crate::permissions;
 use crate::readiness;
 use crate::run_record::{self, RunRecordInput};
@@ -78,17 +79,24 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
 
 fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
     let manifest = load_manifest(capsule_dir, mode)?;
-    let adapter = string_at(&manifest.value, &["runtime", "adapter"]).unwrap_or("python");
+    let manifest_view = ManifestView::new(&manifest.value);
+    let adapter = manifest_view
+        .runtime_adapter()
+        .ok_or_else(|| "invalid Manifest: missing runtime.adapter".to_string())?;
     adapters::ensure_runtime_adapter(adapter)?;
 
-    let entrypoint = string_at(&manifest.value, &["runtime", "entrypoint"]).unwrap_or("action.py");
-    let command = string_array_at(&manifest.value, &["runtime", "command"])?;
-    let timeout = string_at(&manifest.value, &["runtime", "timeout"])
+    let entrypoint = manifest_view
+        .runtime_entrypoint()
+        .ok_or_else(|| "invalid Manifest: missing runtime.entrypoint".to_string())?;
+    validate_manifest_schema_contract(&manifest_view)?;
+    let command = manifest_view.runtime_command()?;
+    let timeout = manifest_view
+        .runtime_timeout()
         .and_then(parse_timeout)
         .unwrap_or_else(|| Duration::from_secs(30));
     let run_id = new_run_id();
     let paths = create_run_paths(capsule_dir, &run_id)?;
-    let permissions = json_value_at(&manifest.value, &["permissions"]).unwrap_or(Value::Null);
+    let permissions = manifest_view.permissions_json().unwrap_or(Value::Null);
     let declared_env = permissions::declared_env_values(&manifest.value);
     let started_at = Utc::now();
     let started = Instant::now();
@@ -104,7 +112,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     });
     write_json(&paths.context_json, &context)?;
 
-    if let Some(input_schema) = json_value_at(&manifest.value, &["schemas", "input"]) {
+    if let Some(input_schema) = manifest_view.input_schema_json() {
         if let Err(error) = schemas::validate_value(&input_schema, &input_value) {
             write_empty_logs(&paths)?;
             return finish_run(
@@ -215,6 +223,20 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     )
 }
 
+fn validate_manifest_schema_contract(manifest: &ManifestView<'_>) -> Result<(), String> {
+    let input_schema = manifest
+        .input_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.input".to_string())?;
+    schemas::validate_schema_contract(&input_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.input {error}"))?;
+
+    let output_schema = manifest
+        .output_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.output".to_string())?;
+    schemas::validate_schema_contract(&output_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.output {error}"))
+}
+
 fn write_empty_logs(paths: &RunPaths) -> Result<(), String> {
     fs::write(&paths.stdout_log, [])
         .map_err(|error| format!("failed to write {}: {error}", paths.stdout_log.display()))?;
@@ -287,11 +309,9 @@ fn finish_run(input: FinishRunInput<'_>, mut envelope: Value) -> Result<RunOutco
     write_json(&input.paths.output_json, &envelope)?;
 
     let finished_at = Utc::now();
-    let skill_sha256 = string_at(&input.manifest.value, &["sources", "skill", "sha256"])
-        .or_else(|| string_at(&input.manifest.value, &["skill", "skill_hash"]))
-        .unwrap_or("missing");
-    let action_sha256 =
-        string_at(&input.manifest.value, &["sources", "action", "sha256"]).unwrap_or("missing");
+    let manifest_view = ManifestView::new(&input.manifest.value);
+    let skill_sha256 = manifest_view.skill_sha256().unwrap_or("missing");
+    let action_sha256 = manifest_view.action_sha256().unwrap_or("missing");
     run_record::write(
         &input.paths.record_json,
         RunRecordInput {
@@ -306,8 +326,7 @@ fn finish_run(input: FinishRunInput<'_>, mut envelope: Value) -> Result<RunOutco
             manifest_sha256: &input.manifest.sha256,
             skill_sha256,
             action_sha256,
-            permissions: json_value_at(&input.manifest.value, &["permissions"])
-                .unwrap_or(Value::Null),
+            permissions: manifest_view.permissions_json().unwrap_or(Value::Null),
         },
     )?;
 
@@ -341,7 +360,8 @@ fn adapter_envelope(
 
     match envelope.get("ok").and_then(Value::as_bool) {
         Some(true) if adapter_success => {
-            if let Some(output_schema) = json_value_at(manifest, &["schemas", "output"]) {
+            let manifest_view = ManifestView::new(manifest);
+            if let Some(output_schema) = manifest_view.output_schema_json() {
                 let output = envelope.get("output").unwrap_or(&Value::Null);
                 if let Err(error) = schemas::validate_value(&output_schema, output) {
                     return (
@@ -471,39 +491,4 @@ fn parse_timeout(value: &str) -> Option<Duration> {
         return seconds.parse::<u64>().ok().map(Duration::from_secs);
     }
     value.parse::<u64>().ok().map(Duration::from_secs)
-}
-
-fn value_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a YamlValue> {
-    let mut current = value;
-    for segment in path {
-        let key = YamlValue::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    Some(current)
-}
-
-fn string_at<'a>(value: &'a YamlValue, path: &[&str]) -> Option<&'a str> {
-    value_at(value, path)?.as_str()
-}
-
-fn string_array_at(value: &YamlValue, path: &[&str]) -> Result<Option<Vec<String>>, String> {
-    let Some(value) = value_at(value, path) else {
-        return Ok(None);
-    };
-    let sequence = value
-        .as_sequence()
-        .ok_or_else(|| format!("{} must be an array of strings", path.join(".")))?;
-    let mut strings = Vec::with_capacity(sequence.len());
-    for item in sequence {
-        let Some(string) = item.as_str() else {
-            return Err(format!("{} must contain only strings", path.join(".")));
-        };
-        strings.push(string.to_string());
-    }
-    Ok(Some(strings))
-}
-
-fn json_value_at(value: &YamlValue, path: &[&str]) -> Option<Value> {
-    let value = value_at(value, path)?;
-    serde_json::to_value(value).ok()
 }

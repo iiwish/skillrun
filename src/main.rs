@@ -11,6 +11,7 @@ mod hashing;
 mod init;
 mod inspect;
 mod manifest;
+mod manifest_access;
 mod mcp;
 mod pack;
 mod permissions;

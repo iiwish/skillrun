@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::manifest;
+use crate::manifest_access::string_at;
 use crate::readiness;
 
 #[derive(Debug)]
@@ -577,15 +578,6 @@ fn json_output<T: Serialize>(value: &T) -> Result<RegistryOutput, String> {
     Ok(RegistryOutput {
         output: serde_json::to_string_pretty(value).map_err(|error| error.to_string())?,
     })
-}
-
-fn string_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a str> {
-    let mut current = value;
-    for segment in path {
-        let key = Value::String((*segment).to_string());
-        current = current.as_mapping()?.get(&key)?;
-    }
-    current.as_str()
 }
 
 fn relative_path(cwd: &Path, path: &Path) -> String {
