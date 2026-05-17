@@ -34,6 +34,8 @@ SkillRun 同时存在几类版本号，不能混用：
 
 ## 发布步骤
 
+具体发布执行清单见 [Release Checklist](release-checklist.md)。本节只定义发布原则和最小步骤。
+
 1. 从版本集成分支合并到 `main`。
 2. 在 `main` 上运行 release validation。
 3. 更新 `RELEASE_NOTES.md`。

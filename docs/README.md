@@ -30,6 +30,7 @@
 - [v0.5.5 Core Contract Hardening](v0.5.5-core-contract-hardening.md)：进入 Desktop / v0.6 前的 Manifest、schema 与 adapter lifecycle 合同硬化。
 - [v0.5.5 Release Gate Review](v0.5.5-release-gate-review.md)：用命令合同矩阵确认 Consumer Mode 执行、MCP 暴露和 `.skr` 分发共享 Manifest 静态合同。
 - [v0.5.5 发布后复盘](v0.5.5-post-release-review.md)：记录 v0.5.5 发布事实、远端 CI 暴露的问题、修复结论和 v0.5.6 推荐边界。
+- [v0.5.6 Headless Consumer Contract](v0.5.6-headless-consumer-contract.md)：定义 Desktop / Router 前置的本地消费者控制面 JSON 合同与非 UI 边界。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
@@ -37,6 +38,7 @@
 
 - [测试策略](testing.md)：本地验证、CI 检查和 release validation。
 - [发布策略](release-policy.md)：版本号、release candidate、tag 和发布流程。
+- [Release Checklist](release-checklist.md)：基于 v0.5.5 发布复盘固化的逐步发布检查清单。
 - [分支保护建议](branch-protection.md)：公开前后 `main` 分支保护规则。
 
 ## 文档维护规则
