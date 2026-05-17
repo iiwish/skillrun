@@ -43,7 +43,8 @@ SkillRun sharpens its public project surface before Desktop: README, docs index,
 - docs relative links check
 - `cargo run --quiet -- --version` -> `skillrun 0.5.7`
 - Website external validation: `pnpm build` in `skillrun-www`
-- Release branch CI, main CI, tag, and GitHub Release publication are pending
+- Remote CI passed on `codex/v0.5.7-public-surface`: https://github.com/iiwish/skillrun/actions/runs/25993143273
+- Main CI, tag, and GitHub Release publication are pending
 
 ## v0.5.6
 
