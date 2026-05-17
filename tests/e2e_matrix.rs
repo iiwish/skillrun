@@ -30,6 +30,10 @@ fn output_text(bytes: &[u8]) -> String {
     String::from_utf8(bytes.to_vec()).expect("output should be utf-8")
 }
 
+fn archive_name(stem: &str) -> String {
+    format!("{stem}-{}.skr", env!("CARGO_PKG_VERSION"))
+}
+
 fn assert_success(output: &std::process::Output, label: &str) -> String {
     assert!(
         output.status.success(),
@@ -262,7 +266,7 @@ fn a001_to_a013_release_matrix_has_fresh_command_evidence() {
 
     let pack = run_skillrun(&["pack", "--cwd", &cwd]);
     assert_success(&pack, "pack");
-    let archive_path = capsule.join("dist").join("refund-0.5.5.skr");
+    let archive_path = capsule.join("dist").join(archive_name("refund"));
     assert!(archive_path.is_file(), "A012 archive should exist");
     let unpacked = output_root.join("unpacked");
     fs::create_dir_all(&unpacked).expect("unpack target should exist");
@@ -546,7 +550,7 @@ fn js_alpha_local_command_matrix_covers_init_manifest_inspect_test_and_run() {
     let pack_stdout = assert_success(&pack, "JS pack");
     assert!(pack_stdout.contains("does not vendor dependencies"));
     assert!(
-        capsule.join("dist").join("refund-0.5.5.skr").is_file(),
+        capsule.join("dist").join(archive_name("refund")).is_file(),
         "JS pack should create .skr archive"
     );
 

@@ -8,7 +8,7 @@ Publication: no v0.5.6 tag, main merge, GitHub Release, package publication, reg
 
 ### Headline
 
-SkillRun adds release polish and the first explicit headless consumer control-plane contracts before Desktop: `skillrun consumer inventory --json` and `skillrun consumer exposure --json`.
+SkillRun adds release polish and the first explicit headless consumer control-plane contracts before Desktop: inventory, exposure, run history summary, and mount planning.
 
 ### What Is Included
 
@@ -44,11 +44,12 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - `cargo test`
 - `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
+- `cargo run --quiet -- --version`
 - `cargo test --test registry`
 - `cargo test --test mount_plan`
 - `cargo test --test consumer_json_contracts`
 - docs relative links check
-- Remote CI passed on `codex/v0.5.6-release-polish`: https://github.com/iiwish/skillrun/actions/runs/25991247448
+- Remote CI passed on `codex/v0.5.6-release-polish`: https://github.com/iiwish/skillrun/actions/runs/25991340718
 
 ## v0.5.5
 
