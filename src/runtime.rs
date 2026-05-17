@@ -80,10 +80,14 @@ fn execute(cwd: &Path, input: &Path, mode: &str) -> Result<RunOutcome, String> {
 fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<RunOutcome, String> {
     let manifest = load_manifest(capsule_dir, mode)?;
     let manifest_view = ManifestView::new(&manifest.value);
-    let adapter = manifest_view.runtime_adapter().unwrap_or("python");
+    let adapter = manifest_view
+        .runtime_adapter()
+        .ok_or_else(|| "invalid Manifest: missing runtime.adapter".to_string())?;
     adapters::ensure_runtime_adapter(adapter)?;
 
-    let entrypoint = manifest_view.runtime_entrypoint().unwrap_or("action.py");
+    let entrypoint = manifest_view
+        .runtime_entrypoint()
+        .ok_or_else(|| "invalid Manifest: missing runtime.entrypoint".to_string())?;
     let command = manifest_view.runtime_command()?;
     let timeout = manifest_view
         .runtime_timeout()
