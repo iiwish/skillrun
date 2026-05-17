@@ -33,6 +33,7 @@
 - [v0.5.6 CI Diagnostics Review](v0.5.6-ci-diagnostics-review.md)：复审 `cargo test` 失败 annotation 是否适合作为发布工程基线。
 - [v0.5.6 Headless Consumer Contract](v0.5.6-headless-consumer-contract.md)：定义 Desktop / Router 前置的本地消费者控制面 JSON 合同与非 UI 边界。
 - [v0.5.6 Run History Contract Review](v0.5.6-run-history-contract-review.md)：审查 Envelope Explorer 前置的 run history 查询合同、隐私边界和实现切分。
+- [v0.5.6 Mount Plan Contract Review](v0.5.6-mount-plan-contract-review.md)：审查一键挂载的 plan-first 合同、Router 挂载边界和不写配置约束。
 - [v0.5.6 Release Polish Plan](v0.5.6-release-polish-plan.md)：把 v0.5.6 拆成发布工程、CI 诊断和 headless consumer JSON surface 的可执行任务。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
