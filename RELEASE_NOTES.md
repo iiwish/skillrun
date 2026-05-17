@@ -2,9 +2,9 @@
 
 ## v0.5.5
 
-Status: Ready_For_Release_Decision
+Status: Released
 Prepared on: 2026-05-17
-Publication: pending v0.5.5 tag, remote push, GitHub Release publication, and any package publication decision
+Publication: v0.5.5 main merge, remote push, tag, and GitHub Release publication completed; no package registry publication was performed
 
 ### Headline
 
@@ -44,7 +44,7 @@ SkillRun hardens the Manifest-driven Consumer Mode contract before Desktop: exec
 - `cargo test`
 - `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
-- Remote CI must pass before merge/tag publication.
+- Remote CI passed on the release branch and main before tag publication.
 
 ## v0.5.4
 
