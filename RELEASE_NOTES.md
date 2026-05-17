@@ -2,9 +2,9 @@
 
 ## v0.5.7
 
-Status: Release candidate
+Status: Released
 Prepared on: 2026-05-17
-Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
+Publication: v0.5.7 main merge, remote push, tag, and GitHub Release publication completed; no package registry publication was performed
 
 ### Headline
 
@@ -43,8 +43,9 @@ SkillRun sharpens its public project surface before Desktop: README, docs index,
 - docs relative links check
 - `cargo run --quiet -- --version` -> `skillrun 0.5.7`
 - Website external validation: `pnpm build` in `skillrun-www`
-- Remote CI passed on `codex/v0.5.7-public-surface`: https://github.com/iiwish/skillrun/actions/runs/25993143273
-- Main CI, tag, and GitHub Release publication are pending
+- Remote CI passed on `codex/v0.5.7-public-surface`: https://github.com/iiwish/skillrun/actions/runs/25993183133
+- Remote CI passed on `main` before tag publication: https://github.com/iiwish/skillrun/actions/runs/25993258572
+- GitHub Release: https://github.com/iiwish/skillrun/releases/tag/v0.5.7
 
 ## v0.5.6
 
