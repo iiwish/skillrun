@@ -139,12 +139,6 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
         .unwrap_or_else(|| spec.default_config.clone());
     let exists = config_path.is_file();
     let mut warnings = Vec::new();
-    warnings.push(WarningView {
-        code: "router-runtime-not-implemented",
-        message: "plan targets the future SkillRun Router; v0.5.6 does not start or install it"
-            .to_string(),
-    });
-
     let (parseable, changes) = plan_changes(&config_path, exists, &router, &mut warnings);
     let config_path_display = display_path(&config_path);
     MountPlanView {

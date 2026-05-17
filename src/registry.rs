@@ -27,6 +27,14 @@ pub struct RegistryOutput {
     pub output: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct ExposedCapsule {
+    pub id: String,
+    pub path: PathBuf,
+    pub tool_name: String,
+    pub manifest_hash: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct RegistryFile {
     version: u32,
@@ -443,6 +451,41 @@ pub fn consumer_exposure(json: bool) -> Result<RegistryOutput, String> {
         format!("SkillRun Consumer Exposure\ntools:\n{items}")
     };
     Ok(RegistryOutput { output })
+}
+
+pub fn exposed_capsules() -> Result<Vec<ExposedCapsule>, String> {
+    let registry = load_registry()?;
+    let mut capsules = Vec::new();
+
+    for entry in &registry.capsules {
+        let capsule = capsule_view(entry)?;
+        if !capsule.enabled || !capsule.readiness.ok {
+            continue;
+        }
+
+        let Some(tool) = &capsule.tool else {
+            continue;
+        };
+
+        let capsule_path = PathBuf::from(&entry.path);
+        let manifest_path = manifest::generated_manifest_path(&capsule_path);
+        let manifest_hash = hashing::sha256_file(&manifest_path).map_err(|error| {
+            format!(
+                "failed to hash exposed Manifest for {} at {}: {error}",
+                entry.id,
+                manifest_path.display()
+            )
+        })?;
+
+        capsules.push(ExposedCapsule {
+            id: entry.id.clone(),
+            path: capsule_path,
+            tool_name: tool.name.clone(),
+            manifest_hash,
+        });
+    }
+
+    Ok(capsules)
 }
 
 pub fn consumer_runs_list(

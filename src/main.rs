@@ -18,6 +18,7 @@ mod pack;
 mod permissions;
 mod readiness;
 mod registry;
+mod router;
 mod run_record;
 mod runtime;
 mod schemas;

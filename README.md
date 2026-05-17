@@ -216,6 +216,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.6 Headless Consumer Contract](docs/v0.5.6-headless-consumer-contract.md)
 - [v0.5.6 Run History Contract Review](docs/v0.5.6-run-history-contract-review.md)
 - [v0.5.6 Mount Plan Contract Review](docs/v0.5.6-mount-plan-contract-review.md)
+- [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
