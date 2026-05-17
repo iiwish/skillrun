@@ -15,6 +15,7 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - Maintainer-oriented release checklist documentation.
 - CI failure diagnostics review for `cargo test` GitHub annotations.
 - Headless consumer contract documentation for future Desktop, Router, mount planning, exposure, and run history surfaces.
+- Run history contract review defining registry-scoped list semantics, input privacy boundaries, and why `runs inspect` should not be bundled into v0.5.6 by default.
 - `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
 - `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for future Router consumers.
 - Contract fixture coverage for enabled consumer inventory output.
@@ -25,6 +26,7 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 
 - v0.5.6 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
 - `consumer inventory --json` and `consumer exposure --json` are read-only control-plane surfaces over local registry readiness semantics.
+- Run history remains evidence-first; Desktop should consume future Core JSON surfaces instead of reading `.skillrun/runs` directly.
 - Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
 - `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
 
