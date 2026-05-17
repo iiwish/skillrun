@@ -73,14 +73,14 @@ fn terminate_process_tree(child: &mut Child) {
 fn terminate_process_tree(child: &mut Child) {
     let process_group = format!("-{}", child.id());
     let _ = Command::new("kill")
-        .args(["-TERM", process_group.as_str()])
+        .args(["-TERM", "--", process_group.as_str()])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
     thread::sleep(Duration::from_millis(50));
     let _ = Command::new("kill")
-        .args(["-KILL", process_group.as_str()])
+        .args(["-KILL", "--", process_group.as_str()])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
