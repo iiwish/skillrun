@@ -1,5 +1,45 @@
 # SkillRun Release Notes
 
+## v0.5.7
+
+Status: In progress
+Prepared on: 2026-05-17
+Publication: Not released; draft release entry for `codex/v0.5.7-public-surface`
+
+### Headline
+
+SkillRun sharpens its public project surface before Desktop: README, docs index, website handoff, and Desktop readiness are aligned around SOP-backed skills, Manifest-driven runtime boundaries, and honest Consumer Mode language.
+
+### Version Layers
+
+- Binary/crate version is pending release preparation; if this branch is published as `v0.5.7`, `Cargo.toml`, `Cargo.lock`, CLI `--version`, tag, and release notes must agree on `0.5.7`.
+- Manifest IR `manifest_version` is expected to remain `0.1.0`.
+- IPC / Adapter `protocol_version` is expected to remain `0.1.0`.
+- Adapter Protocol is expected to remain `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- English README rewritten as a first-class project entry instead of a historical changelog surface.
+- Chinese README aligned with the same public positioning, current v0.5.6 capabilities, Desktop boundary, trust model, and roadmap.
+- v0.5.7 public surface planning document covering the main repository, website handoff, Desktop readiness, release gates, and pre-Desktop gap decision.
+- Docs index entry for the v0.5.7 public surface plan.
+- Website version and homepage alignment prepared in the external `skillrun-www` project for user-managed submission.
+- Desktop readiness draft prepared in the external `skillrun-desktop` project for later repository initialization.
+
+### Boundaries
+
+- v0.5.7 is a public surface / documentation / handoff release candidate, not a runtime expansion.
+- v0.5.7 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- Website and Desktop files live outside this repository and are not part of the `skillrunv2` Git history unless separately committed in their own projects.
+- "No guardrail, no execution" must continue to mean Manifest contracts, schema checks, preflight, structured envelopes, artifact containment, run evidence, and Consumer Mode static checks; it must not be described as OS sandboxing.
+
+### Validation
+
+- `git diff --check`
+- docs relative links check
+- Website external validation: `pnpm build` in `skillrun-www`
+- Final release validation pending before any `v0.5.7` tag
+
 ## v0.5.6
 
 Status: Released
