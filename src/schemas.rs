@@ -88,8 +88,26 @@ fn validate_array(schema: &Value, value: &Value, path: &str) -> Result<(), Strin
 fn validate_type(type_value: &Value, value: &Value, path: &str) -> Result<(), String> {
     let allowed = match type_value {
         Value::String(single) => vec![single.as_str()],
-        Value::Array(items) => items.iter().filter_map(Value::as_str).collect(),
-        _ => return Ok(()),
+        Value::Array(items) => {
+            if items.is_empty() {
+                return Err(format!("{path} schema type array must not be empty"));
+            }
+            let mut allowed = Vec::with_capacity(items.len());
+            for item in items {
+                let Some(item) = item.as_str() else {
+                    return Err(format!(
+                        "{path} schema type array must contain only strings"
+                    ));
+                };
+                allowed.push(item);
+            }
+            allowed
+        }
+        _ => {
+            return Err(format!(
+                "{path} schema type must be a string or string array"
+            ))
+        }
     };
 
     for expected in &allowed {
@@ -214,6 +232,22 @@ mod tests {
         assert_eq!(
             validate_value(&schema, &json!("2026-05-15")).unwrap_err(),
             "$ uses unsupported schema type date"
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_schema_type_shapes() {
+        assert_eq!(
+            validate_value(&json!({ "type": 42 }), &json!("value")).unwrap_err(),
+            "$ schema type must be a string or string array"
+        );
+        assert_eq!(
+            validate_value(&json!({ "type": [] }), &json!("value")).unwrap_err(),
+            "$ schema type array must not be empty"
+        );
+        assert_eq!(
+            validate_value(&json!({ "type": ["string", 42] }), &json!("value")).unwrap_err(),
+            "$ schema type array must contain only strings"
         );
     }
 }
