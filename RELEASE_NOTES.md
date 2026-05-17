@@ -1,5 +1,51 @@
 # SkillRun Release Notes
 
+## v0.5.7
+
+Status: Release candidate
+Prepared on: 2026-05-17
+Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
+
+### Headline
+
+SkillRun sharpens its public project surface before Desktop: README, docs index, website handoff, and Desktop readiness are aligned around SOP-backed skills, Manifest-driven runtime boundaries, and honest Consumer Mode language.
+
+### Version Layers
+
+- Binary/crate version is `0.5.7`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- English README rewritten as a first-class project entry instead of a historical changelog surface.
+- Chinese README aligned with the same public positioning, current v0.5.7 release surface, Desktop boundary, trust model, and roadmap.
+- v0.5.7 public surface planning document covering the main repository, website handoff, Desktop readiness, release gates, and pre-Desktop gap decision.
+- Docs index entry for the v0.5.7 public surface plan.
+- Website version and homepage alignment prepared in the external `skillrun-www` project for user-managed submission.
+- Desktop readiness draft prepared in the external `skillrun-desktop` project for later repository initialization.
+
+### Boundaries
+
+- v0.5.7 is a public surface / documentation / handoff release candidate, not a runtime expansion.
+- v0.5.7 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- Website and Desktop files live outside this repository and are not part of the `skillrunv2` Git history unless separately committed in their own projects.
+- "No guardrail, no execution" must continue to mean Manifest contracts, schema checks, preflight, structured envelopes, artifact containment, run evidence, and Consumer Mode static checks; it must not be described as OS sandboxing.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test --test business_examples`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- `cargo run --quiet -- --version` -> `skillrun 0.5.7`
+- Website external validation: `pnpm build` in `skillrun-www`
+- Remote CI passed on `codex/v0.5.7-public-surface`: https://github.com/iiwish/skillrun/actions/runs/25993143273
+- Main CI, tag, and GitHub Release publication are pending
+
 ## v0.5.6
 
 Status: Released
