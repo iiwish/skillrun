@@ -244,5 +244,25 @@ fn registry_and_switchboard_json_match_contract_fixtures() {
         &paths,
     );
 
+    let consumer_inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_contract(
+        consumer_inventory,
+        include_str!("fixtures/contracts/consumer_inventory_enabled.json"),
+        &paths,
+    );
+
+    let consumer_exposure = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_contract(
+        consumer_exposure,
+        include_str!("fixtures/contracts/consumer_exposure_enabled.json"),
+        &paths,
+    );
+
     fs::remove_dir_all(output_root).ok();
 }

@@ -8,6 +8,7 @@ use crate::init::{self, InitLanguage, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
+use crate::mount_plan::{self, MountPlanOptions};
 use crate::pack::{self, PackOptions};
 use crate::registry::{self, RegistryCommand, RegistryOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
@@ -119,6 +120,59 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun doctor [--json] [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("consumer") => match parse_consumer(args.collect()) {
+            Ok(command) => match command {
+                ConsumerCommand::Inventory { json } => match registry::consumer_inventory(json) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+                ConsumerCommand::Exposure { json } => match registry::consumer_exposure(json) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+                ConsumerCommand::RunsList {
+                    json,
+                    capsule,
+                    limit,
+                } => match registry::consumer_runs_list(json, capsule.as_deref(), limit) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+                ConsumerCommand::MountPlan(options) => match mount_plan::plan(&options) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun consumer <inventory|exposure|runs|mount> [options]");
                 ExitCode::from(2)
             }
         },
@@ -258,6 +312,21 @@ where
 struct ServeOptions {
     cwd: PathBuf,
     dry_run: bool,
+}
+
+enum ConsumerCommand {
+    Inventory {
+        json: bool,
+    },
+    Exposure {
+        json: bool,
+    },
+    RunsList {
+        json: bool,
+        capsule: Option<String>,
+        limit: Option<usize>,
+    },
+    MountPlan(MountPlanOptions),
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -411,6 +480,149 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     }
 
     Ok(CheckOptions { cwd, json })
+}
+
+fn parse_consumer(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "inventory" => parse_consumer_inventory(rest),
+        "exposure" => parse_consumer_exposure(rest),
+        "runs" => parse_consumer_runs(rest),
+        "mount" => parse_consumer_mount(rest),
+        value => Err(format!("unknown consumer subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_inventory(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected consumer inventory argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::Inventory { json })
+}
+
+fn parse_consumer_exposure(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected consumer exposure argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::Exposure { json })
+}
+
+fn parse_consumer_runs(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer runs requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "list" => parse_consumer_runs_list(rest),
+        value => Err(format!("unknown consumer runs subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+    let mut capsule = None;
+    let mut limit = None;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            "--capsule" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--capsule requires a registry id".to_string());
+                };
+                capsule = Some(value.to_string());
+                index += 2;
+            }
+            "--limit" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--limit requires a number".to_string());
+                };
+                let parsed = value
+                    .parse::<usize>()
+                    .map_err(|_| format!("--limit must be a positive integer: {value}"))?;
+                if parsed == 0 {
+                    return Err("--limit must be greater than 0".to_string());
+                }
+                limit = Some(parsed);
+                index += 2;
+            }
+            value => return Err(format!("unexpected consumer runs list argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::RunsList {
+        json,
+        capsule,
+        limit,
+    })
+}
+
+fn parse_consumer_mount(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer mount requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "plan" => parse_consumer_mount_plan(rest),
+        value => Err(format!("unknown consumer mount subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_mount_plan(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut client = None;
+    let mut config = None;
+    let mut json = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--client" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--client requires a value".to_string());
+                };
+                client = Some(value.to_string());
+                index += 2;
+            }
+            "--config" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--config requires a path".to_string());
+                };
+                config = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            value => return Err(format!("unexpected consumer mount plan argument: {value}")),
+        }
+    }
+
+    let client = client.ok_or_else(|| "consumer mount plan requires --client <id>".to_string())?;
+    Ok(ConsumerCommand::MountPlan(MountPlanOptions {
+        client,
+        config,
+        json,
+    }))
 }
 
 fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
@@ -664,6 +876,7 @@ MVP commands:
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+  consumer   expose headless consumer control-plane JSON
   registry   manage local capsule inventory
   switchboard enable or disable registered capsules
   test       run the default example through the runtime contract
@@ -679,6 +892,10 @@ Implemented:
   inspect [--json]
   check [--json]
   doctor [--json]
+  consumer inventory [--json]
+  consumer exposure [--json]
+  consumer runs list [--json] [--capsule <id>] [--limit <n>]
+  consumer mount plan --client <id> [--config <path>] [--json]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test

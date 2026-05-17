@@ -1,5 +1,56 @@
 # SkillRun Release Notes
 
+## v0.5.6
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-17
+Publication: no v0.5.6 tag, main merge, GitHub Release, package publication, registry entry, or artifact publication has been performed
+
+### Headline
+
+SkillRun adds release polish and the first explicit headless consumer control-plane contracts before Desktop: inventory, exposure, run history summary, and mount planning.
+
+### What Is Included
+
+- Maintainer-oriented release checklist documentation.
+- CI failure diagnostics review for `cargo test` GitHub annotations.
+- Headless consumer contract documentation for future Desktop, Router, mount planning, exposure, and run history surfaces.
+- Run history contract review defining registry-scoped list semantics, input privacy boundaries, and why `runs inspect` should not be bundled into v0.5.6 by default.
+- Mount plan contract review defining Router-only mounting, plan-first output, and why apply/rollback should not be bundled into v0.5.6 by default.
+- `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
+- `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for future Router consumers.
+- `skillrun consumer runs list --json` as a registry-scoped run evidence summary for future Envelope Explorer consumers.
+- `skillrun consumer mount plan --client <id> --json` as a plan-only MCP client configuration preview.
+- Contract fixture coverage for enabled consumer inventory output.
+- Registry degradation coverage showing consumer inventory tolerates missing capsule paths and invalid Manifest entries without failing the whole list.
+- Exposure coverage showing disabled capsules and no-longer-ready enabled capsules are not exposed.
+- Run list coverage showing summary output omits full input/envelope/log content and degrades invalid run records without failing the whole list.
+- Mount plan coverage showing missing configs, existing configs, unsupported clients, and unparseable configs do not mutate real client files.
+
+### Boundaries
+
+- v0.5.6 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- `consumer inventory --json` and `consumer exposure --json` are read-only control-plane surfaces over local registry readiness semantics.
+- `consumer runs list --json` is a read-only summary over registered capsules only; it is not a global run database and does not include full input, artifact content, log content, or `runs inspect`.
+- `consumer mount plan --client <id> --json` is plan-only. v0.5.6 does not implement apply/rollback and does not modify real MCP client configuration.
+- Mount plan targets the future SkillRun Router and emits a warning because v0.5.6 does not add Router runtime.
+- Run history remains evidence-first; Desktop should consume Core JSON surfaces instead of reading `.skillrun/runs` directly.
+- Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
+- `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- `cargo run --quiet -- --version`
+- `cargo test --test registry`
+- `cargo test --test mount_plan`
+- `cargo test --test consumer_json_contracts`
+- docs relative links check
+- Remote CI passed on `codex/v0.5.6-release-polish`: https://github.com/iiwish/skillrun/actions/runs/25991340718
+
 ## v0.5.5
 
 Status: Released
