@@ -254,6 +254,104 @@ fn switchboard_enable_disable_and_list_json_updates_registry_state() {
 }
 
 #[test]
+fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
+    let (output_root, capsule) = generated_capsule("consumer-runs-list");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+
+    let run = assert_success_json(&run_skillrun(&["test", "--cwd", &cwd_arg], &skillrun_home));
+    let run_id = run["run_id"]
+        .as_str()
+        .expect("run envelope should include run_id");
+
+    let list = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "list", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(list["command"], "consumer runs list");
+    assert_eq!(list["schema_version"], "consumer.runs.list.v1");
+    assert_eq!(list["scope"]["kind"], "registry");
+    assert!(list["scope"]["capsule_id"].is_null());
+
+    let runs = list["runs"].as_array().expect("runs should be an array");
+    assert_eq!(runs.len(), 1);
+    let summary = &runs[0];
+    assert_eq!(summary["run_id"], run_id);
+    assert_eq!(summary["run_ref"]["kind"], "local_run");
+    assert_eq!(summary["run_ref"]["capsule_id"], "refund");
+    assert_eq!(summary["run_ref"]["run_id"], run_id);
+    assert_eq!(summary["capsule_id"], "refund");
+    assert_eq!(summary["mode"], "test");
+    assert_eq!(summary["status"], "succeeded");
+    assert_eq!(summary["ok"], true);
+    assert!(summary["error_code"].is_null());
+    assert_eq!(summary["artifact_count"], 0);
+    assert_eq!(summary["input_included"], false);
+    assert!(summary.get("input").is_none());
+    assert!(summary.get("envelope").is_none());
+    assert!(summary.get("stdout").is_none());
+    assert!(summary.get("stderr").is_none());
+
+    let scoped = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "list",
+            "--json",
+            "--capsule",
+            "refund",
+            "--limit",
+            "1",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(scoped["scope"]["capsule_id"], "refund");
+    assert_eq!(scoped["runs"].as_array().unwrap().len(), 1);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn consumer_runs_list_degrades_invalid_run_records_without_failing() {
+    let (output_root, capsule) = generated_capsule("consumer-runs-invalid-record");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+
+    let run = assert_success_json(&run_skillrun(&["test", "--cwd", &cwd_arg], &skillrun_home));
+    let run_id = run["run_id"]
+        .as_str()
+        .expect("run envelope should include run_id");
+    fs::write(
+        capsule
+            .join(".skillrun")
+            .join("runs")
+            .join(run_id)
+            .join("record.json"),
+        "{not-json",
+    )
+    .expect("test should corrupt run record");
+
+    let list = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "list", "--json"],
+        &skillrun_home,
+    ));
+    let runs = list["runs"].as_array().expect("runs should be an array");
+    assert_eq!(runs.len(), 1);
+    assert_eq!(runs[0]["run_id"], run_id);
+    assert_eq!(runs[0]["status"], "invalid-record");
+    assert!(runs[0]["ok"].is_null());
+    assert_eq!(runs[0]["input_included"], false);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn registry_and_switchboard_lists_tolerate_missing_capsule_paths() {
     let (output_root, capsule) = generated_capsule("registry-missing-path");
     let skillrun_home = output_root.join("skillrun-home");

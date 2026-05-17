@@ -144,10 +144,24 @@ where
                         ExitCode::from(2)
                     }
                 },
+                ConsumerCommand::RunsList {
+                    json,
+                    capsule,
+                    limit,
+                } => match registry::consumer_runs_list(json, capsule.as_deref(), limit) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun consumer <inventory|exposure> [options]");
+                eprintln!("usage: skillrun consumer <inventory|exposure|runs> [options]");
                 ExitCode::from(2)
             }
         },
@@ -290,8 +304,17 @@ struct ServeOptions {
 }
 
 enum ConsumerCommand {
-    Inventory { json: bool },
-    Exposure { json: bool },
+    Inventory {
+        json: bool,
+    },
+    Exposure {
+        json: bool,
+    },
+    RunsList {
+        json: bool,
+        capsule: Option<String>,
+        limit: Option<usize>,
+    },
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -455,6 +478,7 @@ fn parse_consumer(args: Vec<String>) -> Result<ConsumerCommand, String> {
     match command {
         "inventory" => parse_consumer_inventory(rest),
         "exposure" => parse_consumer_exposure(rest),
+        "runs" => parse_consumer_runs(rest),
         value => Err(format!("unknown consumer subcommand: {value}")),
     }
 }
@@ -483,6 +507,60 @@ fn parse_consumer_exposure(args: Vec<String>) -> Result<ConsumerCommand, String>
     }
 
     Ok(ConsumerCommand::Exposure { json })
+}
+
+fn parse_consumer_runs(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer runs requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "list" => parse_consumer_runs_list(rest),
+        value => Err(format!("unknown consumer runs subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+    let mut capsule = None;
+    let mut limit = None;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            "--capsule" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--capsule requires a registry id".to_string());
+                };
+                capsule = Some(value.to_string());
+                index += 2;
+            }
+            "--limit" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--limit requires a number".to_string());
+                };
+                let parsed = value
+                    .parse::<usize>()
+                    .map_err(|_| format!("--limit must be a positive integer: {value}"))?;
+                if parsed == 0 {
+                    return Err("--limit must be greater than 0".to_string());
+                }
+                limit = Some(parsed);
+                index += 2;
+            }
+            value => return Err(format!("unexpected consumer runs list argument: {value}")),
+        }
+    }
+
+    Ok(ConsumerCommand::RunsList {
+        json,
+        capsule,
+        limit,
+    })
 }
 
 fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
@@ -754,6 +832,7 @@ Implemented:
   doctor [--json]
   consumer inventory [--json]
   consumer exposure [--json]
+  consumer runs list [--json] [--capsule <id>] [--limit <n>]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test

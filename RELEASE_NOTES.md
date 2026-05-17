@@ -18,15 +18,18 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - Run history contract review defining registry-scoped list semantics, input privacy boundaries, and why `runs inspect` should not be bundled into v0.5.6 by default.
 - `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
 - `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for future Router consumers.
+- `skillrun consumer runs list --json` as a registry-scoped run evidence summary for future Envelope Explorer consumers.
 - Contract fixture coverage for enabled consumer inventory output.
 - Registry degradation coverage showing consumer inventory tolerates missing capsule paths and invalid Manifest entries without failing the whole list.
 - Exposure coverage showing disabled capsules and no-longer-ready enabled capsules are not exposed.
+- Run list coverage showing summary output omits full input/envelope/log content and degrades invalid run records without failing the whole list.
 
 ### Boundaries
 
 - v0.5.6 does not add Desktop, Tauri, `skillrun ui`, a daemon, Router runtime, MCP client config mutation, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
 - `consumer inventory --json` and `consumer exposure --json` are read-only control-plane surfaces over local registry readiness semantics.
-- Run history remains evidence-first; Desktop should consume future Core JSON surfaces instead of reading `.skillrun/runs` directly.
+- `consumer runs list --json` is a read-only summary over registered capsules only; it is not a global run database and does not include full input, artifact content, log content, or `runs inspect`.
+- Run history remains evidence-first; Desktop should consume Core JSON surfaces instead of reading `.skillrun/runs` directly.
 - Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
 - `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
 
