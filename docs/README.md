@@ -27,6 +27,8 @@
 - [v0.5.2 Consumer JSON Surface](v0.5.2-consumer-json-surface.md)：为 Desktop、Router 和自动化提供 `inspect/check/doctor --json` 的只读机器接口计划。
 - [v0.5.3 Capsule Registry + Switchboard](v0.5.3-capsule-registry-switchboard.md)：为 v0.6 建立本地 capsule inventory 与 enable/disable 控制面计划。
 - [v0.5.4 Core Stabilization Audit](v0.5.4-core-stabilization-audit.md)：进入 Desktop 前对整个 `skillrun` Core 的稳定化审核、风险清单和修复 work graph。
+- [v0.5.5 Core Contract Hardening](v0.5.5-core-contract-hardening.md)：进入 Desktop / v0.6 前的 Manifest、schema 与 adapter lifecycle 合同硬化。
+- [v0.5.5 Release Gate Review](v0.5.5-release-gate-review.md)：用命令合同矩阵确认 Consumer Mode 执行、MCP 暴露和 `.skr` 分发共享 Manifest 静态合同。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 

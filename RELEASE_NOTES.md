@@ -1,5 +1,51 @@
 # SkillRun Release Notes
 
+## v0.5.5
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-17
+Publication: pending v0.5.5 tag, remote push, GitHub Release publication, and any package publication decision
+
+### Headline
+
+SkillRun hardens the Manifest-driven Consumer Mode contract before Desktop: execution, MCP exposure, and `.skr` distribution now share the same static Manifest validation boundary.
+
+### Version Layers
+
+- Binary/crate version is `0.5.5`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included
+
+- Shared `ManifestView` access helpers for frequently read Manifest fields.
+- Consumer Mode static Manifest contract validation in `consumer::validate`.
+- Runtime fail-closed behavior for missing `runtime.adapter` / `runtime.entrypoint`.
+- Manifest schema contract validation before Manifest generation, readiness success, runtime execution, MCP dry-run contract output, and `.skr` archive creation.
+- Core schema validator support for `minLength` and `minimum`.
+- Rejection of unsupported or malformed schema `type` declarations.
+- Adapter timeout handling moved into a shared process helper.
+- Best-effort process-tree termination on timeout: Windows uses `taskkill /T /F`; Unix uses process groups with `TERM` / `KILL`.
+- Release gate review documenting command-by-command Consumer Mode boundaries.
+
+### Boundaries
+
+- v0.5.5 does not add Desktop, Tauri, Router, daemon, MCP client mounting, marketplace, signed package verification, dependency installation, or OS sandboxing.
+- Schema validation is a SkillRun-supported JSON Schema subset, not a full JSON Schema engine claim.
+- `serve --mcp` validates the Manifest at server startup and uses that startup snapshot for the stdio server lifecycle; it does not hot-reload Manifest changes.
+- Registry remains local inventory. `registry add` does not mean trust, enablement, install, or runnable certification.
+- Adapter timeout cleanup is best-effort process lifecycle control, not a security sandbox.
+- `.skr` remains a source + Manifest archive. It is not signed, not a dependency bundle, not a registry package, and not a reproducible runtime image.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- Remote CI must pass before merge/tag publication.
+
 ## v0.5.4
 
 Status: Ready_For_Release_Decision
