@@ -815,6 +815,38 @@ fn check_reports_stale_manifest_without_creating_run_records() {
 }
 
 #[test]
+fn check_reports_invalid_schema_contract_without_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("check-invalid-schema-contract");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let check = run_skillrun(&["check", "--cwd", &cwd_arg]);
+    let stdout = assert_failure_stdout(&check, "invalid schema check");
+
+    for expected in [
+        "status: invalid-manifest",
+        "manifest freshness: fresh",
+        "reason: schemas.input $ schema type must be a string or string array",
+        "note: check reads Manifest, files and hashes only; it does not run or import action source.",
+    ] {
+        assert!(
+            stdout.contains(expected),
+            "invalid schema check missing {expected:?}\n{stdout}"
+        );
+    }
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "check must not create run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn doctor_does_not_import_js_action_for_metadata() {
     let (output_root, capsule) = generated_js_capsule("doctor-js-no-import");
     let marker = output_root.join("doctor-import-marker.txt");

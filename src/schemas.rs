@@ -11,6 +11,80 @@ pub fn validate_value(schema: &Value, value: &Value) -> Result<(), String> {
     validate_at(schema, value, "$")
 }
 
+pub fn validate_schemas(schemas: &Schemas) -> Result<(), String> {
+    validate_schema_contract(&schemas.input)
+        .map_err(|error| format!("input schema contract invalid: {error}"))?;
+    validate_schema_contract(&schemas.output)
+        .map_err(|error| format!("output schema contract invalid: {error}"))
+}
+
+pub fn validate_schema_contract(schema: &Value) -> Result<(), String> {
+    validate_schema_contract_at(schema, "$")
+}
+
+fn validate_schema_contract_at(schema: &Value, path: &str) -> Result<(), String> {
+    let object = schema
+        .as_object()
+        .ok_or_else(|| format!("{path} schema must be an object"))?;
+
+    if let Some(type_value) = object.get("type") {
+        allowed_schema_types(type_value, path)?;
+    }
+
+    if let Some(enum_value) = object.get("enum") {
+        let values = enum_value
+            .as_array()
+            .ok_or_else(|| format!("{path}.enum must be an array"))?;
+        if values.is_empty() {
+            return Err(format!("{path}.enum must not be empty"));
+        }
+    }
+
+    if let Some(required_value) = object.get("required") {
+        let required = required_value
+            .as_array()
+            .ok_or_else(|| format!("{path}.required must be an array of strings"))?;
+        for item in required {
+            if !item.is_string() {
+                return Err(format!("{path}.required must contain only strings"));
+            }
+        }
+    }
+
+    if let Some(properties_value) = object.get("properties") {
+        let properties = properties_value
+            .as_object()
+            .ok_or_else(|| format!("{path}.properties must be an object"))?;
+        for (key, property_schema) in properties {
+            validate_schema_contract_at(property_schema, &format!("{path}.properties.{key}"))?;
+        }
+    }
+
+    if let Some(items_schema) = object.get("items") {
+        validate_schema_contract_at(items_schema, &format!("{path}.items"))?;
+    }
+
+    if let Some(min_length) = object.get("minLength") {
+        if min_length.as_u64().is_none() {
+            return Err(format!("{path}.minLength must be a non-negative integer"));
+        }
+    }
+
+    if let Some(minimum) = object.get("minimum") {
+        if minimum.as_f64().is_none() {
+            return Err(format!("{path}.minimum must be a number"));
+        }
+    }
+
+    if let Some(additional_properties) = object.get("additionalProperties") {
+        if !additional_properties.is_boolean() {
+            return Err(format!("{path}.additionalProperties must be a boolean"));
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_at(schema: &Value, value: &Value, path: &str) -> Result<(), String> {
     if let Some(allowed) = schema.get("enum").and_then(Value::as_array) {
         if !allowed.iter().any(|item| item == value) {
@@ -86,6 +160,19 @@ fn validate_array(schema: &Value, value: &Value, path: &str) -> Result<(), Strin
 }
 
 fn validate_type(type_value: &Value, value: &Value, path: &str) -> Result<(), String> {
+    let allowed = allowed_schema_types(type_value, path)?;
+
+    if allowed
+        .iter()
+        .any(|expected| value_matches_type(value, expected))
+    {
+        Ok(())
+    } else {
+        Err(format!("{path} must be {}", allowed.join(" or ")))
+    }
+}
+
+fn allowed_schema_types<'a>(type_value: &'a Value, path: &str) -> Result<Vec<&'a str>, String> {
     let allowed = match type_value {
         Value::String(single) => vec![single.as_str()],
         Value::Array(items) => {
@@ -116,14 +203,7 @@ fn validate_type(type_value: &Value, value: &Value, path: &str) -> Result<(), St
         }
     }
 
-    if allowed
-        .iter()
-        .any(|expected| value_matches_type(value, expected))
-    {
-        Ok(())
-    } else {
-        Err(format!("{path} must be {}", allowed.join(" or ")))
-    }
+    Ok(allowed)
 }
 
 fn value_matches_type(value: &Value, expected: &str) -> bool {
@@ -200,7 +280,7 @@ fn render_enum(values: &[Value]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_value;
+    use super::{validate_schema_contract, validate_schemas, validate_value, Schemas};
     use serde_json::json;
 
     #[test]
@@ -248,6 +328,62 @@ mod tests {
         assert_eq!(
             validate_value(&json!({ "type": ["string", 42] }), &json!("value")).unwrap_err(),
             "$ schema type array must contain only strings"
+        );
+    }
+
+    #[test]
+    fn validates_schema_contract_without_values() {
+        let schema = json!({
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "items": {
+                    "type": "array",
+                    "items": { "type": "integer", "minimum": 1 }
+                }
+            },
+            "additionalProperties": false
+        });
+
+        assert!(validate_schema_contract(&schema).is_ok());
+    }
+
+    #[test]
+    fn rejects_invalid_schema_contract_shapes() {
+        assert_eq!(
+            validate_schema_contract(&json!({ "type": 42 })).unwrap_err(),
+            "$ schema type must be a string or string array"
+        );
+        assert_eq!(
+            validate_schema_contract(&json!({ "type": "object", "required": ["name", 42] }))
+                .unwrap_err(),
+            "$.required must contain only strings"
+        );
+        assert_eq!(
+            validate_schema_contract(&json!({ "type": "object", "properties": [] })).unwrap_err(),
+            "$.properties must be an object"
+        );
+        assert_eq!(
+            validate_schema_contract(&json!({ "type": "array", "items": [] })).unwrap_err(),
+            "$.items schema must be an object"
+        );
+        assert_eq!(
+            validate_schema_contract(&json!({ "type": "string", "minLength": -1 })).unwrap_err(),
+            "$.minLength must be a non-negative integer"
+        );
+    }
+
+    #[test]
+    fn validates_schema_pair_contract() {
+        let schemas = Schemas {
+            input: json!({ "type": "object" }),
+            output: json!({ "type": [] }),
+        };
+
+        assert_eq!(
+            validate_schemas(&schemas).unwrap_err(),
+            "output schema contract invalid: $ schema type array must not be empty"
         );
     }
 }

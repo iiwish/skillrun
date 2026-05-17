@@ -509,6 +509,39 @@ fn manifest_generates_command_adapter_with_static_schemas_and_argv() {
 }
 
 #[test]
+fn manifest_rejects_invalid_static_schema_contract() {
+    let output_root = temp_dir("manifest-invalid-static-schema");
+    let capsule = output_root.join("command_hello");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# command hello").expect("skill should be written");
+    fs::write(capsule.join("action.rb"), "puts 'not imported'\n")
+        .expect("action should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["ruby", "action.rb"]
+  },
+  "input_schema": { "type": 42 },
+  "output_schema": { "type": "object" }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(!manifest.status.success());
+    let stderr = String::from_utf8(manifest.stderr).expect("stderr should be utf-8");
+    assert!(stderr
+        .contains("input schema contract invalid: $ schema type must be a string or string array"));
+    assert!(!generated_manifest(&capsule).exists());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn manifest_rejects_command_adapter_shell_string() {
     let output_root = temp_dir("manifest-command-shell-string");
     let capsule = output_root.join("command_hello");

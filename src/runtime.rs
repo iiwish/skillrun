@@ -88,6 +88,7 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
     let entrypoint = manifest_view
         .runtime_entrypoint()
         .ok_or_else(|| "invalid Manifest: missing runtime.entrypoint".to_string())?;
+    validate_manifest_schema_contract(&manifest_view)?;
     let command = manifest_view.runtime_command()?;
     let timeout = manifest_view
         .runtime_timeout()
@@ -220,6 +221,20 @@ fn execute_value(capsule_dir: &Path, input_value: Value, mode: &str) -> Result<R
         },
         envelope,
     )
+}
+
+fn validate_manifest_schema_contract(manifest: &ManifestView<'_>) -> Result<(), String> {
+    let input_schema = manifest
+        .input_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.input".to_string())?;
+    schemas::validate_schema_contract(&input_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.input {error}"))?;
+
+    let output_schema = manifest
+        .output_schema_json()
+        .ok_or_else(|| "invalid Manifest: missing schemas.output".to_string())?;
+    schemas::validate_schema_contract(&output_schema)
+        .map_err(|error| format!("invalid Manifest: schemas.output {error}"))
 }
 
 fn write_empty_logs(paths: &RunPaths) -> Result<(), String> {

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::adapters;
 use crate::config::{self, ManifestPermissions, RuntimeConfig};
 use crate::hashing;
-use crate::schemas::Schemas;
+use crate::schemas::{self, Schemas};
 
 #[derive(Debug)]
 pub struct ManifestOptions {
@@ -107,6 +107,7 @@ pub fn generate(options: &ManifestOptions) -> Result<PathBuf, String> {
     } else {
         adapters::extract_schemas(&adapter, &capsule_dir, &action_path)?
     };
+    schemas::validate_schemas(&schemas)?;
     let skill_hash = hashing::sha256_file(&skill_path)?;
     let action_hash = hashing::sha256_file(&action_path)?;
     let config_source = if config_path.exists() {

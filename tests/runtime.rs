@@ -343,6 +343,32 @@ fn runtime_rejects_missing_runtime_entrypoint_before_creating_run_records() {
 }
 
 #[test]
+fn runtime_rejects_invalid_schema_contract_before_creating_run_records() {
+    let (output_root, capsule) = generated_capsule("runtime-invalid-schema-contract");
+    let manifest_path = capsule.join(".skillrun").join("manifest.generated.yaml");
+    let manifest = fs::read_to_string(&manifest_path)
+        .expect("manifest should be readable")
+        .replacen("type: object", "type: 42", 1);
+    fs::write(&manifest_path, manifest).expect("manifest should be writable");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let output = run_skillrun(&["test", "--cwd", &cwd_arg]);
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert_contains(
+        &stderr,
+        "invalid Manifest: schemas.input $ schema type must be a string or string array",
+    );
+    assert!(
+        !capsule.join(".skillrun").join("runs").exists(),
+        "invalid schema contract should fail before creating run records"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn test_returns_dependency_error_when_python_is_missing() {
     let (output_root, capsule) = generated_capsule("runtime-missing-python");
     let fake_path = output_root.join("empty-path");

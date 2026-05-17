@@ -7,6 +7,7 @@ use crate::adapters;
 use crate::hashing;
 use crate::manifest;
 use crate::manifest_access::{string_at, value_at, ManifestView};
+use crate::schemas;
 
 pub struct ReadinessReport {
     pub cwd: PathBuf,
@@ -196,6 +197,12 @@ fn report_with_manifest(
     let requirements = requirements_view(&manifest);
     let dependency_checks = dependency_checks(adapter.as_deref(), &requirements);
     let runtime_present = adapter.is_some() && entrypoint.is_some();
+    let schema_contract_error = schema_contract_error(&manifest_view);
+    let invalid_manifest_reason = if !runtime_present {
+        Some("missing runtime.adapter or runtime.entrypoint".to_string())
+    } else {
+        schema_contract_error
+    };
     let all_fresh = source_checks.iter().all(|check| check.status == "fresh");
     let examples_present = example_checks.iter().all(|check| check.present);
     let dependencies_ready = dependency_checks
@@ -203,7 +210,7 @@ fn report_with_manifest(
         .all(|check| check.status == "satisfied");
     let status = if !all_fresh {
         "stale-manifest"
-    } else if !runtime_present {
+    } else if invalid_manifest_reason.is_some() {
         "invalid-manifest"
     } else if !examples_present {
         "missing-examples"
@@ -224,6 +231,11 @@ fn report_with_manifest(
         "dependency-error" => "Install or select a runtime matching the declared requirements, then retry `skillrun check`.".to_string(),
         _ => format!("Run `skillrun manifest --cwd {}`.", cwd.display()),
     };
+    let reason = if status == "invalid-manifest" {
+        invalid_manifest_reason
+    } else {
+        None
+    };
 
     Ok(ReadinessReport {
         cwd,
@@ -232,7 +244,7 @@ fn report_with_manifest(
         manifest_present: true,
         status: status.to_string(),
         freshness: freshness.to_string(),
-        reason: None,
+        reason,
         next_step,
         adapter,
         entrypoint,
@@ -242,6 +254,26 @@ fn report_with_manifest(
         example_checks,
         ok: status == "ok",
     })
+}
+
+fn schema_contract_error(manifest: &ManifestView<'_>) -> Option<String> {
+    let input_schema = match manifest.input_schema_json() {
+        Some(schema) => schema,
+        None => return Some("missing schemas.input".to_string()),
+    };
+    if let Err(error) = schemas::validate_schema_contract(&input_schema) {
+        return Some(format!("schemas.input {error}"));
+    }
+
+    let output_schema = match manifest.output_schema_json() {
+        Some(schema) => schema,
+        None => return Some("missing schemas.output".to_string()),
+    };
+    if let Err(error) = schemas::validate_schema_contract(&output_schema) {
+        return Some(format!("schemas.output {error}"));
+    }
+
+    None
 }
 
 fn source_checks(cwd: &Path, manifest: &ManifestView<'_>) -> Vec<SourceCheck> {
