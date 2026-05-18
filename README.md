@@ -36,13 +36,13 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current public release: `v0.5.12`.
+Current public release candidate: `v0.5.13`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.5.12
+# skillrun 0.5.13
 ```
 
 Available today:
@@ -71,7 +71,7 @@ Available today:
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.12 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
+v0.5.13 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
 
 ## Quickstart
 
@@ -180,12 +180,12 @@ The key rule for one-click mounting is: mount the SkillRun Router, not individua
 SkillRun uses separate version layers:
 
 - `Cargo.toml` and `skillrun --version` identify the binary/crate version.
-- Git tags such as `v0.5.12` identify public release boundaries.
-- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, v0.5.9, v0.5.10, v0.5.11, and v0.5.12 describe delivery scope.
+- Git tags such as `v0.5.13` identify public release boundaries.
+- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, v0.5.9, v0.5.10, v0.5.11, v0.5.12, and v0.5.13 describe delivery scope.
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.12 adds local `.skr` import without changing those protocol versions.
+The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.13 hardens the `.skr import` to Router exposure contract without changing those protocol versions.
 
 ## Roadmap
 
@@ -204,6 +204,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 | `v0.5.10` | Consumer Contract Hardening before Desktop |
 | `v0.5.11` | Runs Inspect for Desktop Envelope Explorer |
 | `v0.5.12` | Capsule Import for Desktop-ready local inventory |
+| `v0.5.13` | Import-to-Router contract hardening before Desktop |
 | `v0.6` | Proposed Consumer Era Desktop and local control plane |
 
 ## Examples
@@ -234,6 +235,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.10 Consumer Contract Hardening](docs/v0.5.10-consumer-contract-hardening.md)
 - [v0.5.11 Runs Inspect](docs/v0.5.11-runs-inspect.md)
 - [v0.5.12 Capsule Import](docs/v0.5.12-capsule-import.md)
+- [v0.5.13 Import Router Contract](docs/v0.5.13-import-router-contract.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
