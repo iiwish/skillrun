@@ -2,9 +2,9 @@
 
 ## v0.5.9
 
-Status: In progress
+Status: Release candidate
 Prepared on: 2026-05-18
-Publication: Not released; implementation branch `codex/v0.5.9-safe-mount-apply`
+Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
 
 ### Headline
 
@@ -12,7 +12,7 @@ SkillRun turns mount planning into a reversible headless execution path: Core ow
 
 ### Version Layers
 
-- Binary/crate version remains `0.5.8` until release preparation.
+- Binary/crate version is `0.5.9`.
 - Manifest IR `manifest_version` remains `0.1.0`.
 - IPC / Adapter `protocol_version` remains `0.1.0`.
 - Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
@@ -38,7 +38,12 @@ SkillRun turns mount planning into a reversible headless execution path: Core ow
 
 - `cargo test --test mount_plan`
 - `cargo test --test cli`
-- Full release validation pending before any `v0.5.9` tag
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- Release branch CI, main CI, tag, and GitHub Release publication are required before final release status
 
 ## v0.5.8
 
