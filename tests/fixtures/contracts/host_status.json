@@ -83,6 +83,11 @@
     "ipc_protocol_version": "0.1.0",
     "manifest_ir_version": "0.1.0"
   },
+  "desktop_contract": {
+    "name": "desktop.alpha",
+    "status": "frozen",
+    "version": 1
+  },
   "ok": true,
   "paths": {
     "current_exe": "<skillrun_exe>",

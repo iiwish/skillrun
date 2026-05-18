@@ -33,6 +33,21 @@ struct ImportView {
 }
 
 #[derive(Debug, Serialize)]
+struct ImportErrorView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    error: ImportErrorDetailView,
+    warnings: Vec<ImportWarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ImportErrorDetailView {
+    code: &'static str,
+    message: String,
+}
+
+#[derive(Debug, Serialize)]
 struct ImportedCapsuleView {
     id: String,
     path: String,
@@ -44,6 +59,20 @@ struct ImportedCapsuleView {
 struct ImportWarningView {
     code: &'static str,
     message: &'static str,
+}
+
+pub fn error_json(message: &str) -> Result<String, String> {
+    let view = ImportErrorView {
+        command: "import",
+        schema_version: "import.v1",
+        ok: false,
+        error: ImportErrorDetailView {
+            code: import_error_code(message),
+            message: message.to_string(),
+        },
+        warnings: Vec::new(),
+    };
+    serde_json::to_string_pretty(&view).map_err(|error| error.to_string())
 }
 
 pub fn run(options: &ImportOptions) -> Result<ImportOutput, String> {
@@ -219,6 +248,26 @@ fn normalize_package_path(path: &Path) -> Result<PathBuf, String> {
         return Err("package path escapes import target: empty entry path".to_string());
     }
     Ok(normalized)
+}
+
+fn import_error_code(message: &str) -> &'static str {
+    if message.starts_with("registry id already exists") {
+        "registry-id-exists"
+    } else if message.starts_with("import target already exists") {
+        "import-target-exists"
+    } else if message.starts_with("package does not exist") {
+        "package-not-found"
+    } else if message.starts_with("package is not a file") {
+        "package-not-file"
+    } else if message.starts_with("package path escapes import target") {
+        "package-path-escape"
+    } else if message.starts_with("unsupported package entry type") {
+        "unsupported-package-entry"
+    } else if message.contains("Manifest") || message.contains("manifest") {
+        "invalid-manifest"
+    } else {
+        "import-failed"
+    }
 }
 
 fn import_warnings() -> Vec<ImportWarningView> {

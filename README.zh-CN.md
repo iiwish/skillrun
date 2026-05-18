@@ -36,15 +36,15 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前开发线：`v0.5.14`。
+当前开发线：`v0.5.15`。
 
-最新公开 release：`v0.5.13`。
+最新公开 release：`v0.5.14`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.5.14
+# skillrun 0.5.15
 ```
 
 当前已经可用：
@@ -54,7 +54,7 @@ skillrun --version
 - Level 0 `command` adapter，用显式 argv 进程遵守 SkillRun IPC。
 - Manifest generation，包含 source hash 与 runtime contract 字段。
 - `inspect`、`check`、`doctor` 的 human 和 JSON surface。
-- `host status --json`，用于 Desktop / tray host readiness 握手。
+- `host status --json`，用于 Desktop / tray host readiness 握手和 `desktop.alpha` contract set。
 - `test`、`run` 输出结构化 output/error envelope。
 - 从 Manifest 派生 MCP stdio server。
 - `.skr` source + Manifest package。
@@ -74,7 +74,7 @@ skillrun --version
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.14 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、package update/reinstall、import from URL、marketplace、`--include-input`、artifact content read、log content read、global run index 或 OS sandbox。
+v0.5.15 冻结 Desktop alpha contract set，并让 `import --json` 的运行期失败也变成机器可读合同。它刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、package update/reinstall、import from URL、marketplace、`--include-input`、artifact content read、log content read、global run index 或 OS sandbox。
 
 ## 快速开始
 
@@ -178,19 +178,19 @@ skillrun-desktop
 
 一键挂载的核心规则是：挂载 SkillRun Router，而不是直接挂 `.skr` 或 capsule 文件夹。`.skr` 是 import/distribution artifact，Router 才是 MCP runtime entry。
 
-托盘应用应使用 `skillrun host status --json` 做 Core 握手，用短跑 JSON 命令刷新状态。托盘不应把 `skillrun router serve --mcp` 作为隐藏 daemon 启动；MCP client 通过已挂载配置启动 Router。
+托盘应用应使用 `skillrun host status --json` 做 Core 握手，用短跑 JSON 命令刷新状态。它应绑定 `desktop.alpha` contract version `1`，而不是从人类文本推断兼容性。托盘不应把 `skillrun router serve --mcp` 作为隐藏 daemon 启动；MCP client 通过已挂载配置启动 Router。
 
 ## 版本层级
 
 SkillRun 同时存在几类版本：
 
 - `Cargo.toml` 和 `skillrun --version` 标识 binary/crate version。
-- `v0.5.13` 这类 Git tag 标识公开 release 边界。
-- v0.5.4、v0.5.5、v0.5.6、v0.5.7、v0.5.8、v0.5.9、v0.5.10、v0.5.11、v0.5.12、v0.5.13、v0.5.14 这类 milestone 描述交付范围。
+- `v0.5.14` 这类 Git tag 标识公开 release 边界。
+- v0.5.4、v0.5.5、v0.5.6、v0.5.7、v0.5.8、v0.5.9、v0.5.10、v0.5.11、v0.5.12、v0.5.13、v0.5.14、v0.5.15 这类 milestone 描述交付范围。
 - Manifest `manifest_version` 标识 Manifest IR schema。
 - IPC / Adapter `protocol_version` 标识 Core 到 adapter process 的文件协议。
 
-当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.14 增加 Desktop host readiness，但不改变这些协议版本。
+当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.15 冻结 Desktop alpha contract set，但不改变这些协议版本。
 
 ## 路线图
 
@@ -211,6 +211,7 @@ SkillRun 同时存在几类版本：
 | `v0.5.12` | 面向 Desktop 本地 inventory 的 Capsule Import |
 | `v0.5.13` | Desktop 前的 Import-to-Router contract hardening |
 | `v0.5.14` | 面向 tray-first Desktop 的 Core host readiness 握手 |
+| `v0.5.15` | 面向 `desktop.alpha` 与 import JSON error 的 Desktop Contract Freeze |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
 ## 示例
@@ -243,6 +244,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.12 Capsule Import](docs/v0.5.12-capsule-import.md)
 - [v0.5.13 Import Router Contract](docs/v0.5.13-import-router-contract.md)
 - [v0.5.14 Desktop Host Readiness](docs/v0.5.14-desktop-host-readiness.md)
+- [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)

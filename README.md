@@ -36,15 +36,15 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current development line: `v0.5.14`.
+Current development line: `v0.5.15`.
 
-Latest public release: `v0.5.13`.
+Latest public release: `v0.5.14`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.5.14
+# skillrun 0.5.15
 ```
 
 Available today:
@@ -54,7 +54,7 @@ Available today:
 - Level 0 `command` adapter for explicit argv processes that obey SkillRun IPC.
 - Manifest generation with source hashes and runtime contract fields.
 - `inspect`, `check`, and `doctor` human and JSON surfaces.
-- `host status --json` for Desktop/tray host readiness.
+- `host status --json` for Desktop/tray host readiness and the `desktop.alpha` contract set.
 - `test` and `run` with structured output/error envelopes.
 - MCP stdio server from Manifest-derived tools and resources.
 - `.skr` source + Manifest packaging.
@@ -74,7 +74,7 @@ Available today:
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.14 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
+v0.5.15 freezes the Desktop alpha contract set and makes `import --json` runtime failures machine-readable. It intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
 
 ## Quickstart
 
@@ -178,19 +178,19 @@ skillrun-desktop
 
 The key rule for one-click mounting is: mount the SkillRun Router, not individual `.skr` files or capsule folders. `.skr` is an import/distribution artifact. Router is the MCP runtime entry.
 
-The tray should use `skillrun host status --json` for Core handshake and short-running JSON commands for refresh. It should not run `skillrun router serve --mcp` as a hidden daemon; MCP clients start the Router through their mounted config.
+The tray should use `skillrun host status --json` for Core handshake and short-running JSON commands for refresh. It should bind to `desktop.alpha` contract version `1`, not infer compatibility from human text. It should not run `skillrun router serve --mcp` as a hidden daemon; MCP clients start the Router through their mounted config.
 
 ## Version Layers
 
 SkillRun uses separate version layers:
 
 - `Cargo.toml` and `skillrun --version` identify the binary/crate version.
-- Git tags such as `v0.5.13` identify public release boundaries.
-- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, v0.5.9, v0.5.10, v0.5.11, v0.5.12, v0.5.13, and v0.5.14 describe delivery scope.
+- Git tags such as `v0.5.14` identify public release boundaries.
+- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, v0.5.9, v0.5.10, v0.5.11, v0.5.12, v0.5.13, v0.5.14, and v0.5.15 describe delivery scope.
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.14 adds Desktop host readiness without changing those protocol versions.
+The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.15 freezes the Desktop alpha contract set without changing those protocol versions.
 
 ## Roadmap
 
@@ -211,6 +211,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 | `v0.5.12` | Capsule Import for Desktop-ready local inventory |
 | `v0.5.13` | Import-to-Router contract hardening before Desktop |
 | `v0.5.14` | Desktop Host Readiness for tray-first Core handshake |
+| `v0.5.15` | Desktop Contract Freeze for `desktop.alpha` and import JSON errors |
 | `v0.6` | Proposed Consumer Era Desktop and local control plane |
 
 ## Examples
@@ -243,6 +244,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.12 Capsule Import](docs/v0.5.12-capsule-import.md)
 - [v0.5.13 Import Router Contract](docs/v0.5.13-import-router-contract.md)
 - [v0.5.14 Desktop Host Readiness](docs/v0.5.14-desktop-host-readiness.md)
+- [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
