@@ -1,8 +1,14 @@
-use serde::{Deserialize, Serialize};
+mod backup;
+mod client;
+
+use backup::{
+    backup_id, backup_path_for, backup_path_preview_for, read_backup_file, MountBackupFile,
+};
+use client::{client_spec, selected_config_path, ClientSpec};
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct MountPlanOptions {
     pub client: String,
@@ -142,24 +148,6 @@ struct WarningView {
     message: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct MountBackupFile {
-    schema_version: String,
-    created_by: String,
-    id: String,
-    client_id: String,
-    config_path: String,
-    router_entry: Value,
-    original_exists: bool,
-    original_config: Option<Value>,
-}
-
-struct ClientSpec {
-    id: &'static str,
-    name: &'static str,
-    default_config: PathBuf,
-}
-
 pub fn plan(options: &MountPlanOptions) -> Result<MountPlanOutput, String> {
     let view = build_plan(options);
     if options.json {
@@ -268,7 +256,7 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
             parseable,
         }),
         backup: Some(BackupView {
-            path: format!("{config_path_display}.skillrun.bak"),
+            path: display_path(&backup_path_preview_for(&config_path)),
             required_before_apply: true,
         }),
         router,
@@ -731,30 +719,6 @@ fn client_view(spec: &ClientSpec, detected: bool) -> ClientView {
     }
 }
 
-fn selected_config_path(config: &Option<PathBuf>, spec: &ClientSpec) -> PathBuf {
-    config
-        .clone()
-        .unwrap_or_else(|| spec.default_config.clone())
-}
-
-fn client_spec(client: &str) -> Option<ClientSpec> {
-    match client {
-        "claude-desktop" => Some(ClientSpec {
-            id: "claude-desktop",
-            name: "Claude Desktop",
-            default_config: appdata_path(&["Claude", "claude_desktop_config.json"])
-                .unwrap_or_else(|| PathBuf::from("claude_desktop_config.json")),
-        }),
-        "cursor" => Some(ClientSpec {
-            id: "cursor",
-            name: "Cursor",
-            default_config: home_path(&[".cursor", "mcp.json"])
-                .unwrap_or_else(|| PathBuf::from("mcp.json")),
-        }),
-        _ => None,
-    }
-}
-
 fn router_entry(router: &RouterView) -> Value {
     json!({
         "command": router.command,
@@ -859,45 +823,6 @@ fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     let text = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     fs::write(path, format!("{text}\n"))
         .map_err(|error| format!("failed to write {}: {error}", path.display()))
-}
-
-fn read_backup_file(path: &Path) -> Result<MountBackupFile, String> {
-    let value = read_json(path)?;
-    serde_json::from_value(value)
-        .map_err(|error| format!("backup is not a valid SkillRun mount backup: {error}"))
-}
-
-fn backup_id() -> String {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0);
-    format!("{millis}-{}", std::process::id())
-}
-
-fn backup_path_for(config_path: &Path, backup_id: &str) -> PathBuf {
-    let file_name = config_path
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or("mcp_config.json");
-    config_path.with_file_name(format!("{file_name}.skillrun.{backup_id}.bak.json"))
-}
-
-fn appdata_path(parts: &[&str]) -> Option<PathBuf> {
-    std::env::var_os("APPDATA").map(|root| join_parts(PathBuf::from(root), parts))
-}
-
-fn home_path(parts: &[&str]) -> Option<PathBuf> {
-    std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(|root| join_parts(PathBuf::from(root), parts))
-}
-
-fn join_parts(mut root: PathBuf, parts: &[&str]) -> PathBuf {
-    for part in parts {
-        root.push(part);
-    }
-    root
 }
 
 fn display_path(path: &Path) -> String {

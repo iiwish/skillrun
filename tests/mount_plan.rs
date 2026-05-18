@@ -61,6 +61,14 @@ fn mount_plan_for_missing_config_is_plan_only_router_upsert() {
     assert_eq!(output["config"]["parseable"], true);
     assert_eq!(output["router"]["command"], "skillrun");
     assert_eq!(output["router"]["args"][0], "router");
+    let backup_path = output["backup"]["path"]
+        .as_str()
+        .expect("plan should expose the backup path pattern");
+    assert!(
+        backup_path.ends_with("claude_desktop_config.json.skillrun.<backup-id>.bak.json"),
+        "plan backup path should match the apply backup naming contract: {backup_path}"
+    );
+    assert_eq!(output["backup"]["required_before_apply"], true);
     assert_eq!(output["changes"].as_array().unwrap().len(), 1);
     assert_eq!(output["changes"][0]["kind"], "upsert_mcp_server");
     assert!(output["changes"][0]["before"].is_null());
