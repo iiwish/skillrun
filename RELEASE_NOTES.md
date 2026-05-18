@@ -2,9 +2,9 @@
 
 ## v0.5.15
 
-Status: In Progress
+Status: Released
 Prepared on: 2026-05-18
-Publication: not published
+Publication: v0.5.15 main merge, remote push, and tag publication completed; GitHub Release page publication was not performed by request; no package registry publication was performed
 
 ### Headline
 
@@ -30,6 +30,20 @@ SkillRun freezes the first Desktop alpha contract set: `host.status.v1` now decl
 
 - v0.5.15 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, artifact/log/input content reads, global run indexing, or OS sandboxing.
 - v0.5.15 does not add a global JSON error framework. It hardens the Desktop-critical import runtime error path only.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test --test capsule_import --test consumer_json_contracts --test cli`
+- `cargo run --quiet -- host status --json`
+- `cargo run --quiet -- --version` returned `skillrun 0.5.15`
+- `cargo clippy --all-targets -- -D warnings`
+- `cargo test`
+- `git diff --check`
+- docs relative links check
+- `skillrun import does-not-exist.skr --json` returned `ok=false` JSON with `error.code="package-not-found"`
+- Release branch CI passed on `codex/v0.5.15-desktop-contract-freeze`: https://github.com/iiwish/skillrun/actions/runs/26020761279
+- Main CI passed after tag publication: https://github.com/iiwish/skillrun/actions/runs/26020891444
 
 ## v0.5.14
 
