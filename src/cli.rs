@@ -8,7 +8,7 @@ use crate::init::{self, InitLanguage, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
 use crate::mcp;
-use crate::mount_plan::{self, MountPlanOptions};
+use crate::mount_plan::{self, MountApplyOptions, MountPlanOptions, MountRollbackOptions};
 use crate::pack::{self, PackOptions};
 use crate::registry::{self, RegistryCommand, RegistryOptions};
 use crate::router::{self, RouterOptions};
@@ -161,6 +161,26 @@ where
                     }
                 },
                 ConsumerCommand::MountPlan(options) => match mount_plan::plan(&options) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+                ConsumerCommand::MountApply(options) => match mount_plan::apply(&options) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
+                ConsumerCommand::MountRollback(options) => match mount_plan::rollback(&options) {
                     Ok(output) => {
                         println!("{}", output.output);
                         ExitCode::SUCCESS
@@ -346,6 +366,8 @@ enum ConsumerCommand {
         limit: Option<usize>,
     },
     MountPlan(MountPlanOptions),
+    MountApply(MountApplyOptions),
+    MountRollback(MountRollbackOptions),
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -602,6 +624,8 @@ fn parse_consumer_mount(args: Vec<String>) -> Result<ConsumerCommand, String> {
     let rest = args[1..].to_vec();
     match command {
         "plan" => parse_consumer_mount_plan(rest),
+        "apply" => parse_consumer_mount_apply(rest),
+        "rollback" => parse_consumer_mount_rollback(rest),
         value => Err(format!("unknown consumer mount subcommand: {value}")),
     }
 }
@@ -640,6 +664,98 @@ fn parse_consumer_mount_plan(args: Vec<String>) -> Result<ConsumerCommand, Strin
     Ok(ConsumerCommand::MountPlan(MountPlanOptions {
         client,
         config,
+        json,
+    }))
+}
+
+fn parse_consumer_mount_apply(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut client = None;
+    let mut config = None;
+    let mut json = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--client" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--client requires a value".to_string());
+                };
+                client = Some(value.to_string());
+                index += 2;
+            }
+            "--config" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--config requires a path".to_string());
+                };
+                config = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            value => return Err(format!("unexpected consumer mount apply argument: {value}")),
+        }
+    }
+
+    let client = client.ok_or_else(|| "consumer mount apply requires --client <id>".to_string())?;
+    Ok(ConsumerCommand::MountApply(MountApplyOptions {
+        client,
+        config,
+        json,
+    }))
+}
+
+fn parse_consumer_mount_rollback(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut client = None;
+    let mut config = None;
+    let mut backup = None;
+    let mut json = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--client" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--client requires a value".to_string());
+                };
+                client = Some(value.to_string());
+                index += 2;
+            }
+            "--config" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--config requires a path".to_string());
+                };
+                config = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--backup" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--backup requires a path".to_string());
+                };
+                backup = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            value => {
+                return Err(format!(
+                    "unexpected consumer mount rollback argument: {value}"
+                ))
+            }
+        }
+    }
+
+    let client =
+        client.ok_or_else(|| "consumer mount rollback requires --client <id>".to_string())?;
+    let backup =
+        backup.ok_or_else(|| "consumer mount rollback requires --backup <path>".to_string())?;
+    Ok(ConsumerCommand::MountRollback(MountRollbackOptions {
+        client,
+        config,
+        backup,
         json,
     }))
 }
@@ -945,6 +1061,8 @@ Implemented:
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--limit <n>]
   consumer mount plan --client <id> [--config <path>] [--json]
+  consumer mount apply --client claude-desktop [--config <path>] [--json]
+  consumer mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
   router serve --mcp [--dry-run]
   registry add/list/inspect/remove
   switchboard list/enable/disable
