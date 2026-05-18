@@ -62,7 +62,7 @@ skillrun --version
 - 可逆的 Claude Desktop MCP config 挂载：
   - `skillrun consumer mount apply --client claude-desktop --json`
   - `skillrun consumer mount rollback --client claude-desktop --backup <path> --json`
-- 面向未来 Desktop / Router 的 headless consumer JSON surface：
+- 面向 Desktop、Router 检查和自动化消费者的 headless consumer JSON surface：
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
   - `skillrun consumer runs list --json`
@@ -170,7 +170,7 @@ skillrun-desktop
   official pack browser
 ```
 
-一键挂载的核心规则是：挂载未来 SkillRun Router，而不是直接挂 `.skr` 或 capsule 文件夹。`.skr` 是 import/distribution artifact，Router 才是 MCP runtime entry。
+一键挂载的核心规则是：挂载 SkillRun Router，而不是直接挂 `.skr` 或 capsule 文件夹。`.skr` 是 import/distribution artifact，Router 才是 MCP runtime entry。
 
 ## 版本层级
 
@@ -198,6 +198,7 @@ SkillRun 同时存在几类版本：
 | `v0.5.7` | Desktop 前的 public narrative 与 contract-surface polish |
 | `v0.5.8` | Router runtime MVP，支撑真实一键挂载 |
 | `v0.5.9` | Safe Mount Apply，提供可逆 MCP client config 写入 |
+| `v0.5.10` | 计划：Desktop 前的 Consumer Contract Hardening |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
 ## 示例

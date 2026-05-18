@@ -268,7 +268,7 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
             parseable,
         }),
         backup: Some(BackupView {
-            path: format!("{config_path_display}.skillrun.bak"),
+            path: display_path(&backup_path_preview_for(&config_path)),
             required_before_apply: true,
         }),
         router,
@@ -881,6 +881,10 @@ fn backup_path_for(config_path: &Path, backup_id: &str) -> PathBuf {
         .and_then(|value| value.to_str())
         .unwrap_or("mcp_config.json");
     config_path.with_file_name(format!("{file_name}.skillrun.{backup_id}.bak.json"))
+}
+
+fn backup_path_preview_for(config_path: &Path) -> PathBuf {
+    backup_path_for(config_path, "<backup-id>")
 }
 
 fn appdata_path(parts: &[&str]) -> Option<PathBuf> {

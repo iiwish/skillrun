@@ -62,7 +62,7 @@ Available today:
 - Reversible Claude Desktop MCP config mounting:
   - `skillrun consumer mount apply --client claude-desktop --json`
   - `skillrun consumer mount rollback --client claude-desktop --backup <path> --json`
-- Headless consumer JSON surfaces for future Desktop and Router consumers:
+- Headless consumer JSON surfaces for Desktop, Router checks, and automation consumers:
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
   - `skillrun consumer runs list --json`
@@ -170,7 +170,7 @@ skillrun-desktop
   official pack browser
 ```
 
-The key rule for one-click mounting is: mount the future SkillRun Router, not individual `.skr` files or capsule folders. `.skr` is an import/distribution artifact. Router is the MCP runtime entry.
+The key rule for one-click mounting is: mount the SkillRun Router, not individual `.skr` files or capsule folders. `.skr` is an import/distribution artifact. Router is the MCP runtime entry.
 
 ## Version Layers
 
@@ -198,6 +198,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 | `v0.5.7` | Public narrative and contract-surface polish before Desktop |
 | `v0.5.8` | Router runtime MVP for real one-click mounting |
 | `v0.5.9` | Safe Mount Apply for reversible MCP client config changes |
+| `v0.5.10` | Planned Consumer Contract Hardening before Desktop |
 | `v0.6` | Proposed Consumer Era Desktop and local control plane |
 
 ## Examples
