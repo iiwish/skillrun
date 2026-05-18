@@ -2,9 +2,9 @@
 
 ## v0.5.8
 
-Status: In progress
-Prepared on: 2026-05-17
-Publication: Not released; implementation branch `codex/v0.5.8-router-mvp`
+Status: Release candidate
+Prepared on: 2026-05-18
+Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
 
 ### Headline
 
@@ -12,7 +12,7 @@ SkillRun adds the first real Router MVP for one-click mounting: `skillrun router
 
 ### Version Layers
 
-- Binary/crate version remains `0.5.7` until release preparation.
+- Binary/crate version is `0.5.8`.
 - Manifest IR `manifest_version` remains `0.1.0`.
 - IPC / Adapter `protocol_version` remains `0.1.0`.
 - Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
@@ -46,7 +46,7 @@ SkillRun adds the first real Router MVP for one-click mounting: `skillrun router
 - `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
 - docs relative links check
-- Full release validation pending before any `v0.5.8` tag
+- Release branch CI, main CI, tag, and GitHub Release publication are pending
 
 ## v0.5.7
 
