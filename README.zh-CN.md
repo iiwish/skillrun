@@ -194,6 +194,7 @@ SkillRun 同时存在几类版本：
 | `v0.5.6` | Desktop 前置的 headless consumer JSON contracts |
 | `v0.5.7` | Desktop 前的 public narrative 与 contract-surface polish |
 | `v0.5.8` | Router runtime MVP，支撑真实一键挂载 |
+| `v0.5.9` | 进行中：Safe Mount Apply，提供可逆 MCP client config 写入 |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
 ## 示例
@@ -220,6 +221,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.6 Run History Contract Review](docs/v0.5.6-run-history-contract-review.md)
 - [v0.5.6 Mount Plan Contract Review](docs/v0.5.6-mount-plan-contract-review.md)
 - [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
+- [v0.5.9 Safe Mount Apply](docs/v0.5.9-safe-mount-apply.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)

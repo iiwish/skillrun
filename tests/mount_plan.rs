@@ -29,6 +29,11 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
 }
 
+fn json_file(path: &PathBuf) -> Value {
+    serde_json::from_str(&fs::read_to_string(path).expect("json file should be readable"))
+        .expect("json file should parse")
+}
+
 #[test]
 fn mount_plan_for_missing_config_is_plan_only_router_upsert() {
     let root = temp_dir("mount-plan-missing-config");
@@ -170,6 +175,239 @@ fn mount_plan_refuses_to_patch_unparseable_config() {
     assert_eq!(output["config"]["parseable"], false);
     assert_eq!(output["changes"].as_array().unwrap().len(), 0);
     assert_eq!(output["warnings"][0]["code"], "unparseable-config");
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn mount_apply_creates_missing_claude_config_and_rollback_removes_it() {
+    let root = temp_dir("mount-apply-missing-config");
+    let config = root.join("claude_desktop_config.json");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let applied = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+
+    assert_eq!(applied["command"], "consumer mount apply");
+    assert_eq!(applied["schema_version"], "consumer.mount_apply.v1");
+    assert_eq!(applied["client"]["id"], "claude-desktop");
+    assert_eq!(applied["applied"], true);
+    assert_eq!(applied["config"]["exists_before"], false);
+    assert_eq!(applied["config"]["written"], true);
+    assert_eq!(applied["backup"]["created"], true);
+    let backup_path = applied["backup"]["path"]
+        .as_str()
+        .expect("backup path should be present")
+        .to_string();
+    assert!(PathBuf::from(&backup_path).is_file());
+
+    let written = json_file(&config);
+    assert_eq!(written["mcpServers"]["skillrun"]["command"], "skillrun");
+    assert_eq!(written["mcpServers"]["skillrun"]["args"][0], "router");
+
+    let noop = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+    assert_eq!(noop["applied"], false);
+    assert_eq!(noop["backup"]["created"], false);
+
+    let rolled_back = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_path,
+        "--json",
+    ]));
+    assert_eq!(rolled_back["command"], "consumer mount rollback");
+    assert_eq!(rolled_back["schema_version"], "consumer.mount_rollback.v1");
+    assert_eq!(rolled_back["rolled_back"], true);
+    assert!(
+        !config.exists(),
+        "rollback should remove a config file created only for SkillRun"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn mount_apply_and_rollback_restore_existing_skillrun_entry_without_leaking_other_config() {
+    let root = temp_dir("mount-apply-existing-config");
+    fs::create_dir_all(&root).expect("test root should be created");
+    let config = root.join("claude_desktop_config.json");
+    fs::write(
+        &config,
+        r#"{
+  "mcpServers": {
+    "skillrun": {
+      "command": "old-skillrun",
+      "args": ["serve", "--mcp"],
+      "env": {
+        "SECRET_TOKEN": "restore-me"
+      }
+    },
+    "other": {
+      "command": "other-server",
+      "env": {
+        "OTHER_SECRET": "preserve-me"
+      }
+    }
+  }
+}"#,
+    )
+    .expect("test config should be written");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let applied = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+    let rendered_apply = serde_json::to_string(&applied).expect("apply output should render");
+
+    assert_eq!(applied["applied"], true);
+    assert!(!rendered_apply.contains("SECRET_TOKEN"));
+    assert!(!rendered_apply.contains("OTHER_SECRET"));
+    let backup_path = applied["backup"]["path"]
+        .as_str()
+        .expect("backup path should be present")
+        .to_string();
+    let patched = json_file(&config);
+    assert_eq!(patched["mcpServers"]["skillrun"]["command"], "skillrun");
+    assert_eq!(patched["mcpServers"]["other"]["command"], "other-server");
+
+    let rolled_back = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_path,
+        "--json",
+    ]));
+
+    assert_eq!(rolled_back["rolled_back"], true);
+    let restored = json_file(&config);
+    assert_eq!(
+        restored["mcpServers"]["skillrun"]["command"],
+        "old-skillrun"
+    );
+    assert_eq!(
+        restored["mcpServers"]["skillrun"]["env"]["SECRET_TOKEN"],
+        "restore-me"
+    );
+    assert_eq!(
+        restored["mcpServers"]["other"]["env"]["OTHER_SECRET"],
+        "preserve-me"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn mount_rollback_refuses_when_skillrun_entry_changed_after_apply() {
+    let root = temp_dir("mount-rollback-conflict");
+    let config = root.join("claude_desktop_config.json");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let applied = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+    let backup_path = applied["backup"]["path"]
+        .as_str()
+        .expect("backup path should be present")
+        .to_string();
+
+    let mut changed = json_file(&config);
+    changed["mcpServers"]["skillrun"]["env"] =
+        serde_json::json!({ "USER_ADDED_TOKEN": "do-not-overwrite" });
+    fs::write(
+        &config,
+        serde_json::to_string_pretty(&changed).expect("changed config should render"),
+    )
+    .expect("changed config should be written");
+
+    let rolled_back = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_path,
+        "--json",
+    ]));
+
+    assert_eq!(rolled_back["rolled_back"], false);
+    assert_eq!(rolled_back["warnings"][0]["code"], "rollback-conflict");
+    assert_eq!(
+        json_file(&config)["mcpServers"]["skillrun"]["env"]["USER_ADDED_TOKEN"],
+        "do-not-overwrite"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn mount_apply_for_cursor_is_plan_only_and_does_not_write_config() {
+    let root = temp_dir("mount-apply-cursor-plan-only");
+    let config = root.join("mcp.json");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let output = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "cursor",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+
+    assert_eq!(output["command"], "consumer mount apply");
+    assert_eq!(output["applied"], false);
+    assert_eq!(output["warnings"][0]["code"], "unsupported-client");
+    assert!(
+        !config.exists(),
+        "cursor apply must not write config in v0.5.9"
+    );
 
     fs::remove_dir_all(root).ok();
 }

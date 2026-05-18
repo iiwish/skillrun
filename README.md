@@ -194,6 +194,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 | `v0.5.6` | Headless consumer JSON contracts before Desktop |
 | `v0.5.7` | Public narrative and contract-surface polish before Desktop |
 | `v0.5.8` | Router runtime MVP for real one-click mounting |
+| `v0.5.9` | In progress: Safe Mount Apply for reversible MCP client config changes |
 | `v0.6` | Proposed Consumer Era Desktop and local control plane |
 
 ## Examples
@@ -220,6 +221,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.6 Run History Contract Review](docs/v0.5.6-run-history-contract-review.md)
 - [v0.5.6 Mount Plan Contract Review](docs/v0.5.6-mount-plan-contract-review.md)
 - [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
+- [v0.5.9 Safe Mount Apply](docs/v0.5.9-safe-mount-apply.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

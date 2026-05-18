@@ -1,7 +1,8 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct MountPlanOptions {
     pub client: String,
@@ -9,7 +10,28 @@ pub struct MountPlanOptions {
     pub json: bool,
 }
 
+pub struct MountApplyOptions {
+    pub client: String,
+    pub config: Option<PathBuf>,
+    pub json: bool,
+}
+
+pub struct MountRollbackOptions {
+    pub client: String,
+    pub config: Option<PathBuf>,
+    pub backup: PathBuf,
+    pub json: bool,
+}
+
 pub struct MountPlanOutput {
+    pub output: String,
+}
+
+pub struct MountApplyOutput {
+    pub output: String,
+}
+
+pub struct MountRollbackOutput {
     pub output: String,
 }
 
@@ -23,6 +45,29 @@ struct MountPlanView {
     backup: Option<BackupView>,
     router: RouterView,
     changes: Vec<ChangeView>,
+    warnings: Vec<WarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct MountApplyView {
+    command: &'static str,
+    schema_version: &'static str,
+    client: ClientView,
+    config: Option<ApplyConfigView>,
+    backup: Option<ApplyBackupView>,
+    applied: bool,
+    changes: Vec<ChangeView>,
+    warnings: Vec<WarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct MountRollbackView {
+    command: &'static str,
+    schema_version: &'static str,
+    client: ClientView,
+    config: Option<RollbackConfigView>,
+    backup: Option<RollbackBackupView>,
+    rolled_back: bool,
     warnings: Vec<WarningView>,
 }
 
@@ -43,9 +88,37 @@ struct ConfigView {
 }
 
 #[derive(Debug, Serialize)]
+struct ApplyConfigView {
+    path: String,
+    path_source: &'static str,
+    exists_before: bool,
+    written: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct RollbackConfigView {
+    path: String,
+    written: bool,
+}
+
+#[derive(Debug, Serialize)]
 struct BackupView {
     path: String,
     required_before_apply: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct ApplyBackupView {
+    id: Option<String>,
+    path: Option<String>,
+    created: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct RollbackBackupView {
+    id: String,
+    path: String,
+    consumed: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -55,7 +128,7 @@ struct RouterView {
     args: Vec<&'static str>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct ChangeView {
     kind: &'static str,
     server_name: &'static str,
@@ -63,10 +136,22 @@ struct ChangeView {
     after: Value,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct WarningView {
     code: &'static str,
     message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct MountBackupFile {
+    schema_version: String,
+    created_by: String,
+    id: String,
+    client_id: String,
+    config_path: String,
+    router_entry: Value,
+    original_exists: bool,
+    original_config: Option<Value>,
 }
 
 struct ClientSpec {
@@ -99,12 +184,40 @@ pub fn plan(options: &MountPlanOptions) -> Result<MountPlanOutput, String> {
     Ok(MountPlanOutput { output })
 }
 
+pub fn apply(options: &MountApplyOptions) -> Result<MountApplyOutput, String> {
+    let view = build_apply(options)?;
+    if options.json {
+        return Ok(MountApplyOutput {
+            output: serde_json::to_string_pretty(&view).map_err(|error| error.to_string())?,
+        });
+    }
+
+    let output = format!(
+        "SkillRun Mount Apply\nclient: {}\napplied: {}\nchanges: {}",
+        view.client.id,
+        view.applied,
+        view.changes.len()
+    );
+    Ok(MountApplyOutput { output })
+}
+
+pub fn rollback(options: &MountRollbackOptions) -> Result<MountRollbackOutput, String> {
+    let view = build_rollback(options)?;
+    if options.json {
+        return Ok(MountRollbackOutput {
+            output: serde_json::to_string_pretty(&view).map_err(|error| error.to_string())?,
+        });
+    }
+
+    let output = format!(
+        "SkillRun Mount Rollback\nclient: {}\nrolled_back: {}",
+        view.client.id, view.rolled_back
+    );
+    Ok(MountRollbackOutput { output })
+}
+
 fn build_plan(options: &MountPlanOptions) -> MountPlanView {
-    let router = RouterView {
-        server_name: "skillrun",
-        command: "skillrun",
-        args: vec!["router", "serve", "--mcp"],
-    };
+    let router = router_view();
 
     let Some(spec) = client_spec(&options.client) else {
         return MountPlanView {
@@ -133,10 +246,7 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
     } else {
         "default"
     };
-    let config_path = options
-        .config
-        .clone()
-        .unwrap_or_else(|| spec.default_config.clone());
+    let config_path = selected_config_path(&options.config, &spec);
     let exists = config_path.is_file();
     let mut warnings = Vec::new();
     let (parseable, changes) = plan_changes(&config_path, exists, &router, &mut warnings);
@@ -165,6 +275,254 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
         changes,
         warnings,
     }
+}
+
+fn build_apply(options: &MountApplyOptions) -> Result<MountApplyView, String> {
+    let router = router_view();
+    let Some(spec) = client_spec(&options.client) else {
+        return Ok(apply_warning(
+            &options.client,
+            "unsupported-client",
+            "client is not supported by mount apply",
+        ));
+    };
+    if spec.id != "claude-desktop" {
+        return Ok(apply_warning(
+            spec.id,
+            "unsupported-client",
+            "client is plan-only in this release; mount apply supports claude-desktop only",
+        ));
+    }
+
+    let plan_options = MountPlanOptions {
+        client: options.client.clone(),
+        config: options.config.clone(),
+        json: true,
+    };
+    let plan = build_plan(&plan_options);
+    let Some(config) = plan.config.as_ref() else {
+        return Ok(apply_warning(
+            spec.id,
+            "unsupported-client",
+            "client is not supported by mount apply",
+        ));
+    };
+    if !config.parseable {
+        return Ok(MountApplyView {
+            command: "consumer mount apply",
+            schema_version: "consumer.mount_apply.v1",
+            client: plan.client,
+            config: Some(ApplyConfigView {
+                path: config.path.clone(),
+                path_source: config.path_source,
+                exists_before: config.exists,
+                written: false,
+            }),
+            backup: Some(ApplyBackupView {
+                id: None,
+                path: None,
+                created: false,
+            }),
+            applied: false,
+            changes: Vec::new(),
+            warnings: plan.warnings,
+        });
+    }
+    if plan.changes.is_empty() {
+        return Ok(MountApplyView {
+            command: "consumer mount apply",
+            schema_version: "consumer.mount_apply.v1",
+            client: plan.client,
+            config: Some(ApplyConfigView {
+                path: config.path.clone(),
+                path_source: config.path_source,
+                exists_before: config.exists,
+                written: false,
+            }),
+            backup: Some(ApplyBackupView {
+                id: None,
+                path: None,
+                created: false,
+            }),
+            applied: false,
+            changes: Vec::new(),
+            warnings: plan.warnings,
+        });
+    }
+
+    let config_path = selected_config_path(&options.config, &spec);
+    let original_exists = config_path.is_file();
+    let original_config = if original_exists {
+        Some(read_json(&config_path)?)
+    } else {
+        None
+    };
+    let backup_id = backup_id();
+    let backup_path = backup_path_for(&config_path, &backup_id);
+    let backup_file = MountBackupFile {
+        schema_version: "consumer.mount_backup.v1".to_string(),
+        created_by: "skillrun".to_string(),
+        id: backup_id.clone(),
+        client_id: spec.id.to_string(),
+        config_path: display_path(&config_path),
+        router_entry: router_entry(&router),
+        original_exists,
+        original_config: original_config.clone(),
+    };
+    write_json_file(&backup_path, &backup_file)?;
+
+    let mut next_config = original_config.unwrap_or_else(|| json!({}));
+    upsert_skillrun_entry(&mut next_config, router_entry(&router))?;
+    write_json_file(&config_path, &next_config)?;
+
+    Ok(MountApplyView {
+        command: "consumer mount apply",
+        schema_version: "consumer.mount_apply.v1",
+        client: plan.client,
+        config: Some(ApplyConfigView {
+            path: config.path.clone(),
+            path_source: config.path_source,
+            exists_before: config.exists,
+            written: true,
+        }),
+        backup: Some(ApplyBackupView {
+            id: Some(backup_id),
+            path: Some(display_path(&backup_path)),
+            created: true,
+        }),
+        applied: true,
+        changes: plan.changes,
+        warnings: plan.warnings,
+    })
+}
+
+fn build_rollback(options: &MountRollbackOptions) -> Result<MountRollbackView, String> {
+    let Some(spec) = client_spec(&options.client) else {
+        return Ok(rollback_warning(
+            &options.client,
+            "unsupported-client",
+            "client is not supported by mount rollback",
+        ));
+    };
+    if spec.id != "claude-desktop" {
+        return Ok(rollback_warning(
+            spec.id,
+            "unsupported-client",
+            "client is plan-only in this release; mount rollback supports claude-desktop only",
+        ));
+    }
+
+    let backup = read_backup_file(&options.backup)?;
+    if backup.schema_version != "consumer.mount_backup.v1"
+        || backup.created_by != "skillrun"
+        || backup.client_id != spec.id
+    {
+        return Ok(rollback_warning(
+            spec.id,
+            "invalid-backup",
+            "backup is not a SkillRun mount backup for this client",
+        ));
+    }
+
+    let config_path = options
+        .config
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(&backup.config_path));
+    if display_path(&config_path) != backup.config_path {
+        return Ok(MountRollbackView {
+            command: "consumer mount rollback",
+            schema_version: "consumer.mount_rollback.v1",
+            client: client_view(&spec, config_path.is_file()),
+            config: Some(RollbackConfigView {
+                path: display_path(&config_path),
+                written: false,
+            }),
+            backup: Some(RollbackBackupView {
+                id: backup.id,
+                path: display_path(&options.backup),
+                consumed: false,
+            }),
+            rolled_back: false,
+            warnings: vec![WarningView {
+                code: "backup-config-mismatch",
+                message: "backup target config does not match the selected config path".to_string(),
+            }],
+        });
+    }
+
+    let current_exists = config_path.is_file();
+    if !current_exists && !backup.original_exists {
+        return Ok(MountRollbackView {
+            command: "consumer mount rollback",
+            schema_version: "consumer.mount_rollback.v1",
+            client: client_view(&spec, false),
+            config: Some(RollbackConfigView {
+                path: display_path(&config_path),
+                written: false,
+            }),
+            backup: Some(RollbackBackupView {
+                id: backup.id,
+                path: display_path(&options.backup),
+                consumed: false,
+            }),
+            rolled_back: false,
+            warnings: Vec::new(),
+        });
+    }
+
+    let mut current = if current_exists {
+        read_json(&config_path)?
+    } else {
+        json!({})
+    };
+    if current_exists && skillrun_entry_raw(&current) != Some(backup.router_entry.clone()) {
+        return Ok(MountRollbackView {
+            command: "consumer mount rollback",
+            schema_version: "consumer.mount_rollback.v1",
+            client: client_view(&spec, true),
+            config: Some(RollbackConfigView {
+                path: display_path(&config_path),
+                written: false,
+            }),
+            backup: Some(RollbackBackupView {
+                id: backup.id,
+                path: display_path(&options.backup),
+                consumed: false,
+            }),
+            rolled_back: false,
+            warnings: vec![WarningView {
+                code: "rollback-conflict",
+                message:
+                    "current skillrun MCP entry no longer matches the entry created by mount apply"
+                        .to_string(),
+            }],
+        });
+    }
+
+    restore_original_skillrun_entry(&mut current, backup.original_config.as_ref())?;
+    if should_remove_config_after_rollback(&current, &backup) {
+        fs::remove_file(&config_path)
+            .map_err(|error| format!("failed to remove {}: {error}", config_path.display()))?;
+    } else {
+        write_json_file(&config_path, &current)?;
+    }
+
+    Ok(MountRollbackView {
+        command: "consumer mount rollback",
+        schema_version: "consumer.mount_rollback.v1",
+        client: client_view(&spec, config_path.is_file()),
+        config: Some(RollbackConfigView {
+            path: display_path(&config_path),
+            written: true,
+        }),
+        backup: Some(RollbackBackupView {
+            id: backup.id,
+            path: display_path(&options.backup),
+            consumed: false,
+        }),
+        rolled_back: true,
+        warnings: Vec::new(),
+    })
 }
 
 fn plan_changes(
@@ -235,6 +593,70 @@ fn plan_changes(
     )
 }
 
+fn apply_warning(client: &str, code: &'static str, message: &str) -> MountApplyView {
+    MountApplyView {
+        command: "consumer mount apply",
+        schema_version: "consumer.mount_apply.v1",
+        client: ClientView {
+            id: client.to_string(),
+            name: client.to_string(),
+            supported: false,
+            detected: false,
+        },
+        config: None,
+        backup: None,
+        applied: false,
+        changes: Vec::new(),
+        warnings: vec![WarningView {
+            code,
+            message: message.to_string(),
+        }],
+    }
+}
+
+fn rollback_warning(client: &str, code: &'static str, message: &str) -> MountRollbackView {
+    MountRollbackView {
+        command: "consumer mount rollback",
+        schema_version: "consumer.mount_rollback.v1",
+        client: ClientView {
+            id: client.to_string(),
+            name: client.to_string(),
+            supported: false,
+            detected: false,
+        },
+        config: None,
+        backup: None,
+        rolled_back: false,
+        warnings: vec![WarningView {
+            code,
+            message: message.to_string(),
+        }],
+    }
+}
+
+fn router_view() -> RouterView {
+    RouterView {
+        server_name: "skillrun",
+        command: "skillrun",
+        args: vec!["router", "serve", "--mcp"],
+    }
+}
+
+fn client_view(spec: &ClientSpec, detected: bool) -> ClientView {
+    ClientView {
+        id: spec.id.to_string(),
+        name: spec.name.to_string(),
+        supported: true,
+        detected,
+    }
+}
+
+fn selected_config_path(config: &Option<PathBuf>, spec: &ClientSpec) -> PathBuf {
+    config
+        .clone()
+        .unwrap_or_else(|| spec.default_config.clone())
+}
+
 fn client_spec(client: &str) -> Option<ClientSpec> {
     match client {
         "claude-desktop" => Some(ClientSpec {
@@ -267,11 +689,118 @@ fn server_entry_summary(value: &Value) -> Value {
     })
 }
 
+fn skillrun_entry_raw(config: &Value) -> Option<Value> {
+    config
+        .get("mcpServers")
+        .and_then(Value::as_object)
+        .and_then(|servers| servers.get("skillrun"))
+        .cloned()
+}
+
+fn original_had_mcp_servers(config: Option<&Value>) -> bool {
+    config
+        .and_then(|value| value.get("mcpServers"))
+        .and_then(Value::as_object)
+        .is_some()
+}
+
+fn upsert_skillrun_entry(config: &mut Value, entry: Value) -> Result<(), String> {
+    let Some(root) = config.as_object_mut() else {
+        return Err(
+            "config root must be a JSON object before SkillRun can apply a patch".to_string(),
+        );
+    };
+    if !root.contains_key("mcpServers") {
+        root.insert("mcpServers".to_string(), json!({}));
+    }
+    let Some(servers) = root.get_mut("mcpServers").and_then(Value::as_object_mut) else {
+        return Err(
+            "mcpServers must be a JSON object before SkillRun can apply a patch".to_string(),
+        );
+    };
+    servers.insert("skillrun".to_string(), entry);
+    Ok(())
+}
+
+fn restore_original_skillrun_entry(
+    current: &mut Value,
+    original_config: Option<&Value>,
+) -> Result<(), String> {
+    let original_entry = original_config.and_then(skillrun_entry_raw);
+    let original_had_servers = original_had_mcp_servers(original_config);
+    let Some(root) = current.as_object_mut() else {
+        return Err(
+            "current config root must be a JSON object before SkillRun can rollback".to_string(),
+        );
+    };
+
+    if !root.contains_key("mcpServers") {
+        if original_entry.is_some() {
+            root.insert("mcpServers".to_string(), json!({}));
+        } else {
+            return Ok(());
+        }
+    }
+
+    let Some(servers) = root.get_mut("mcpServers").and_then(Value::as_object_mut) else {
+        return Err(
+            "current mcpServers must be a JSON object before SkillRun can rollback".to_string(),
+        );
+    };
+    if let Some(entry) = original_entry {
+        servers.insert("skillrun".to_string(), entry);
+    } else {
+        servers.remove("skillrun");
+    }
+    if servers.is_empty() && !original_had_servers {
+        root.remove("mcpServers");
+    }
+    Ok(())
+}
+
+fn should_remove_config_after_rollback(current: &Value, backup: &MountBackupFile) -> bool {
+    !backup.original_exists && current.as_object().is_some_and(|root| root.is_empty())
+}
+
 fn read_json(path: &Path) -> Result<Value, String> {
     let text = fs::read_to_string(path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
     serde_json::from_str(&text)
         .map_err(|error| format!("config exists but is not valid JSON: {error}"))
+}
+
+fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)
+                .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+        }
+    }
+    let text = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
+    fs::write(path, format!("{text}\n"))
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
+}
+
+fn read_backup_file(path: &Path) -> Result<MountBackupFile, String> {
+    let value = read_json(path)?;
+    serde_json::from_value(value)
+        .map_err(|error| format!("backup is not a valid SkillRun mount backup: {error}"))
+}
+
+fn backup_id() -> String {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+    format!("{millis}-{}", std::process::id())
+}
+
+fn backup_path_for(config_path: &Path, backup_id: &str) -> PathBuf {
+    let file_name = config_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("mcp_config.json");
+    config_path.with_file_name(format!("{file_name}.skillrun.{backup_id}.bak.json"))
 }
 
 fn appdata_path(parts: &[&str]) -> Option<PathBuf> {

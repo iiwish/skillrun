@@ -1,5 +1,45 @@
 # SkillRun Release Notes
 
+## v0.5.9
+
+Status: In progress
+Prepared on: 2026-05-18
+Publication: Not released; implementation branch `codex/v0.5.9-safe-mount-apply`
+
+### Headline
+
+SkillRun turns mount planning into a reversible headless execution path: Core owns `consumer mount apply` and `consumer mount rollback`, while Desktop remains the consent and visualization layer.
+
+### Version Layers
+
+- Binary/crate version remains `0.5.8` until release preparation.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- v0.5.9 Safe Mount Apply contract document.
+- CLI parser surface for `consumer mount apply` and `consumer mount rollback`.
+- Claude Desktop-only mount apply / rollback MVP.
+- Apply reuses the existing mount plan patch semantics.
+- Apply writes a SkillRun backup before writing MCP client config.
+- Apply is idempotent when the selected config already contains the SkillRun Router entry.
+- Rollback restores or removes only the `skillrun` MCP server entry and preserves unrelated current config.
+- Rollback refuses to overwrite if the current `skillrun` entry no longer matches the Router entry created by apply.
+- Cursor remains plan-only for apply / rollback in v0.5.9.
+
+### Boundaries
+
+- v0.5.9 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client adapter expansion, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- Mount apply is a reversible local MCP client config mutation, not a trust, sandbox, dependency, or safety guarantee.
+
+### Validation
+
+- `cargo test --test mount_plan`
+- `cargo test --test cli`
+- Full release validation pending before any `v0.5.9` tag
+
 ## v0.5.8
 
 Status: Released
