@@ -295,6 +295,46 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert!(summary.get("stdout").is_none());
     assert!(summary.get("stderr").is_none());
 
+    let inspected = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "inspect",
+            run_id,
+            "--json",
+            "--capsule",
+            "refund",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(inspected["command"], "consumer runs inspect");
+    assert_eq!(inspected["schema_version"], "consumer.runs.inspect.v1");
+    assert_eq!(inspected["ok"], true);
+    assert_eq!(inspected["run_ref"]["kind"], "local_run");
+    assert_eq!(inspected["run_ref"]["capsule_id"], "refund");
+    assert_eq!(inspected["run_ref"]["run_id"], run_id);
+    assert_eq!(inspected["capsule"]["id"], "refund");
+    assert_eq!(inspected["record"]["run_id"], run_id);
+    assert_eq!(inspected["record"]["mode"], "test");
+    assert_eq!(inspected["record"]["status"], "succeeded");
+    assert_eq!(inspected["input"]["included"], false);
+    assert_eq!(inspected["input"]["available"], true);
+    assert_eq!(inspected["envelope"]["included"], true);
+    assert_eq!(inspected["envelope"]["status"], "ok");
+    assert_eq!(inspected["envelope"]["value"]["ok"], true);
+    assert_eq!(inspected["logs"]["stdout_available"], true);
+    assert_eq!(inspected["logs"]["stderr_available"], true);
+    assert_eq!(inspected["logs"]["stdout_included"], false);
+    assert_eq!(inspected["logs"]["stderr_included"], false);
+    assert_eq!(inspected["warnings"].as_array().unwrap().len(), 0);
+    let rendered_inspect = serde_json::to_string(&inspected).expect("inspect output should render");
+    assert!(
+        !rendered_inspect.contains("refund_amount"),
+        "inspect must not include full input content by default"
+    );
+    assert!(inspected.get("stdout").is_none());
+    assert!(inspected.get("stderr").is_none());
+
     let scoped = assert_success_json(&run_skillrun(
         &[
             "consumer",
@@ -310,6 +350,68 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     ));
     assert_eq!(scoped["scope"]["capsule_id"], "refund");
     assert_eq!(scoped["runs"].as_array().unwrap().len(), 1);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn consumer_runs_inspect_reports_ambiguous_run_ids_without_reading_internal_files() {
+    let (output_root, capsule) = generated_capsule("consumer-runs-inspect-ambiguous");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add_a = run_skillrun(
+        &["registry", "add", "--cwd", &cwd_arg, "--id", "refund-a"],
+        &skillrun_home,
+    );
+    assert!(add_a.status.success());
+    let add_b = run_skillrun(
+        &["registry", "add", "--cwd", &cwd_arg, "--id", "refund-b"],
+        &skillrun_home,
+    );
+    assert!(add_b.status.success());
+
+    let run = assert_success_json(&run_skillrun(&["test", "--cwd", &cwd_arg], &skillrun_home));
+    let run_id = run["run_id"]
+        .as_str()
+        .expect("run envelope should include run_id");
+
+    let inspected = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "inspect", run_id, "--json"],
+        &skillrun_home,
+    ));
+
+    assert_eq!(inspected["command"], "consumer runs inspect");
+    assert_eq!(inspected["schema_version"], "consumer.runs.inspect.v1");
+    assert_eq!(inspected["ok"], false);
+    assert_eq!(inspected["error"]["code"], "AmbiguousRunId");
+    assert!(inspected["error"]["message"]
+        .as_str()
+        .expect("ambiguous error should include message")
+        .contains("--capsule"));
+    let matches = inspected["matches"]
+        .as_array()
+        .expect("ambiguous response should include matches");
+    assert_eq!(matches.len(), 2);
+    assert_eq!(matches[0]["run_id"], run_id);
+    assert_eq!(matches[1]["run_id"], run_id);
+    assert!(inspected.get("record").is_none());
+    assert!(inspected.get("envelope").is_none());
+
+    let scoped = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "inspect",
+            run_id,
+            "--json",
+            "--capsule",
+            "refund-a",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(scoped["ok"], true);
+    assert_eq!(scoped["run_ref"]["capsule_id"], "refund-a");
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -347,6 +449,23 @@ fn consumer_runs_list_degrades_invalid_run_records_without_failing() {
     assert_eq!(runs[0]["status"], "invalid-record");
     assert!(runs[0]["ok"].is_null());
     assert_eq!(runs[0]["input_included"], false);
+
+    let inspected = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "inspect",
+            run_id,
+            "--json",
+            "--capsule",
+            "refund",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(inspected["ok"], false);
+    assert!(inspected["record"].is_null());
+    assert_eq!(inspected["envelope"]["included"], true);
+    assert_eq!(inspected["warnings"][0]["code"], "invalid-record");
 
     fs::remove_dir_all(output_root).ok();
 }
