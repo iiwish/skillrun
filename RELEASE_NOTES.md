@@ -2,9 +2,9 @@
 
 ## v0.5.10
 
-Status: Ready_For_Release_Decision
+Status: Released
 Prepared on: 2026-05-18
-Publication: not published yet; pending branch push, main merge, tag, and GitHub Release publication
+Publication: v0.5.10 main merge, remote push, and tag publication completed; GitHub Release page publication was not performed in this environment because neither `gh` nor a GitHub release token is available; no package registry publication was performed
 
 ### Headline
 
@@ -43,6 +43,8 @@ SkillRun hardens the Consumer Control Plane contract before Desktop: public docs
 - docs relative links check
 - `cargo run --quiet -- --version` returned `skillrun 0.5.10`
 - Unfinished-marker scan found no release-blocking markers in changed v0.5.10 surfaces.
+- Release branch CI passed on `codex/v0.5.10-consumer-contract-hardening`: https://github.com/iiwish/skillrun/actions/runs/26013909267
+- Main CI passed after tag publication: https://github.com/iiwish/skillrun/actions/runs/26014001071
 
 ## v0.5.9
 
