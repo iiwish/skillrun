@@ -487,7 +487,30 @@ fn build_rollback(options: &MountRollbackOptions) -> Result<MountRollbackView, S
     }
 
     let mut current = if current_exists {
-        read_json(&config_path)?
+        match read_json(&config_path) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(MountRollbackView {
+                    command: "consumer mount rollback",
+                    schema_version: "consumer.mount_rollback.v1",
+                    client: client_view(&spec, true),
+                    config: Some(RollbackConfigView {
+                        path: display_path(&config_path),
+                        written: false,
+                    }),
+                    backup: Some(RollbackBackupView {
+                        id: backup.id,
+                        path: display_path(&options.backup),
+                        consumed: false,
+                    }),
+                    rolled_back: false,
+                    warnings: vec![WarningView {
+                        code: "unparseable-config",
+                        message: format!("{error}; rollback did not modify config"),
+                    }],
+                });
+            }
+        }
     } else {
         json!({})
     };
@@ -515,7 +538,29 @@ fn build_rollback(options: &MountRollbackOptions) -> Result<MountRollbackView, S
         });
     }
 
-    restore_original_skillrun_entry(&mut current, backup.original_config.as_ref())?;
+    if let Err(error) =
+        restore_original_skillrun_entry(&mut current, backup.original_config.as_ref())
+    {
+        return Ok(MountRollbackView {
+            command: "consumer mount rollback",
+            schema_version: "consumer.mount_rollback.v1",
+            client: client_view(&spec, current_exists),
+            config: Some(RollbackConfigView {
+                path: display_path(&config_path),
+                written: false,
+            }),
+            backup: Some(RollbackBackupView {
+                id: backup.id,
+                path: display_path(&options.backup),
+                consumed: false,
+            }),
+            rolled_back: false,
+            warnings: vec![WarningView {
+                code: "unsafe-config-shape",
+                message: format!("{error}; rollback did not modify config"),
+            }],
+        });
+    }
     if should_remove_config_after_rollback(&current, &backup) {
         fs::remove_file(&config_path)
             .map_err(|error| format!("failed to remove {}: {error}", config_path.display()))?;

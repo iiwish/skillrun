@@ -479,3 +479,49 @@ fn mount_rollback_invalid_backup_returns_json_warning_without_writing() {
 
     fs::remove_dir_all(root).ok();
 }
+
+#[test]
+fn mount_rollback_unparseable_current_config_returns_json_warning_without_writing() {
+    let root = temp_dir("mount-rollback-unparseable-current");
+    let config = root.join("claude_desktop_config.json");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let applied = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "apply",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+    let backup_path = applied["backup"]["path"]
+        .as_str()
+        .expect("backup path should be present")
+        .to_string();
+    fs::write(&config, "{not-json").expect("current config should be corrupted");
+
+    let output = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_path,
+        "--json",
+    ]));
+
+    assert_eq!(output["command"], "consumer mount rollback");
+    assert_eq!(output["rolled_back"], false);
+    assert_eq!(output["warnings"][0]["code"], "unparseable-config");
+    assert_eq!(
+        fs::read_to_string(&config).expect("corrupted config should remain readable"),
+        "{not-json"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
