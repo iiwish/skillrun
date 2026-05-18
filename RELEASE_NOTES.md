@@ -1,5 +1,56 @@
 # SkillRun Release Notes
 
+## v0.5.13
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-18
+Publication: pending branch review, remote CI, main merge, tag publication, and release backwrite
+
+### Headline
+
+SkillRun hardens the imported capsule consumption path before Desktop: `.skr import` remains hidden by default, `switchboard enable` remains the exposure gate, and Router calls imported capsules through the same Manifest-driven runtime contract.
+
+### Version Layers
+
+- Binary/crate version is `0.5.13`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- v0.5.13 Import Router Contract document.
+- End-to-end import-to-Router contract coverage:
+  - package creation through `skillrun pack`;
+  - local import through `skillrun import --json`;
+  - inventory showing `source_type=imported_skr` and `enabled=false`;
+  - `consumer exposure --json` empty before enablement;
+  - `router serve --mcp --dry-run` empty before enablement;
+  - `switchboard enable <id>` as the explicit exposure gate;
+  - exposure and Router dry-run showing the imported capsule after enablement;
+  - Router stdio `tools/list` and `tools/call` working against the imported capsule;
+  - `mode=mcp` run evidence written under the imported capsule.
+- README, Chinese README, and docs index updated for v0.5.13.
+
+### Boundaries
+
+- v0.5.13 does not add new runtime behavior, Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, or OS sandboxing.
+- `skillrun import` still does not enable the imported capsule; exposure still requires `switchboard enable <id>` and readiness gates.
+- Router remains snapshot-based.
+
+### Validation
+
+- `cargo test --test router`
+- `cargo test --test capsule_import`
+- `cargo test --test registry`
+- `cargo test --test consumer_json_contracts`
+- `cargo fmt --check`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- `cargo test`
+- `cargo run --quiet -- --version` returned `skillrun 0.5.13`
+
 ## v0.5.12
 
 Status: Released

@@ -52,6 +52,32 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf, PathBuf) {
     (output_root, capsule, skillrun_home)
 }
 
+fn generated_package(label: &str) -> (PathBuf, PathBuf) {
+    let (output_root, capsule, skillrun_home) = generated_capsule(label);
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let test = run_skillrun(&["test", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        test.status.success(),
+        "test should create author run history before pack\nstderr: {}",
+        String::from_utf8_lossy(&test.stderr)
+    );
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        pack.status.success(),
+        "pack should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&pack.stdout),
+        String::from_utf8_lossy(&pack.stderr)
+    );
+
+    let archive = capsule
+        .join("dist")
+        .join(format!("refund-{}.skr", env!("CARGO_PKG_VERSION")));
+    assert!(archive.is_file(), "package should exist at {archive:?}");
+    (output_root, archive)
+}
+
 fn assert_success_json(output: &std::process::Output) -> Value {
     assert!(
         output.status.success(),
@@ -60,6 +86,132 @@ fn assert_success_json(output: &std::process::Output) -> Value {
         String::from_utf8_lossy(&output.stderr)
     );
     serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
+}
+
+#[test]
+fn imported_capsule_stays_hidden_until_enabled_then_routes_via_router() {
+    let (output_root, archive) = generated_package("router-imported-contract");
+    let skillrun_home = output_root.join("consumer-home");
+    let package_arg = archive.to_string_lossy().to_string();
+
+    let imported = assert_success_json(&run_skillrun(
+        &["import", &package_arg, "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(imported["capsule"]["id"], "refund");
+    assert_eq!(imported["capsule"]["source_type"], "imported_skr");
+    assert_eq!(imported["capsule"]["enabled"], false);
+    let imported_path = PathBuf::from(imported["capsule"]["path"].as_str().unwrap());
+    assert!(
+        !imported_path.join(".skillrun").join("runs").exists(),
+        "imported package should not carry author run history"
+    );
+
+    let inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(inventory["capsules"][0]["source_type"], "imported_skr");
+    assert_eq!(inventory["capsules"][0]["enabled"], false);
+    assert_eq!(inventory["capsules"][0]["readiness"]["status"], "ok");
+
+    let exposure_disabled = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(
+        exposure_disabled["tools"].as_array().unwrap().len(),
+        0,
+        "imported capsules must not be exposed before switchboard enable"
+    );
+
+    let router_disabled = assert_success_json(&run_skillrun(
+        &["router", "serve", "--mcp", "--dry-run"],
+        &skillrun_home,
+    ));
+    assert_eq!(router_disabled["router"]["capsules"], 0);
+    assert_eq!(router_disabled["tools"].as_array().unwrap().len(), 0);
+
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(
+        enable.status.success(),
+        "switchboard enable should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&enable.stdout),
+        String::from_utf8_lossy(&enable.stderr)
+    );
+
+    let exposure_enabled = assert_success_json(&run_skillrun(
+        &["consumer", "exposure", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(exposure_enabled["tools"].as_array().unwrap().len(), 1);
+    assert_eq!(exposure_enabled["tools"][0]["capsule_id"], "refund");
+    assert_eq!(exposure_enabled["tools"][0]["enabled"], true);
+    assert_eq!(exposure_enabled["tools"][0]["exposed"], true);
+
+    let router_enabled = assert_success_json(&run_skillrun(
+        &["router", "serve", "--mcp", "--dry-run"],
+        &skillrun_home,
+    ));
+    assert_eq!(router_enabled["router"]["capsules"], 1);
+    assert_eq!(router_enabled["tools"][0]["capsule_id"], "refund");
+    assert_eq!(router_enabled["tools"][0]["name"], "refund");
+    assert!(router_enabled["tools"][0]["capsule_path"]
+        .as_str()
+        .unwrap_or_default()
+        .replace('\\', "/")
+        .contains("/consumer-home/capsules/refund"));
+    assert_eq!(router_enabled["resources"][0]["capsule_id"], "refund");
+    assert!(router_enabled["resources"][0]["uri"]
+        .as_str()
+        .unwrap_or_default()
+        .starts_with("skillrun://router/refund/"));
+
+    let mut client = ScriptedMcpClient::spawn_router(&skillrun_home);
+    let init = client.initialize();
+    assert_eq!(init["result"]["serverInfo"]["name"], "skillrun-router");
+    client.initialized();
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    }));
+    let tools = client.read_response("imported router tools/list response");
+    assert_eq!(tools["result"]["tools"][0]["name"], "refund");
+
+    client.send(json!({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "refund",
+            "arguments": {
+                "order_id": "order_imported_router_1001",
+                "amount": 80,
+                "reason": "damaged",
+                "customer_tier": "standard"
+            }
+        }
+    }));
+    let call = client.read_response("imported router tools/call response");
+    assert_eq!(call["id"], 3);
+    assert_eq!(call["result"]["isError"], false);
+
+    let run_record = fs::read_dir(imported_path.join(".skillrun").join("runs"))
+        .expect("imported capsule runs directory should be readable after router call")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("record.json"))
+        .find(|path| path.is_file())
+        .expect("router call should create run evidence in imported capsule");
+    let record: Value = serde_json::from_str(
+        &fs::read_to_string(run_record).expect("run record should be readable"),
+    )
+    .expect("run record should parse");
+    assert_eq!(record["mode"], "mcp");
+
+    fs::remove_dir_all(output_root).ok();
 }
 
 #[test]
