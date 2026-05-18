@@ -43,6 +43,7 @@
 - [v0.5.11 Runs Inspect](v0.5.11-runs-inspect.md)：计划为 Desktop Envelope Explorer 提供单次 run evidence 查询合同。
 - [v0.5.12 Capsule Import](v0.5.12-capsule-import.md)：计划补齐 `.skr import` 的 Core 合同，让 Desktop 通过稳定 CLI JSON 导入 capsule。
 - [v0.5.13 Import Router Contract](v0.5.13-import-router-contract.md)：计划硬化 import、switchboard、exposure 与 Router 的端到端消费合同。
+- [v0.5.14 Desktop Host Readiness](v0.5.14-desktop-host-readiness.md)：为 tray-first Desktop 增加 `host status --json` 握手合同，不引入 daemon 或 UI。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 

@@ -9,6 +9,7 @@ mod consumer;
 mod doctor;
 mod errors;
 mod hashing;
+mod host;
 mod init;
 mod inspect;
 mod manifest;

@@ -18,7 +18,7 @@ fn help_lists_core_commands() {
     assert!(stdout.contains("skillrun"));
 
     for command in [
-        "init", "manifest", "inspect", "check", "doctor", "import", "test", "run", "serve",
+        "init", "manifest", "host", "inspect", "check", "doctor", "import", "test", "run", "serve",
         "router", "pack",
     ] {
         assert!(
@@ -30,6 +30,7 @@ fn help_lists_core_commands() {
     assert!(stdout.contains("init --python"));
     assert!(stdout.contains("init --py"));
     assert!(stdout.contains("init --js (alpha)"));
+    assert!(stdout.contains("host status [--json]"));
     assert!(stdout.contains("import <package.skr>"));
 }
 

@@ -1,0 +1,99 @@
+{
+  "binary": {
+    "name": "skillrun",
+    "version": "<binary_version>"
+  },
+  "boundaries": {
+    "desktop_must_not_read_internal_paths": true,
+    "desktop_must_not_start_router_as_daemon": true,
+    "desktop_must_use_cli_json": true,
+    "router_runtime_entry": "skillrun router serve --mcp"
+  },
+  "capabilities": [
+    {
+      "command": "host status --json",
+      "name": "host_status",
+      "process": "short_running",
+      "schema_version": "host.status.v1"
+    },
+    {
+      "command": "import <package.skr> --json",
+      "name": "import_skr",
+      "process": "short_running",
+      "schema_version": "import.v1"
+    },
+    {
+      "command": "consumer inventory --json",
+      "name": "consumer_inventory",
+      "process": "short_running",
+      "schema_version": "consumer.inventory.v1"
+    },
+    {
+      "command": "consumer exposure --json",
+      "name": "consumer_exposure",
+      "process": "short_running",
+      "schema_version": "consumer.exposure.v1"
+    },
+    {
+      "command": "router serve --mcp --dry-run",
+      "name": "router_dry_run",
+      "process": "short_running",
+      "schema_version": "router.mcp.v1"
+    },
+    {
+      "command": "router serve --mcp",
+      "name": "router_mcp",
+      "process": "long_running_mcp_stdio",
+      "schema_version": null
+    },
+    {
+      "command": "consumer mount plan --client <id> --json",
+      "name": "mount_plan",
+      "process": "short_running",
+      "schema_version": "consumer.mount_plan.v1"
+    },
+    {
+      "command": "consumer mount apply --client claude-desktop --json",
+      "name": "mount_apply",
+      "process": "short_running",
+      "schema_version": "consumer.mount_apply.v1"
+    },
+    {
+      "command": "consumer mount rollback --client claude-desktop --backup <path> --json",
+      "name": "mount_rollback",
+      "process": "short_running",
+      "schema_version": "consumer.mount_rollback.v1"
+    },
+    {
+      "command": "consumer runs list --json",
+      "name": "runs_list",
+      "process": "short_running",
+      "schema_version": "consumer.runs.list.v1"
+    },
+    {
+      "command": "consumer runs inspect <run-id> --json --capsule <id>",
+      "name": "runs_inspect",
+      "process": "short_running",
+      "schema_version": "consumer.runs.inspect.v1"
+    }
+  ],
+  "command": "host status",
+  "contracts": {
+    "adapter_protocol": "adapter.v1",
+    "ipc_protocol_version": "0.1.0",
+    "manifest_ir_version": "0.1.0"
+  },
+  "ok": true,
+  "paths": {
+    "current_exe": "<skillrun_exe>",
+    "registry_path": "<skillrun_home>/registry.json",
+    "skillrun_home": "<skillrun_home>"
+  },
+  "platform": {
+    "arch": "<arch>",
+    "family": "<family>",
+    "os": "<os>"
+  },
+  "schema_version": "host.status.v1",
+  "warnings": []
+}

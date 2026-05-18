@@ -106,6 +106,14 @@ fn normalize_json(value: &mut Value, paths: &[(&Path, &str)], key: Option<&str>)
                 *text = "<timestamp>".to_string();
                 return;
             }
+            if key == Some("version") && text == env!("CARGO_PKG_VERSION") {
+                *text = "<binary_version>".to_string();
+                return;
+            }
+            if matches!(key, Some("os" | "arch" | "family")) {
+                *text = format!("<{}>", key.expect("platform key should exist"));
+                return;
+            }
             if key == Some("detected") {
                 *text = "<detected>".to_string();
                 return;
@@ -139,6 +147,25 @@ fn replace_path_variants(text: &mut String, path: &Path, placeholder: &str) {
 
 fn is_sha256(value: &str) -> bool {
     value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
+#[test]
+fn host_status_json_matches_contract_fixture() {
+    let output_root = temp_dir("json-contract-host-status");
+    let skillrun_home = output_root.join("skillrun-home");
+    let paths = [
+        (&skillrun_home as &Path, "<skillrun_home>"),
+        (Path::new(env!("CARGO_BIN_EXE_skillrun")), "<skillrun_exe>"),
+    ];
+
+    let host = assert_success_json(&run_skillrun(&["host", "status", "--json"], &skillrun_home));
+    assert_contract(
+        host,
+        include_str!("fixtures/contracts/host_status.json"),
+        &paths,
+    );
+
+    fs::remove_dir_all(output_root).ok();
 }
 
 #[test]
