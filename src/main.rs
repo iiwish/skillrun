@@ -1,6 +1,7 @@
 use std::process::ExitCode;
 
 mod adapters;
+mod capsule_import;
 mod check;
 mod cli;
 mod config;

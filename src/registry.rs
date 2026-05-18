@@ -50,6 +50,12 @@ struct RegistryEntry {
     registered_at: String,
 }
 
+pub const IMPORTED_SKR_SOURCE_TYPE: &str = "imported_skr";
+
+pub struct RegisteredCapsule {
+    pub id: String,
+}
+
 #[derive(Debug, Serialize)]
 struct RegistryListView {
     command: &'static str,
@@ -309,11 +315,23 @@ pub fn run(options: &RegistryOptions) -> Result<RegistryOutput, String> {
 }
 
 fn add(cwd: &Path, id: Option<&str>) -> Result<RegistryOutput, String> {
+    let registered = register_capsule_with_source(cwd, id, "local_path")?;
+
+    Ok(RegistryOutput {
+        output: format!("registered {}\nenabled: false", registered.id),
+    })
+}
+
+pub fn register_capsule_with_source(
+    cwd: &Path,
+    id: Option<&str>,
+    source_type: &str,
+) -> Result<RegisteredCapsule, String> {
     let capsule_path = absolute_existing_dir(cwd)?;
     let mut registry = load_registry()?;
     let registry_id = match id {
         Some(id) => {
-            validate_id(id)?;
+            validate_registry_id(id)?;
             id.to_string()
         }
         None => default_id(&capsule_path)?,
@@ -330,15 +348,13 @@ fn add(cwd: &Path, id: Option<&str>) -> Result<RegistryOutput, String> {
     registry.capsules.push(RegistryEntry {
         id: registry_id.clone(),
         path: display_path(&capsule_path),
-        source_type: "local_path".to_string(),
+        source_type: source_type.to_string(),
         enabled: false,
         registered_at: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
     });
     save_registry(&registry)?;
 
-    Ok(RegistryOutput {
-        output: format!("registered {registry_id}\nenabled: false"),
-    })
+    Ok(RegisteredCapsule { id: registry_id })
 }
 
 fn list(json: bool) -> Result<RegistryOutput, String> {
@@ -1322,7 +1338,7 @@ fn default_id(capsule_path: &Path) -> Result<String, String> {
             )
         })?
         .to_string();
-    validate_id(&id)?;
+    validate_registry_id(&id)?;
     Ok(id)
 }
 
@@ -1388,6 +1404,19 @@ fn registry_path() -> Result<PathBuf, String> {
     Ok(PathBuf::from(home).join(".skillrun").join("registry.json"))
 }
 
+pub fn registry_path_display() -> Result<String, String> {
+    registry_path().map(|path| display_path(&path))
+}
+
+pub fn ensure_registry_id_available(id: &str) -> Result<(), String> {
+    validate_registry_id(id)?;
+    let registry = load_registry()?;
+    if registry.capsules.iter().any(|entry| entry.id == id) {
+        return Err(format!("registry id already exists: {id}"));
+    }
+    Ok(())
+}
+
 fn absolute_existing_dir(path: &Path) -> Result<PathBuf, String> {
     if !path.exists() {
         return Err(format!("cwd does not exist: {}", path.display()));
@@ -1398,7 +1427,7 @@ fn absolute_existing_dir(path: &Path) -> Result<PathBuf, String> {
     fs::canonicalize(path).map_err(|error| format!("failed to resolve {}: {error}", path.display()))
 }
 
-fn validate_id(id: &str) -> Result<(), String> {
+pub fn validate_registry_id(id: &str) -> Result<(), String> {
     if id.is_empty() {
         return Err("registry id cannot be empty".to_string());
     }
