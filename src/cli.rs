@@ -160,6 +160,20 @@ where
                         ExitCode::from(2)
                     }
                 },
+                ConsumerCommand::RunsInspect {
+                    run_id,
+                    json,
+                    capsule,
+                } => match registry::consumer_runs_inspect(&run_id, json, capsule.as_deref()) {
+                    Ok(output) => {
+                        println!("{}", output.output);
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(2)
+                    }
+                },
                 ConsumerCommand::MountPlan(options) => match mount_plan::plan(&options) {
                     Ok(output) => {
                         println!("{}", output.output);
@@ -364,6 +378,11 @@ enum ConsumerCommand {
         json: bool,
         capsule: Option<String>,
         limit: Option<usize>,
+    },
+    RunsInspect {
+        run_id: String,
+        json: bool,
+        capsule: Option<String>,
     },
     MountPlan(MountPlanOptions),
     MountApply(MountApplyOptions),
@@ -570,6 +589,7 @@ fn parse_consumer_runs(args: Vec<String>) -> Result<ConsumerCommand, String> {
     let rest = args[1..].to_vec();
     match command {
         "list" => parse_consumer_runs_list(rest),
+        "inspect" => parse_consumer_runs_inspect(rest),
         value => Err(format!("unknown consumer runs subcommand: {value}")),
     }
 }
@@ -614,6 +634,50 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
         json,
         capsule,
         limit,
+    })
+}
+
+fn parse_consumer_runs_inspect(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut run_id = None;
+    let mut json = false;
+    let mut capsule = None;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            "--capsule" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--capsule requires a registry id".to_string());
+                };
+                capsule = Some(value.to_string());
+                index += 2;
+            }
+            value if value.starts_with("--") => {
+                return Err(format!(
+                    "unexpected consumer runs inspect argument: {value}"
+                ));
+            }
+            value => {
+                if run_id.is_some() {
+                    return Err(format!(
+                        "unexpected consumer runs inspect argument: {value}"
+                    ));
+                }
+                run_id = Some(value.to_string());
+                index += 1;
+            }
+        }
+    }
+
+    let run_id = run_id.ok_or_else(|| "consumer runs inspect requires <run-id>".to_string())?;
+    Ok(ConsumerCommand::RunsInspect {
+        run_id,
+        json,
+        capsule,
     })
 }
 
@@ -1060,6 +1124,7 @@ Implemented:
   consumer inventory [--json]
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--limit <n>]
+  consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]
   consumer mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]

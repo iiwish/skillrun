@@ -40,6 +40,7 @@
 - [v0.5.8 Router MVP](v0.5.8-router-mvp.md)：实现一键挂载所需的最小本地 MCP Router runtime，不引入 daemon、Desktop 或配置写入。
 - [v0.5.9 Safe Mount Apply](v0.5.9-safe-mount-apply.md)：定义可逆、可审计的 MCP client config apply / rollback 边界。
 - [v0.5.10 Consumer Contract Hardening](v0.5.10-consumer-contract-hardening.md)：计划在 Desktop 前校准公开文档、mount backup 合同和 consumer JSON 边界。
+- [v0.5.11 Runs Inspect](v0.5.11-runs-inspect.md)：计划为 Desktop Envelope Explorer 提供单次 run evidence 查询合同。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 

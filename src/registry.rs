@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serde_yaml::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use crate::hashing;
 use crate::manifest;
@@ -109,6 +109,32 @@ struct ConsumerRunsListView {
 }
 
 #[derive(Debug, Serialize)]
+struct ConsumerRunsInspectView {
+    command: &'static str,
+    schema_version: &'static str,
+    registry_path: String,
+    ok: bool,
+    run_ref: Option<RunRefView>,
+    capsule: Option<RunCapsuleView>,
+    record: Option<RunRecordView>,
+    input: InspectInputView,
+    envelope: InspectEnvelopeView,
+    artifacts: Vec<InspectArtifactView>,
+    logs: InspectLogsView,
+    warnings: Vec<WarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ConsumerRunsInspectErrorView {
+    command: &'static str,
+    schema_version: &'static str,
+    registry_path: String,
+    ok: bool,
+    error: ErrorView,
+    matches: Vec<RunRefView>,
+}
+
+#[derive(Debug, Serialize)]
 struct RunsScopeView {
     kind: &'static str,
     capsule_id: Option<String>,
@@ -141,7 +167,67 @@ struct RunRefView {
     run_id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize)]
+struct RunCapsuleView {
+    id: String,
+    path: String,
+}
+
+#[derive(Debug, Serialize)]
+struct RunRecordView {
+    run_id: String,
+    mode: String,
+    status: String,
+    started_at: String,
+    finished_at: String,
+    duration_ms: u128,
+    manifest_sha256: String,
+    skill_sha256: String,
+    action_sha256: String,
+}
+
+#[derive(Debug, Serialize)]
+struct InspectInputView {
+    included: bool,
+    available: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct InspectEnvelopeView {
+    included: bool,
+    status: String,
+    value: Option<JsonValue>,
+}
+
+#[derive(Debug, Serialize)]
+struct InspectArtifactView {
+    name: Option<String>,
+    kind: Option<String>,
+    path: Option<String>,
+    available: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct InspectLogsView {
+    stdout_available: bool,
+    stderr_available: bool,
+    stdout_included: bool,
+    stderr_included: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct WarningView {
+    code: &'static str,
+    message: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ErrorView {
+    code: &'static str,
+    message: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct StoredRunRecord {
     run_id: String,
     mode: String,
@@ -152,6 +238,16 @@ struct StoredRunRecord {
     manifest_sha256: String,
     skill_sha256: String,
     action_sha256: String,
+    #[serde(default)]
+    input: Option<String>,
+    #[serde(default)]
+    output: Option<String>,
+    #[serde(default)]
+    stdout: Option<String>,
+    #[serde(default)]
+    stderr: Option<String>,
+    #[serde(default)]
+    artifacts: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -570,6 +666,84 @@ pub fn consumer_runs_list(
     Ok(RegistryOutput { output })
 }
 
+pub fn consumer_runs_inspect(
+    run_id: &str,
+    json: bool,
+    capsule_id: Option<&str>,
+) -> Result<RegistryOutput, String> {
+    let registry = load_registry()?;
+    let registry_path = registry_path()?;
+    let registry_path_display = display_path(&registry_path);
+    let entries = registry_entries_for_scope(&registry, capsule_id)?;
+    let matches = matching_runs(entries, run_id);
+
+    if matches.is_empty() {
+        let view = ConsumerRunsInspectErrorView {
+            command: "consumer runs inspect",
+            schema_version: "consumer.runs.inspect.v1",
+            registry_path: registry_path_display,
+            ok: false,
+            error: ErrorView {
+                code: "RunNotFound",
+                message: "run_id was not found in registered capsules".to_string(),
+            },
+            matches: Vec::new(),
+        };
+        if json {
+            return json_output(&view);
+        }
+        return Ok(RegistryOutput {
+            output: format!("SkillRun Consumer Run Inspect\nrun: {run_id}\nstatus: not found"),
+        });
+    }
+
+    if matches.len() > 1 {
+        let refs = matches
+            .iter()
+            .map(|(entry, _)| RunRefView {
+                kind: "local_run",
+                capsule_id: entry.id.clone(),
+                run_id: run_id.to_string(),
+            })
+            .collect::<Vec<_>>();
+        let view = ConsumerRunsInspectErrorView {
+            command: "consumer runs inspect",
+            schema_version: "consumer.runs.inspect.v1",
+            registry_path: registry_path_display,
+            ok: false,
+            error: ErrorView {
+                code: "AmbiguousRunId",
+                message: "run_id matched multiple registered capsules; pass --capsule <id>"
+                    .to_string(),
+            },
+            matches: refs,
+        };
+        if json {
+            return json_output(&view);
+        }
+        return Ok(RegistryOutput {
+            output: format!("SkillRun Consumer Run Inspect\nrun: {run_id}\nstatus: ambiguous"),
+        });
+    }
+
+    let (entry, run_dir) = &matches[0];
+    let view = run_inspect_view(&registry_path_display, entry, run_dir, run_id);
+    if json {
+        return json_output(&view);
+    }
+
+    let output = format!(
+        "SkillRun Consumer Run Inspect\nrun: {}\ncapsule: {}\nstatus: {}",
+        run_id,
+        entry.id,
+        view.record
+            .as_ref()
+            .map(|record| record.status.as_str())
+            .unwrap_or("degraded")
+    );
+    Ok(RegistryOutput { output })
+}
+
 pub fn enable(id: &str) -> Result<RegistryOutput, String> {
     let mut registry = load_registry()?;
     let index = registry
@@ -793,6 +967,240 @@ fn registry_entries_for_scope<'a>(
             .ok_or_else(|| format!("registry id not found: {id}")),
         None => Ok(registry.capsules.iter().collect()),
     }
+}
+
+fn matching_runs<'a>(
+    entries: Vec<&'a RegistryEntry>,
+    run_id: &str,
+) -> Vec<(&'a RegistryEntry, PathBuf)> {
+    entries
+        .into_iter()
+        .filter_map(|entry| {
+            let run_dir = Path::new(&entry.path)
+                .join(".skillrun")
+                .join("runs")
+                .join(run_id);
+            run_dir.is_dir().then_some((entry, run_dir))
+        })
+        .collect()
+}
+
+fn run_inspect_view(
+    registry_path: &str,
+    entry: &RegistryEntry,
+    run_dir: &Path,
+    fallback_run_id: &str,
+) -> ConsumerRunsInspectView {
+    let run_ref = RunRefView {
+        kind: "local_run",
+        capsule_id: entry.id.clone(),
+        run_id: fallback_run_id.to_string(),
+    };
+    let mut warnings = Vec::new();
+    let mut record_view = None;
+    let mut record_for_files = None;
+
+    let record_path = run_dir.join("record.json");
+    if !record_path.is_file() {
+        warnings.push(WarningView {
+            code: "missing-record",
+            message: "record.json is missing; run evidence is degraded".to_string(),
+        });
+    } else {
+        match read_stored_run_record(&record_path) {
+            Ok(record) => {
+                record_for_files = Some(record.clone());
+                record_view = Some(RunRecordView {
+                    run_id: record.run_id.clone(),
+                    mode: record.mode.clone(),
+                    status: record.status.clone(),
+                    started_at: record.started_at.clone(),
+                    finished_at: record.finished_at.clone(),
+                    duration_ms: record.duration_ms,
+                    manifest_sha256: record.manifest_sha256.clone(),
+                    skill_sha256: record.skill_sha256.clone(),
+                    action_sha256: record.action_sha256.clone(),
+                });
+            }
+            Err(message) => warnings.push(WarningView {
+                code: "invalid-record",
+                message,
+            }),
+        }
+    }
+
+    let input_name = evidence_file_name(
+        record_for_files.as_ref(),
+        |record| record.input.as_deref(),
+        "input.json",
+    );
+    let output_name = evidence_file_name(
+        record_for_files.as_ref(),
+        |record| record.output.as_deref(),
+        "output.json",
+    );
+    let stdout_name = evidence_file_name(
+        record_for_files.as_ref(),
+        |record| record.stdout.as_deref(),
+        "stdout.log",
+    );
+    let stderr_name = evidence_file_name(
+        record_for_files.as_ref(),
+        |record| record.stderr.as_deref(),
+        "stderr.log",
+    );
+    let artifacts_name = evidence_file_name(
+        record_for_files.as_ref(),
+        |record| record.artifacts.as_deref(),
+        "artifacts",
+    );
+
+    let input = InspectInputView {
+        included: false,
+        available: run_dir.join(&input_name).is_file(),
+    };
+
+    let (envelope, artifacts) =
+        inspect_envelope(run_dir, &output_name, &artifacts_name, &mut warnings);
+    let logs = InspectLogsView {
+        stdout_available: run_dir.join(&stdout_name).is_file(),
+        stderr_available: run_dir.join(&stderr_name).is_file(),
+        stdout_included: false,
+        stderr_included: false,
+    };
+
+    ConsumerRunsInspectView {
+        command: "consumer runs inspect",
+        schema_version: "consumer.runs.inspect.v1",
+        registry_path: registry_path.to_string(),
+        ok: warnings.is_empty(),
+        run_ref: Some(run_ref),
+        capsule: Some(RunCapsuleView {
+            id: entry.id.clone(),
+            path: entry.path.clone(),
+        }),
+        record: record_view,
+        input,
+        envelope,
+        artifacts,
+        logs,
+        warnings,
+    }
+}
+
+fn read_stored_run_record(path: &Path) -> Result<StoredRunRecord, String> {
+    read_json(path).and_then(|value| {
+        serde_json::from_value::<StoredRunRecord>(value)
+            .map_err(|error| format!("record.json is not a valid run record: {error}"))
+    })
+}
+
+fn evidence_file_name(
+    record: Option<&StoredRunRecord>,
+    get: impl Fn(&StoredRunRecord) -> Option<&str>,
+    fallback: &str,
+) -> String {
+    record
+        .and_then(get)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(fallback)
+        .to_string()
+}
+
+fn inspect_envelope(
+    run_dir: &Path,
+    output_name: &str,
+    artifacts_name: &str,
+    warnings: &mut Vec<WarningView>,
+) -> (InspectEnvelopeView, Vec<InspectArtifactView>) {
+    let envelope_path = run_dir.join(output_name);
+    if !envelope_path.is_file() {
+        warnings.push(WarningView {
+            code: "missing-envelope",
+            message: "output envelope is missing; run result is degraded".to_string(),
+        });
+        return (
+            InspectEnvelopeView {
+                included: false,
+                status: "missing-envelope".to_string(),
+                value: None,
+            },
+            Vec::new(),
+        );
+    }
+
+    let envelope = match read_json(&envelope_path) {
+        Ok(envelope) => envelope,
+        Err(message) => {
+            warnings.push(WarningView {
+                code: "invalid-envelope",
+                message,
+            });
+            return (
+                InspectEnvelopeView {
+                    included: false,
+                    status: "invalid-envelope".to_string(),
+                    value: None,
+                },
+                Vec::new(),
+            );
+        }
+    };
+
+    let artifacts = inspect_artifacts(run_dir, artifacts_name, &envelope);
+    (
+        InspectEnvelopeView {
+            included: true,
+            status: "ok".to_string(),
+            value: Some(envelope),
+        },
+        artifacts,
+    )
+}
+
+fn inspect_artifacts(
+    run_dir: &Path,
+    artifacts_name: &str,
+    envelope: &JsonValue,
+) -> Vec<InspectArtifactView> {
+    envelope
+        .get("artifacts")
+        .and_then(JsonValue::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| {
+                    let path = item.get("path").and_then(JsonValue::as_str);
+                    let name = item
+                        .get("name")
+                        .and_then(JsonValue::as_str)
+                        .map(str::to_string);
+                    let kind = item
+                        .get("kind")
+                        .and_then(JsonValue::as_str)
+                        .map(str::to_string);
+                    let available = path
+                        .filter(|relative| is_safe_relative_artifact_path(relative))
+                        .map(|relative| run_dir.join(artifacts_name).join(relative).is_file())
+                        .unwrap_or(false);
+                    InspectArtifactView {
+                        name,
+                        kind,
+                        path: path.map(str::to_string),
+                        available,
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn is_safe_relative_artifact_path(path: &str) -> bool {
+    let path = Path::new(path);
+    !path.is_absolute()
+        && path
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
 }
 
 fn run_summary_view(
