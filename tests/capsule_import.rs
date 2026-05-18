@@ -37,6 +37,16 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
 }
 
+fn assert_failure_json(output: &std::process::Output) -> Value {
+    assert!(
+        !output.status.success(),
+        "command should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
+}
+
 fn generated_package(label: &str) -> (PathBuf, PathBuf) {
     let output_root = temp_dir(label);
     let output_arg = output_root.to_string_lossy().to_string();
@@ -151,14 +161,19 @@ fn import_rejects_duplicate_registry_ids_without_overwriting_existing_capsule() 
     fs::write(&marker, "do not overwrite").expect("marker should be writable");
 
     let duplicate = run_skillrun(&["import", &package_arg, "--json"], &skillrun_home);
+    let error = assert_failure_json(&duplicate);
+    assert_eq!(error["command"], "import");
+    assert_eq!(error["schema_version"], "import.v1");
+    assert_eq!(error["ok"], false);
+    assert_eq!(error["error"]["code"], "registry-id-exists");
+    assert!(error["error"]["message"]
+        .as_str()
+        .expect("error message should be present")
+        .contains("registry id already exists"));
     assert!(
-        !duplicate.status.success(),
-        "duplicate import should fail\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&duplicate.stdout),
-        String::from_utf8_lossy(&duplicate.stderr)
+        duplicate.stderr.is_empty(),
+        "json import errors should not require stderr parsing"
     );
-    let stderr = String::from_utf8(duplicate.stderr).expect("stderr should be utf-8");
-    assert!(stderr.contains("registry id already exists"));
     assert_eq!(
         fs::read_to_string(&marker).expect("marker should survive failed duplicate import"),
         "do not overwrite"
@@ -178,14 +193,19 @@ fn import_rejects_archive_entries_that_escape_target_directory() {
 
     let package_arg = package_path.to_string_lossy().to_string();
     let imported = run_skillrun(&["import", &package_arg, "--json"], &skillrun_home);
+    let error = assert_failure_json(&imported);
+    assert_eq!(error["command"], "import");
+    assert_eq!(error["schema_version"], "import.v1");
+    assert_eq!(error["ok"], false);
+    assert_eq!(error["error"]["code"], "package-path-escape");
+    assert!(error["error"]["message"]
+        .as_str()
+        .expect("error message should be present")
+        .contains("package path escapes import target"));
     assert!(
-        !imported.status.success(),
-        "path traversal package should fail\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&imported.stdout),
-        String::from_utf8_lossy(&imported.stderr)
+        imported.stderr.is_empty(),
+        "json import errors should not require stderr parsing"
     );
-    let stderr = String::from_utf8(imported.stderr).expect("stderr should be utf-8");
-    assert!(stderr.contains("package path escapes import target"));
     assert!(
         !output_root.join("escape.txt").exists(),
         "import must not write escaped archive entries"

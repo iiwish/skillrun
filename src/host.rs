@@ -21,6 +21,7 @@ struct HostStatusView {
     schema_version: &'static str,
     ok: bool,
     binary: BinaryView,
+    desktop_contract: DesktopContractView,
     contracts: ContractsView,
     platform: PlatformView,
     paths: PathsView,
@@ -33,6 +34,13 @@ struct HostStatusView {
 struct BinaryView {
     name: &'static str,
     version: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+struct DesktopContractView {
+    name: &'static str,
+    version: u32,
+    status: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +108,11 @@ pub fn status(options: &HostStatusOptions) -> Result<HostStatusOutput, String> {
         binary: BinaryView {
             name: "skillrun",
             version: env!("CARGO_PKG_VERSION"),
+        },
+        desktop_contract: DesktopContractView {
+            name: "desktop.alpha",
+            version: 1,
+            status: "frozen",
         },
         contracts: ContractsView {
             manifest_ir_version: MANIFEST_IR_VERSION,

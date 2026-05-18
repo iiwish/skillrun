@@ -1,5 +1,36 @@
 # SkillRun Release Notes
 
+## v0.5.15
+
+Status: In Progress
+Prepared on: 2026-05-18
+Publication: not published
+
+### Headline
+
+SkillRun freezes the first Desktop alpha contract set: `host.status.v1` now declares `desktop.alpha` version `1`, and `skillrun import --json` runtime failures return machine-readable `ok=false` JSON instead of forcing Desktop to parse stderr.
+
+### Version Layers
+
+- Binary/crate version is `0.5.15`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- `host.status.v1.desktop_contract` with `name=desktop.alpha`, `version=1`, and `status=frozen`.
+- `skillrun import <package.skr> --json` runtime failure JSON with `schema_version=import.v1`, `ok=false`, `error.code`, and `error.message`.
+- Import error codes for duplicate registry id, existing import target, missing package, non-file package, path escape, unsupported package entry, invalid manifest, and generic import failure.
+- Host status fixture updated for the Desktop contract set.
+- Import tests updated so JSON callers do not need stderr parsing for runtime failures.
+- v0.5.15 Desktop Contract Freeze design document.
+
+### Boundaries
+
+- v0.5.15 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, artifact/log/input content reads, global run indexing, or OS sandboxing.
+- v0.5.15 does not add a global JSON error framework. It hardens the Desktop-critical import runtime error path only.
+
 ## v0.5.14
 
 Status: Released

@@ -150,7 +150,19 @@ where
                     ExitCode::SUCCESS
                 }
                 Err(error) => {
-                    eprintln!("error: {error}");
+                    if options.json {
+                        match capsule_import::error_json(&error) {
+                            Ok(output) => println!("{output}"),
+                            Err(render_error) => {
+                                eprintln!("error: {error}");
+                                eprintln!(
+                                    "error: failed to render import JSON error: {render_error}"
+                                );
+                            }
+                        }
+                    } else {
+                        eprintln!("error: {error}");
+                    }
                     ExitCode::from(2)
                 }
             },
