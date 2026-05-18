@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use crate::capsule_import::{self, ImportOptions};
 use crate::check::{self, CheckOptions};
 use crate::consumer;
 use crate::doctor::{self, DoctorOptions};
@@ -121,6 +122,23 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun doctor [--json] [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("import") => match parse_import(args.collect()) {
+            Ok(options) => match capsule_import::run(&options) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun import <package.skr> [--id <id>] [--to <dir>] [--json]");
                 ExitCode::from(2)
             }
         },
@@ -540,6 +558,55 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     }
 
     Ok(CheckOptions { cwd, json })
+}
+
+fn parse_import(args: Vec<String>) -> Result<ImportOptions, String> {
+    let mut package = None;
+    let mut id = None;
+    let mut target_dir = None;
+    let mut json = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--id" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--id requires a registry id".to_string());
+                };
+                id = Some(value.to_string());
+                index += 2;
+            }
+            "--to" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--to requires a directory".to_string());
+                };
+                target_dir = Some(PathBuf::from(value));
+                index += 2;
+            }
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            value if value.starts_with('-') => {
+                return Err(format!("unexpected import argument: {value}"));
+            }
+            value => {
+                if package.is_some() {
+                    return Err(format!("unexpected import argument: {value}"));
+                }
+                package = Some(PathBuf::from(value));
+                index += 1;
+            }
+        }
+    }
+
+    let package = package.ok_or_else(|| "import requires <package.skr>".to_string())?;
+    Ok(ImportOptions {
+        package,
+        id,
+        target_dir,
+        json,
+    })
 }
 
 fn parse_consumer(args: Vec<String>) -> Result<ConsumerCommand, String> {
@@ -1105,6 +1172,7 @@ MVP commands:
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+  import     import a .skr package into the local capsule registry
   consumer   expose headless consumer control-plane JSON
   registry   manage local capsule inventory
   switchboard enable or disable registered capsules
@@ -1121,6 +1189,7 @@ Implemented:
   inspect [--json]
   check [--json]
   doctor [--json]
+  import <package.skr> [--id <id>] [--to <dir>] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--limit <n>]
