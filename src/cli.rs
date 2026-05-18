@@ -5,6 +5,7 @@ use crate::capsule_import::{self, ImportOptions};
 use crate::check::{self, CheckOptions};
 use crate::consumer;
 use crate::doctor::{self, DoctorOptions};
+use crate::host::{self, HostStatusOptions};
 use crate::init::{self, InitLanguage, InitOptions};
 use crate::inspect::{self, InspectOptions};
 use crate::manifest::{self, ManifestOptions};
@@ -32,6 +33,23 @@ where
             println!("skillrun {VERSION}");
             ExitCode::SUCCESS
         }
+        Some("host") => match parse_host(args.collect()) {
+            Ok(options) => match host::status(&options) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun host status [--json]");
+                ExitCode::from(2)
+            }
+        },
         Some("init") => match parse_init(args.collect()) {
             Ok(options) => match init::create_capsule(&options) {
                 Ok(path) => {
@@ -463,6 +481,30 @@ fn set_language(language: &mut Option<InitLanguage>, value: InitLanguage) -> Res
             Ok(())
         }
     }
+}
+
+fn parse_host(args: Vec<String>) -> Result<HostStatusOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("host requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "status" => parse_host_status(rest),
+        value => Err(format!("unknown host subcommand: {value}")),
+    }
+}
+
+fn parse_host_status(args: Vec<String>) -> Result<HostStatusOptions, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected host status argument: {value}")),
+        }
+    }
+
+    Ok(HostStatusOptions { json })
 }
 
 fn parse_manifest(args: Vec<String>) -> Result<ManifestOptions, String> {
@@ -1169,6 +1211,7 @@ Usage:
 MVP commands:
   init       create a Python stable or JS alpha action capsule skeleton
   manifest   generate the Manifest from SOP, action metadata, config and examples
+  host       show Desktop-facing host readiness and Core contract status
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
@@ -1185,6 +1228,7 @@ Implemented:
   init --python
   init --py
   init --js (alpha)
+  host status [--json]
   manifest
   inspect [--json]
   check [--json]

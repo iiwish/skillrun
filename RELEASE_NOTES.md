@@ -1,5 +1,35 @@
 # SkillRun Release Notes
 
+## v0.5.14
+
+Status: In Progress
+Prepared on: 2026-05-18
+Publication: not published
+
+### Headline
+
+SkillRun adds a Desktop host readiness handshake for tray-first clients: `skillrun host status --json` lets Desktop confirm Core version, platform, contract versions, paths, supported short-running surfaces, and the Router daemon boundary before rendering UI state.
+
+### Version Layers
+
+- Binary/crate version is `0.5.14`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- `skillrun host status --json` with `host.status.v1`.
+- Host status contract fixture for Desktop/tray parser tests.
+- Help surface updated with `host status [--json]`.
+- README, Chinese README, and docs index updated for v0.5.14 development line.
+- v0.5.14 Desktop Host Readiness design document.
+
+### Boundaries
+
+- v0.5.14 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, artifact/log/input content reads, global run indexing, or OS sandboxing.
+- `host status` does not read capsules, parse Manifest YAML, read `.skillrun/runs`, execute actions, or start `skillrun router serve --mcp`.
+
 ## v0.5.13
 
 Status: Released
