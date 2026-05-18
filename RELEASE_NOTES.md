@@ -2,9 +2,9 @@
 
 ## v0.5.13
 
-Status: Ready_For_Release_Decision
+Status: Released
 Prepared on: 2026-05-18
-Publication: pending branch review, remote CI, main merge, tag publication, and release backwrite
+Publication: v0.5.13 main merge, remote push, and tag publication completed; GitHub Release page publication was not performed in this environment because neither `gh` nor a GitHub release token is available; no package registry publication was performed
 
 ### Headline
 
@@ -50,6 +50,8 @@ SkillRun hardens the imported capsule consumption path before Desktop: `.skr imp
 - docs relative links check
 - `cargo test`
 - `cargo run --quiet -- --version` returned `skillrun 0.5.13`
+- Release branch CI passed on `codex/v0.5.13-import-router-contract`: https://github.com/iiwish/skillrun/actions/runs/26016853241
+- Main CI passed after tag publication: https://github.com/iiwish/skillrun/actions/runs/26016916237
 
 ## v0.5.12
 
