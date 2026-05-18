@@ -411,3 +411,71 @@ fn mount_apply_for_cursor_is_plan_only_and_does_not_write_config() {
 
     fs::remove_dir_all(root).ok();
 }
+
+#[test]
+fn mount_rollback_missing_backup_returns_json_warning_without_writing() {
+    let root = temp_dir("mount-rollback-missing-backup");
+    let config = root.join("claude_desktop_config.json");
+    let backup = root.join("missing.skillrun.bak.json");
+    let config_arg = config.to_string_lossy().to_string();
+    let backup_arg = backup.to_string_lossy().to_string();
+
+    let output = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_arg,
+        "--json",
+    ]));
+
+    assert_eq!(output["command"], "consumer mount rollback");
+    assert_eq!(output["rolled_back"], false);
+    assert_eq!(output["client"]["supported"], true);
+    assert_eq!(output["warnings"][0]["code"], "missing-backup");
+    assert!(
+        !config.exists(),
+        "missing backup rollback must not write config"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn mount_rollback_invalid_backup_returns_json_warning_without_writing() {
+    let root = temp_dir("mount-rollback-invalid-backup");
+    fs::create_dir_all(&root).expect("test root should be created");
+    let config = root.join("claude_desktop_config.json");
+    let backup = root.join("invalid.skillrun.bak.json");
+    fs::write(&backup, "{not-json").expect("invalid backup should be written");
+    let config_arg = config.to_string_lossy().to_string();
+    let backup_arg = backup.to_string_lossy().to_string();
+
+    let output = assert_success_json(&run_skillrun(&[
+        "consumer",
+        "mount",
+        "rollback",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--backup",
+        &backup_arg,
+        "--json",
+    ]));
+
+    assert_eq!(output["command"], "consumer mount rollback");
+    assert_eq!(output["rolled_back"], false);
+    assert_eq!(output["client"]["supported"], true);
+    assert_eq!(output["warnings"][0]["code"], "invalid-backup");
+    assert!(
+        !config.exists(),
+        "invalid backup rollback must not write config"
+    );
+
+    fs::remove_dir_all(root).ok();
+}

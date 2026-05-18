@@ -412,13 +412,29 @@ fn build_rollback(options: &MountRollbackOptions) -> Result<MountRollbackView, S
         ));
     }
 
-    let backup = read_backup_file(&options.backup)?;
+    if !options.backup.is_file() {
+        return Ok(rollback_warning_for_spec(
+            &spec,
+            "missing-backup",
+            "backup file does not exist; rollback did not modify config",
+        ));
+    }
+    let backup = match read_backup_file(&options.backup) {
+        Ok(backup) => backup,
+        Err(error) => {
+            return Ok(rollback_warning_for_spec(
+                &spec,
+                "invalid-backup",
+                &format!("{error}; rollback did not modify config"),
+            ));
+        }
+    };
     if backup.schema_version != "consumer.mount_backup.v1"
         || backup.created_by != "skillrun"
         || backup.client_id != spec.id
     {
-        return Ok(rollback_warning(
-            spec.id,
+        return Ok(rollback_warning_for_spec(
+            &spec,
             "invalid-backup",
             "backup is not a SkillRun mount backup for this client",
         ));
@@ -624,6 +640,25 @@ fn rollback_warning(client: &str, code: &'static str, message: &str) -> MountRol
             supported: false,
             detected: false,
         },
+        config: None,
+        backup: None,
+        rolled_back: false,
+        warnings: vec![WarningView {
+            code,
+            message: message.to_string(),
+        }],
+    }
+}
+
+fn rollback_warning_for_spec(
+    spec: &ClientSpec,
+    code: &'static str,
+    message: &str,
+) -> MountRollbackView {
+    MountRollbackView {
+        command: "consumer mount rollback",
+        schema_version: "consumer.mount_rollback.v1",
+        client: client_view(spec, false),
         config: None,
         backup: None,
         rolled_back: false,
