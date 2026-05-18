@@ -1,5 +1,52 @@
 # SkillRun Release Notes
 
+## v0.5.11
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-18
+Publication: pending branch review, remote CI, main merge, tag publication, and release backwrite
+
+### Headline
+
+SkillRun adds a stable `consumer runs inspect --json` contract for Desktop Envelope Explorer: Desktop can inspect one recorded run envelope and evidence availability without reading raw inputs, logs, or artifact contents.
+
+### Version Layers
+
+- Binary/crate version is `0.5.11`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- v0.5.11 Runs Inspect contract document.
+- `skillrun consumer runs inspect <run-id> --json`.
+- Optional `--capsule <id>` disambiguation for duplicate run IDs across local registered capsules.
+- JSON success contract with capsule summary, run record summary, envelope value, artifact metadata, log availability, and warnings.
+- Structured JSON errors for missing and ambiguous run IDs.
+- Privacy-preserving inspect behavior: no raw input content, stdout content, stderr content, or artifact content is emitted.
+- Artifact availability checks only safe relative artifact paths.
+- README, Chinese README, docs index, and v0.6 Consumer Era vision updated for the new Desktop-facing read surface.
+
+### Boundaries
+
+- v0.5.11 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, marketplace behavior, or OS sandboxing.
+- v0.5.11 does not add `--include-input`, artifact content reads, log content reads, or global run indexing.
+- `consumer runs inspect` is registry-scoped and reads only evidence referenced by registered local capsule run records.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test --test registry`
+- `cargo test --test cli`
+- `cargo test --test consumer_json_contracts`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- `cargo run --quiet -- --version` returned `skillrun 0.5.11`
+- Unfinished-marker scan found no release-blocking markers in changed v0.5.11 surfaces.
+
 ## v0.5.10
 
 Status: Released

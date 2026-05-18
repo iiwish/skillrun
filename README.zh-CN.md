@@ -36,13 +36,13 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前公开 release：`v0.5.10`。
+当前公开 release candidate：`v0.5.11`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.5.10
+# skillrun 0.5.11
 ```
 
 当前已经可用：
@@ -66,9 +66,10 @@ skillrun --version
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
   - `skillrun consumer runs list --json`
+  - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.10 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、marketplace 或 OS sandbox。
+v0.5.11 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、marketplace、`--include-input`、artifact content read、log content read、global run index 或 OS sandbox。
 
 ## 快速开始
 
@@ -177,12 +178,12 @@ skillrun-desktop
 SkillRun 同时存在几类版本：
 
 - `Cargo.toml` 和 `skillrun --version` 标识 binary/crate version。
-- `v0.5.10` 这类 Git tag 标识公开 release 边界。
-- v0.5.4、v0.5.5、v0.5.6、v0.5.7、v0.5.8、v0.5.9、v0.5.10 这类 milestone 描述交付范围。
+- `v0.5.11` 这类 Git tag 标识公开 release 边界。
+- v0.5.4、v0.5.5、v0.5.6、v0.5.7、v0.5.8、v0.5.9、v0.5.10、v0.5.11 这类 milestone 描述交付范围。
 - Manifest `manifest_version` 标识 Manifest IR schema。
 - IPC / Adapter `protocol_version` 标识 Core 到 adapter process 的文件协议。
 
-当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.10 硬化 consumer contract 和 mount 模块边界，但不改变这些协议版本。
+当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.11 增加 `consumer runs inspect --json`，但不改变这些协议版本。
 
 ## 路线图
 
@@ -198,7 +199,8 @@ SkillRun 同时存在几类版本：
 | `v0.5.7` | Desktop 前的 public narrative 与 contract-surface polish |
 | `v0.5.8` | Router runtime MVP，支撑真实一键挂载 |
 | `v0.5.9` | Safe Mount Apply，提供可逆 MCP client config 写入 |
-| `v0.5.10` | 计划：Desktop 前的 Consumer Contract Hardening |
+| `v0.5.10` | Desktop 前的 Consumer Contract Hardening |
+| `v0.5.11` | 面向 Desktop Envelope Explorer 的 Runs Inspect |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
 ## 示例
@@ -227,6 +229,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
 - [v0.5.9 Safe Mount Apply](docs/v0.5.9-safe-mount-apply.md)
 - [v0.5.10 Consumer Contract Hardening](docs/v0.5.10-consumer-contract-hardening.md)
+- [v0.5.11 Runs Inspect](docs/v0.5.11-runs-inspect.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
