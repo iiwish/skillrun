@@ -169,7 +169,7 @@ fn mount_plan_refuses_to_patch_unparseable_config() {
     assert_eq!(output["config"]["exists"], true);
     assert_eq!(output["config"]["parseable"], false);
     assert_eq!(output["changes"].as_array().unwrap().len(), 0);
-    assert_eq!(output["warnings"][1]["code"], "unparseable-config");
+    assert_eq!(output["warnings"][0]["code"], "unparseable-config");
 
     fs::remove_dir_all(root).ok();
 }

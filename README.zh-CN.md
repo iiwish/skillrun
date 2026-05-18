@@ -36,13 +36,13 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前公开 release：`v0.5.7`。
+当前公开 release：`v0.5.8`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.5.7
+# skillrun 0.5.8
 ```
 
 当前已经可用：
@@ -56,13 +56,16 @@ skillrun --version
 - 从 Manifest 派生 MCP stdio server。
 - `.skr` source + Manifest package。
 - 本地 capsule `registry` 和 `switchboard`。
+- 用于一键挂载的本地 MCP Router：
+  - `skillrun router serve --mcp`
+  - `skillrun router serve --mcp --dry-run`
 - 面向未来 Desktop / Router 的 headless consumer JSON surface：
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
   - `skillrun consumer runs list --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.7 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon、Router runtime、真实 MCP client config mutation、signed package trust、dependency installation、marketplace 或 OS sandbox。
+v0.5.8 刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、真实 MCP client config mutation、signed package trust、dependency installation、marketplace 或 OS sandbox。
 
 ## 快速开始
 
@@ -157,7 +160,7 @@ Desktop 是独立项目。它应该消费 SkillRun Core 暴露的稳定 headless
 ```text
 skillrun
   Rust CLI/Core, Manifest, Consumer Mode, Adapter Protocol, runtime, pack,
-  registry/switchboard, headless JSON surfaces, future Router
+  registry/switchboard, headless JSON surfaces, Router MVP
 
 skillrun-desktop
   Tauri shell, Capsule Switchboard, MCP Mount Manager, Envelope Explorer,
@@ -171,12 +174,12 @@ skillrun-desktop
 SkillRun 同时存在几类版本：
 
 - `Cargo.toml` 和 `skillrun --version` 标识 binary/crate version。
-- `v0.5.7` 这类 Git tag 标识公开 release 边界。
-- v0.5.4、v0.5.5、v0.5.6、v0.5.7 这类 milestone 描述交付范围。
+- `v0.5.8` 这类 Git tag 标识公开 release 边界。
+- v0.5.4、v0.5.5、v0.5.6、v0.5.7、v0.5.8 这类 milestone 描述交付范围。
 - Manifest `manifest_version` 标识 Manifest IR schema。
 - IPC / Adapter `protocol_version` 标识 Core 到 adapter process 的文件协议。
 
-当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.7 是基于 v0.5.6 headless consumer control-plane contracts 的公开表层发布，不改变这些协议版本。
+当前生成的 Manifest IR 与 IPC protocol version 仍是 `0.1.0`。v0.5.8 增加本地 MCP Router runtime MVP，但不改变这些协议版本。
 
 ## 路线图
 
@@ -190,7 +193,7 @@ SkillRun 同时存在几类版本：
 | `v0.5.5` | Manifest-driven Consumer Mode contract hardening |
 | `v0.5.6` | Desktop 前置的 headless consumer JSON contracts |
 | `v0.5.7` | Desktop 前的 public narrative 与 contract-surface polish |
-| `v0.5.8` | 建议：Router runtime MVP，支撑真实一键挂载 |
+| `v0.5.8` | Router runtime MVP，支撑真实一键挂载 |
 | `v0.6` | 建议：Consumer Era Desktop 与本地控制面 |
 
 ## 示例
@@ -216,6 +219,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.6 Headless Consumer Contract](docs/v0.5.6-headless-consumer-contract.md)
 - [v0.5.6 Run History Contract Review](docs/v0.5.6-run-history-contract-review.md)
 - [v0.5.6 Mount Plan Contract Review](docs/v0.5.6-mount-plan-contract-review.md)
+- [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)

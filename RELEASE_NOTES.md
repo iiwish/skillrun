@@ -1,5 +1,53 @@
 # SkillRun Release Notes
 
+## v0.5.8
+
+Status: Release candidate
+Prepared on: 2026-05-18
+Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
+
+### Headline
+
+SkillRun adds the first real Router MVP for one-click mounting: `skillrun router serve --mcp` exposes enabled and ready local capsules through one MCP stdio entrypoint.
+
+### Version Layers
+
+- Binary/crate version is `0.5.8`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- `skillrun router serve --mcp --dry-run` with `router.mcp.v1` JSON output.
+- `skillrun router serve --mcp` as a long-running MCP stdio Router.
+- Router startup snapshot over local registry + switchboard + readiness.
+- Router exposure limited to `enabled=true` and readiness `ok=true` capsules.
+- Consumer Mode Manifest validation before a capsule is exposed by Router.
+- Duplicate MCP tool name rejection at Router startup.
+- MCP `tools/list`, `tools/call`, `resources/list`, and `resources/read` across exposed capsules.
+- `consumer mount plan` no longer emits `router-runtime-not-implemented` for supported clients.
+- Router tests for dry-run filtering and stdio tool calls.
+
+### Boundaries
+
+- v0.5.8 Router MVP is snapshot-based; it does not hot-reload registry or switchboard changes.
+- It does not add Desktop, Tauri, `skillrun ui`, a daemon API, HTTP/SSE transport, MCP client config apply/rollback, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- MCP client config mutation remains out of scope; mount plan is still plan-only.
+- Router exposure is local inventory + switchboard intent + readiness gate, not trust certification.
+
+### Validation
+
+- `cargo test --test router`
+- `cargo test --test mount_plan`
+- `cargo test --test cli`
+- `cargo test`
+- `cargo fmt --check`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- Release branch CI, main CI, tag, and GitHub Release publication are pending
+
 ## v0.5.7
 
 Status: Released

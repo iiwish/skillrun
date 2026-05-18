@@ -7,6 +7,7 @@ use crate::manifest;
 use crate::manifest_access::{string_at, value_at, ManifestView};
 use crate::schemas;
 
+#[derive(Clone)]
 pub struct ValidManifest {
     pub value: Value,
     pub path: PathBuf,

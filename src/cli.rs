@@ -11,6 +11,7 @@ use crate::mcp;
 use crate::mount_plan::{self, MountPlanOptions};
 use crate::pack::{self, PackOptions};
 use crate::registry::{self, RegistryCommand, RegistryOptions};
+use crate::router::{self, RouterOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 use crate::switchboard::{self, SwitchboardCommand, SwitchboardOptions};
 
@@ -190,6 +191,24 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun registry <add|list|inspect|remove> [options]");
+                ExitCode::from(2)
+            }
+        },
+        Some("router") => match parse_router(args.collect()) {
+            Ok(options) => match router::serve_mcp(&options) {
+                Ok(router::RouterOutcome::DryRun(output)) => {
+                    println!("{output}");
+                    ExitCode::SUCCESS
+                }
+                Ok(router::RouterOutcome::Served) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun router serve --mcp [--dry-run]");
                 ExitCode::from(2)
             }
         },
@@ -640,6 +659,36 @@ fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
     Ok(RegistryOptions { command })
 }
 
+fn parse_router(args: Vec<String>) -> Result<RouterOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("router requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "serve" => parse_router_serve(rest),
+        value => Err(format!("unknown router subcommand: {value}")),
+    }
+}
+
+fn parse_router_serve(args: Vec<String>) -> Result<RouterOptions, String> {
+    let mut mcp = false;
+    let mut dry_run = false;
+
+    for value in args {
+        match value.as_str() {
+            "--mcp" => mcp = true,
+            "--dry-run" => dry_run = true,
+            value => return Err(format!("unexpected router serve argument: {value}")),
+        }
+    }
+
+    if !mcp {
+        return Err("router serve currently requires --mcp".to_string());
+    }
+
+    Ok(RouterOptions { dry_run })
+}
+
 fn parse_registry_add(args: Vec<String>) -> Result<RegistryCommand, String> {
     let mut cwd = None;
     let mut id = None;
@@ -896,6 +945,7 @@ Implemented:
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--limit <n>]
   consumer mount plan --client <id> [--config <path>] [--json]
+  router serve --mcp [--dry-run]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test

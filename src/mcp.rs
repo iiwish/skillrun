@@ -9,6 +9,13 @@ use crate::runtime;
 
 const MCP_PROTOCOL_VERSION: &str = "2025-11-25";
 
+#[derive(Clone)]
+pub struct McpRoute {
+    pub capsule_id: String,
+    pub capsule_dir: PathBuf,
+    pub manifest: ValidManifest,
+}
+
 pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<String, String> {
     let manifest_view = ManifestView::new(&manifest.value);
     let skill_name = manifest_view.skill_name().unwrap_or("skill");
@@ -60,10 +67,82 @@ pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<
         .map_err(|error| format!("failed to serialize MCP dry-run contract: {error}"))
 }
 
+pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
+    let tools = routes
+        .iter()
+        .map(|route| {
+            let manifest_view = ManifestView::new(&route.manifest.value);
+            let skill_name = manifest_view.skill_name().unwrap_or("skill");
+            let tool_name = manifest_view.tool_name().unwrap_or(skill_name);
+            let tool_description = manifest_view
+                .tool_description()
+                .unwrap_or("SkillRun MCP tool.");
+            let input_schema = manifest_view
+                .input_schema_json()
+                .unwrap_or_else(|| json!({}));
+            let output_schema = manifest_view
+                .output_schema_json()
+                .unwrap_or_else(|| json!({}));
+            json!({
+                "capsule_id": route.capsule_id,
+                "capsule_path": route.capsule_dir.display().to_string(),
+                "name": tool_name,
+                "description": tool_description,
+                "input_schema": input_schema,
+                "output_schema": output_schema,
+                "manifest_sha256": route.manifest.sha256,
+                "result_contract": "SkillRun output/error envelope"
+            })
+        })
+        .collect::<Vec<_>>();
+    let resources = routes
+        .iter()
+        .flat_map(|route| {
+            resource_registry(&route.capsule_dir, &route.manifest)
+                .into_iter()
+                .map(|resource| {
+                    json!({
+                        "capsule_id": route.capsule_id,
+                        "uri": router_resource_uri(route, &resource),
+                        "name": resource.name,
+                        "path": resource.relative_path,
+                        "mime_type": resource.mime_type
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let contract = json!({
+        "command": "router serve --mcp",
+        "schema_version": "router.mcp.v1",
+        "mcp": {
+            "dry_run": true,
+            "transport": "stdio",
+            "protocol": "model-context-protocol"
+        },
+        "router": {
+            "snapshot": true,
+            "capsules": routes.len()
+        },
+        "tools": tools,
+        "resources": resources
+    });
+
+    serde_json::to_string_pretty(&contract)
+        .map_err(|error| format!("failed to serialize Router dry-run contract: {error}"))
+}
+
 pub fn serve_stdio(capsule_dir: &Path, manifest: &ValidManifest) -> Result<(), String> {
     let stdin = io::stdin();
     let stdout = io::stdout();
     serve_stdio_io(stdin.lock(), stdout.lock(), capsule_dir, manifest)
+}
+
+pub fn serve_router_stdio(routes: &[McpRoute]) -> Result<(), String> {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    serve_router_stdio_io(stdin.lock(), stdout.lock(), routes)
 }
 
 fn serve_stdio_io<R, W>(
@@ -146,6 +225,98 @@ fn handle_message(
         Some("resources/read") => {
             let id = id.unwrap_or(JsonValue::Null);
             Some(handle_resources_read(id, object, capsule_dir, manifest))
+        }
+        Some(method) => {
+            let id = id.unwrap_or(JsonValue::Null);
+            if id.is_null() {
+                None
+            } else {
+                Some(error_response(
+                    id,
+                    -32601,
+                    format!("Method not found: {method}"),
+                ))
+            }
+        }
+        None => Some(error_response(
+            id.unwrap_or(JsonValue::Null),
+            -32600,
+            "Invalid Request: missing method",
+        )),
+    }
+}
+
+fn serve_router_stdio_io<R, W>(reader: R, mut writer: W, routes: &[McpRoute]) -> Result<(), String>
+where
+    R: BufRead,
+    W: Write,
+{
+    for line in reader.lines() {
+        let line = line.map_err(|error| format!("failed to read MCP stdin: {error}"))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let response = match serde_json::from_str::<JsonValue>(&line) {
+            Ok(message) => handle_router_message(message, routes),
+            Err(error) => Some(error_response(
+                JsonValue::Null,
+                -32700,
+                format!("Parse error: {error}"),
+            )),
+        };
+
+        if let Some(response) = response {
+            write_json_line(&mut writer, &response)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_router_message(message: JsonValue, routes: &[McpRoute]) -> Option<JsonValue> {
+    let Some(object) = message.as_object() else {
+        return Some(error_response(
+            JsonValue::Null,
+            -32600,
+            "Invalid Request: expected JSON object",
+        ));
+    };
+
+    let id = object.get("id").cloned();
+    let method = object.get("method").and_then(JsonValue::as_str);
+
+    match method {
+        Some("initialize") => Some(success_response(
+            id.unwrap_or(JsonValue::Null),
+            json!({
+                "protocolVersion": MCP_PROTOCOL_VERSION,
+                "capabilities": {
+                    "tools": {},
+                    "resources": {}
+                },
+                "serverInfo": {
+                    "name": "skillrun-router",
+                    "version": env!("CARGO_PKG_VERSION")
+                }
+            }),
+        )),
+        Some("notifications/initialized") => None,
+        Some("tools/list") => Some(success_response(
+            id.unwrap_or(JsonValue::Null),
+            router_tools_list_result(routes),
+        )),
+        Some("tools/call") => {
+            let id = id.unwrap_or(JsonValue::Null);
+            Some(handle_router_tools_call(id, object, routes))
+        }
+        Some("resources/list") => Some(success_response(
+            id.unwrap_or(JsonValue::Null),
+            router_resources_list_result(routes),
+        )),
+        Some("resources/read") => {
+            let id = id.unwrap_or(JsonValue::Null);
+            Some(handle_router_resources_read(id, object, routes))
         }
         Some(method) => {
             let id = id.unwrap_or(JsonValue::Null);
@@ -251,6 +422,26 @@ fn resources_list_result(capsule_dir: &Path, manifest: &ValidManifest) -> JsonVa
     json!({ "resources": resources })
 }
 
+fn router_resources_list_result(routes: &[McpRoute]) -> JsonValue {
+    let resources = routes
+        .iter()
+        .flat_map(|route| {
+            resource_registry(&route.capsule_dir, &route.manifest)
+                .into_iter()
+                .map(|resource| {
+                    json!({
+                        "uri": router_resource_uri(route, &resource),
+                        "name": resource.name,
+                        "mimeType": resource.mime_type
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    json!({ "resources": resources })
+}
+
 fn handle_resources_read(
     id: JsonValue,
     request: &serde_json::Map<String, JsonValue>,
@@ -297,6 +488,63 @@ fn handle_resources_read(
                 }
             ]
         }),
+    )
+}
+
+fn handle_router_resources_read(
+    id: JsonValue,
+    request: &serde_json::Map<String, JsonValue>,
+    routes: &[McpRoute],
+) -> JsonValue {
+    let Some(params) = request.get("params").and_then(JsonValue::as_object) else {
+        return error_response(id, -32602, "Invalid params: resources/read requires params");
+    };
+    let Some(uri) = params.get("uri").and_then(JsonValue::as_str) else {
+        return error_response(id, -32602, "Invalid params: resources/read requires uri");
+    };
+
+    for route in routes {
+        if let Some(resource) = resource_registry(&route.capsule_dir, &route.manifest)
+            .into_iter()
+            .find(|resource| router_resource_uri(route, resource) == uri)
+        {
+            let path = match safe_relative_path(&resource.relative_path) {
+                Ok(path) => route.capsule_dir.join(path),
+                Err(error) => return error_response(id, -32002, error),
+            };
+            let text = match fs::read_to_string(&path) {
+                Ok(text) => text,
+                Err(error) => {
+                    return error_response(
+                        id,
+                        -32002,
+                        format!("Failed to read resource {uri}: {error}"),
+                    );
+                }
+            };
+
+            return success_response(
+                id,
+                json!({
+                    "contents": [
+                        {
+                            "uri": resource.uri,
+                            "mimeType": resource.mime_type,
+                            "text": text
+                        }
+                    ]
+                }),
+            );
+        }
+    }
+
+    error_response(id, -32002, format!("Resource not found: {uri}"))
+}
+
+fn router_resource_uri(route: &McpRoute, resource: &McpResource) -> String {
+    format!(
+        "skillrun://router/{}/{}",
+        route.capsule_id, resource.relative_path
     )
 }
 
@@ -353,6 +601,35 @@ fn tools_list_result(manifest: &ValidManifest) -> JsonValue {
     })
 }
 
+fn router_tools_list_result(routes: &[McpRoute]) -> JsonValue {
+    let tools = routes
+        .iter()
+        .map(|route| {
+            let manifest_view = ManifestView::new(&route.manifest.value);
+            let skill_name = manifest_view.skill_name().unwrap_or("skill");
+            let tool_name = manifest_view.tool_name().unwrap_or(skill_name);
+            let tool_description = manifest_view
+                .tool_description()
+                .unwrap_or("SkillRun MCP tool.");
+            let input_schema = manifest_view
+                .input_schema_json()
+                .unwrap_or_else(|| json!({}));
+            let output_schema = manifest_view
+                .output_schema_json()
+                .unwrap_or_else(|| json!({}));
+
+            json!({
+                "name": tool_name,
+                "description": tool_description,
+                "inputSchema": input_schema,
+                "outputSchema": output_schema
+            })
+        })
+        .collect::<Vec<_>>();
+
+    json!({ "tools": tools })
+}
+
 fn handle_tools_call(
     id: JsonValue,
     request: &serde_json::Map<String, JsonValue>,
@@ -392,6 +669,49 @@ fn handle_tools_call(
         },
         Err(error) => error_response(id, -32603, error),
     }
+}
+
+fn handle_router_tools_call(
+    id: JsonValue,
+    request: &serde_json::Map<String, JsonValue>,
+    routes: &[McpRoute],
+) -> JsonValue {
+    let Some(params) = request.get("params").and_then(JsonValue::as_object) else {
+        return error_response(id, -32602, "Invalid params: tools/call requires params");
+    };
+    let Some(name) = params.get("name").and_then(JsonValue::as_str) else {
+        return error_response(id, -32602, "Invalid params: tools/call requires name");
+    };
+
+    let Some(route) = routes.iter().find(|route| route_tool_name(route) == name) else {
+        return error_response(id, -32602, format!("Unknown tool: {name}"));
+    };
+
+    let arguments = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if !arguments.is_object() {
+        return error_response(id, -32602, "Invalid params: arguments must be an object");
+    }
+
+    match runtime::run_with_json_input(&route.capsule_dir, arguments, "mcp") {
+        Ok(outcome) => match serde_json::from_str::<JsonValue>(&outcome.envelope) {
+            Ok(envelope) => success_response(id, tool_call_result(&envelope, outcome.success)),
+            Err(error) => error_response(
+                id,
+                -32603,
+                format!("SkillRun envelope was not valid JSON: {error}"),
+            ),
+        },
+        Err(error) => error_response(id, -32603, error),
+    }
+}
+
+pub fn route_tool_name(route: &McpRoute) -> String {
+    let manifest_view = ManifestView::new(&route.manifest.value);
+    let skill_name = manifest_view.skill_name().unwrap_or("skill");
+    manifest_view.tool_name().unwrap_or(skill_name).to_string()
 }
 
 fn tool_call_result(envelope: &JsonValue, success: bool) -> JsonValue {
