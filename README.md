@@ -36,13 +36,13 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current public release: `v0.5.9`.
+Current public release candidate: `v0.5.10`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.5.9
+# skillrun 0.5.10
 ```
 
 Available today:
@@ -68,7 +68,7 @@ Available today:
   - `skillrun consumer runs list --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.9 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, marketplace behavior, or OS sandboxing.
+v0.5.10 intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, marketplace behavior, or OS sandboxing.
 
 ## Quickstart
 
@@ -177,12 +177,12 @@ The key rule for one-click mounting is: mount the SkillRun Router, not individua
 SkillRun uses separate version layers:
 
 - `Cargo.toml` and `skillrun --version` identify the binary/crate version.
-- Git tags such as `v0.5.9` identify public release boundaries.
-- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, and v0.5.9 describe delivery scope.
+- Git tags such as `v0.5.10` identify public release boundaries.
+- Milestone names such as v0.5.4, v0.5.5, v0.5.6, v0.5.7, v0.5.8, v0.5.9, and v0.5.10 describe delivery scope.
 - Manifest `manifest_version` identifies the Manifest IR schema.
 - IPC / Adapter `protocol_version` identifies the Core-to-adapter file protocol.
 
-The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.9 adds reversible Claude Desktop mount apply / rollback without changing those protocol versions.
+The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5.10 hardens consumer contracts and mount module boundaries without changing those protocol versions.
 
 ## Roadmap
 
@@ -226,6 +226,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.6 Mount Plan Contract Review](docs/v0.5.6-mount-plan-contract-review.md)
 - [v0.5.8 Router MVP](docs/v0.5.8-router-mvp.md)
 - [v0.5.9 Safe Mount Apply](docs/v0.5.9-safe-mount-apply.md)
+- [v0.5.10 Consumer Contract Hardening](docs/v0.5.10-consumer-contract-hardening.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)

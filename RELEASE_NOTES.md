@@ -1,5 +1,49 @@
 # SkillRun Release Notes
 
+## v0.5.10
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-18
+Publication: not published yet; pending branch push, main merge, tag, and GitHub Release publication
+
+### Headline
+
+SkillRun hardens the Consumer Control Plane contract before Desktop: public docs now reflect the implemented Router and Safe Mount Apply surface, and mount backup/client semantics are split into narrower Core modules without changing CLI behavior.
+
+### Version Layers
+
+- Binary/crate version is `0.5.10`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- v0.5.10 Consumer Contract Hardening document.
+- README and Chinese README updated from v0.5.9 to v0.5.10 release candidate wording.
+- README no longer describes the implemented SkillRun Router as a future capability.
+- v0.5.8 and v0.5.9 planning documents now record implementation status and follow-on boundaries.
+- v0.6 Consumer Era vision updated to reflect that Router runtime and Claude Desktop Safe Mount Apply already exist.
+- `consumer mount plan --json` backup path pattern now matches the real apply backup filename shape.
+- `mount_plan.rs` remains the CLI facade, while client profile/path logic lives in `mount_plan/client.rs` and backup file semantics live in `mount_plan/backup.rs`.
+
+### Boundaries
+
+- v0.5.10 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client adapter expansion, `.skr import`, marketplace, signed package trust, dependency installation, or OS sandboxing.
+- The mount module split is internal structure only; it does not change the `consumer mount plan/apply/rollback` JSON schema.
+- v0.5.10 keeps Claude Desktop as the only supported apply / rollback client.
+
+### Validation
+
+- `cargo test --test mount_plan`
+- `cargo fmt --check`
+- `cargo test`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- `cargo run --quiet -- --version` returned `skillrun 0.5.10`
+- Unfinished-marker scan found no release-blocking markers in changed v0.5.10 surfaces.
+
 ## v0.5.9
 
 Status: Released
@@ -165,7 +209,7 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - Run history contract review defining registry-scoped list semantics, input privacy boundaries, and why `runs inspect` should not be bundled into v0.5.6 by default.
 - Mount plan contract review defining Router-only mounting, plan-first output, and why apply/rollback should not be bundled into v0.5.6 by default.
 - `skillrun consumer inventory --json` as a stable capsule inventory surface for Desktop, Router, and automation consumers.
-- `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for future Router consumers.
+- `skillrun consumer exposure --json` as a read-only Manifest-derived tool exposure plan for Router consumers.
 - `skillrun consumer runs list --json` as a registry-scoped run evidence summary for future Envelope Explorer consumers.
 - `skillrun consumer mount plan --client <id> --json` as a plan-only MCP client configuration preview.
 - Contract fixture coverage for enabled consumer inventory output.
@@ -180,7 +224,7 @@ SkillRun adds release polish and the first explicit headless consumer control-pl
 - `consumer inventory --json` and `consumer exposure --json` are read-only control-plane surfaces over local registry readiness semantics.
 - `consumer runs list --json` is a read-only summary over registered capsules only; it is not a global run database and does not include full input, artifact content, log content, or `runs inspect`.
 - `consumer mount plan --client <id> --json` is plan-only. v0.5.6 does not implement apply/rollback and does not modify real MCP client configuration.
-- Mount plan targets the future SkillRun Router and emits a warning because v0.5.6 does not add Router runtime.
+- Mount plan targeted the later SkillRun Router and emitted a warning because v0.5.6 did not add Router runtime.
 - Run history remains evidence-first; Desktop should consume Core JSON surfaces instead of reading `.skillrun/runs` directly.
 - Registry remains inventory, not a trust store; `enabled=true` remains future exposure intent and does not mean trusted, sandboxed, installed, or runnable.
 - `.skr` remains an import/distribution artifact, not a direct MCP runtime entry.
@@ -298,7 +342,7 @@ Publication: no v0.5.3 tag, remote push, package publication, registry entry, or
 
 ### Headline
 
-SkillRun adds a local Capsule Registry and Switchboard: users and future Router/Desktop consumers can see registered local capsules and explicitly enable or disable future exposure intent.
+SkillRun adds a local Capsule Registry and Switchboard: users and Router/Desktop consumers can see registered local capsules and explicitly enable or disable planned exposure intent.
 
 ### What Is Included
 
@@ -314,7 +358,7 @@ SkillRun adds a local Capsule Registry and Switchboard: users and future Router/
 ### Boundaries
 
 - Registry is local inventory, not a marketplace, package index, trust registry, or install source.
-- Switchboard `enabled=true` means future Router exposure intent. It does not mean trust, sandboxing, dependency installation, or MCP client mounting.
+- Switchboard `enabled=true` means planned Router exposure intent. It does not mean trust, sandboxing, dependency installation, or MCP client mounting.
 - v0.5.3 does not import or unpack `.skr`.
 - v0.5.3 does not add SkillRun Router, daemon, Tauri/Desktop, MCP client config mutation, signed packages, dependency vendoring, dependency installation, or OS sandboxing.
 - Enable gates use Consumer Mode readiness and do not import action source for metadata.
