@@ -36,7 +36,7 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前公开 release candidate：`v0.5.11`。
+当前公开 release：`v0.5.11`。
 
 当前 binary/crate 版本：
 

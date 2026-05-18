@@ -2,9 +2,9 @@
 
 ## v0.5.11
 
-Status: Ready_For_Release_Decision
+Status: Released
 Prepared on: 2026-05-18
-Publication: pending branch review, remote CI, main merge, tag publication, and release backwrite
+Publication: v0.5.11 main merge, remote push, and tag publication completed; GitHub Release page publication was not performed in this environment because neither `gh` nor a GitHub release token is available; no package registry publication was performed
 
 ### Headline
 
@@ -46,6 +46,8 @@ SkillRun adds a stable `consumer runs inspect --json` contract for Desktop Envel
 - docs relative links check
 - `cargo run --quiet -- --version` returned `skillrun 0.5.11`
 - Unfinished-marker scan found no release-blocking markers in changed v0.5.11 surfaces.
+- Release branch CI passed on `codex/v0.5.11-runs-inspect`: https://github.com/iiwish/skillrun/actions/runs/26014544337
+- Main CI passed after tag publication: https://github.com/iiwish/skillrun/actions/runs/26014592406
 
 ## v0.5.10
 

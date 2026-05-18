@@ -36,7 +36,7 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current public release candidate: `v0.5.11`.
+Current public release: `v0.5.11`.
 
 Current binary/crate version:
 
