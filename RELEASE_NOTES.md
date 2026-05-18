@@ -2,9 +2,9 @@
 
 ## v0.5.9
 
-Status: Release candidate
+Status: Released
 Prepared on: 2026-05-18
-Publication: Pending main merge, remote push, tag, and GitHub Release publication; no package registry publication is planned
+Publication: v0.5.9 main merge, remote push, tag, and GitHub Release publication completed; no package registry publication was performed
 
 ### Headline
 
@@ -43,7 +43,11 @@ SkillRun turns mount planning into a reversible headless execution path: Core ow
 - `cargo clippy --all-targets -- -D warnings`
 - `git diff --check`
 - docs relative links check
-- Release branch CI, main CI, tag, and GitHub Release publication are required before final release status
+- `skillrun --version` returned `skillrun 0.5.9`
+- Unfinished-marker scan found no release-blocking markers in changed v0.5.9 surfaces.
+- Release branch CI passed on `codex/v0.5.9-safe-mount-apply`: https://github.com/iiwish/skillrun/actions/runs/26012348541
+- Main CI passed before tag publication: https://github.com/iiwish/skillrun/actions/runs/26012420226
+- GitHub Release: https://github.com/iiwish/skillrun/releases/tag/v0.5.9
 
 ## v0.5.8
 
