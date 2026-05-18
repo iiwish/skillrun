@@ -1,5 +1,53 @@
 # SkillRun Release Notes
 
+## v0.5.12
+
+Status: Ready_For_Release_Decision
+Prepared on: 2026-05-18
+Publication: pending branch review, remote CI, main merge, tag publication, and release backwrite
+
+### Headline
+
+SkillRun adds the first Core-owned `.skr import` flow: Desktop and automation can import a package into local inventory through a stable CLI/JSON contract without directly unpacking archives or reading capsule internals.
+
+### Version Layers
+
+- Binary/crate version is `0.5.12`.
+- Manifest IR `manifest_version` remains `0.1.0`.
+- IPC / Adapter `protocol_version` remains `0.1.0`.
+- Adapter Protocol remains `adapter.v1` for Level 0 command adapters.
+
+### What Is Included So Far
+
+- v0.5.12 Capsule Import contract document.
+- `skillrun import <package.skr> [--id <id>] [--to <dir>] [--json]`.
+- Default import location under the local SkillRun home `capsules/<id>` directory.
+- Static import validation through Manifest/source hashes and schema contract checks.
+- Registry registration with `source_type=imported_skr` and `enabled=false`.
+- JSON success contract `import.v1` for Desktop and automation consumers.
+- Safe archive extraction that rejects absolute paths, parent traversal, Windows prefixes, empty entry paths, symlinks, hardlinks, and unsupported entry types.
+- Duplicate registry IDs and existing target directories fail without overwriting existing imports.
+- README, Chinese README, docs index, and v0.6 Consumer Era vision updated for `.skr import`.
+
+### Boundaries
+
+- v0.5.12 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, or OS sandboxing.
+- `skillrun import` does not enable the imported capsule; exposure still requires `switchboard enable <id>` and readiness gates.
+- `.skr import` is not trust, sandboxing, dependency installation, or a secure package registry.
+
+### Validation
+
+- `cargo test --test capsule_import`
+- `cargo test --test cli`
+- `cargo test --test registry`
+- `cargo test --test consumer_json_contracts`
+- `cargo fmt --check`
+- `cargo clippy --all-targets -- -D warnings`
+- `git diff --check`
+- docs relative links check
+- `cargo test`
+- `cargo run --quiet -- --version` returned `skillrun 0.5.12`
+
 ## v0.5.11
 
 Status: Released
