@@ -2,9 +2,9 @@
 
 ## v0.5.14
 
-Status: In Progress
+Status: Released
 Prepared on: 2026-05-18
-Publication: not published
+Publication: v0.5.14 main merge, remote push, and tag publication completed; GitHub Release page publication was not performed by request; no package registry publication was performed
 
 ### Headline
 
@@ -29,6 +29,19 @@ SkillRun adds a Desktop host readiness handshake for tray-first clients: `skillr
 
 - v0.5.14 does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, artifact/log/input content reads, global run indexing, or OS sandboxing.
 - `host status` does not read capsules, parse Manifest YAML, read `.skillrun/runs`, execute actions, or start `skillrun router serve --mcp`.
+
+### Validation
+
+- `cargo fmt --check`
+- `cargo test --test cli --test consumer_json_contracts`
+- `cargo run --quiet -- host status --json`
+- `cargo run --quiet -- --version` returned `skillrun 0.5.14`
+- `cargo clippy --all-targets -- -D warnings`
+- `cargo test`
+- `git diff --check`
+- docs relative links check
+- Release branch CI passed on `codex/v0.5.14-desktop-host-readiness`: https://github.com/iiwish/skillrun/actions/runs/26019815534
+- Main CI passed after tag publication: https://github.com/iiwish/skillrun/actions/runs/26019937557
 
 ## v0.5.13
 
