@@ -913,7 +913,7 @@ skillrun pack
 
 主打：
 
-> **Turn one SOP and one action into a tested MCP skill.**
+> **Turn one SOP and one action into a tested, manifest-bound Skill Capsule.**
 
 中文：
 
@@ -934,7 +934,7 @@ skillrun pack
 ```text
 Skill Capsule = SOP + action code + schema + examples + overrides
 Manifest = compiled runtime IR
-Core = Rust manifest-driven runtime and MCP server
+Core = Rust manifest-driven runtime and packaging toolchain
 Adapter = language bridge
 SDK = low-friction developer API
 IPC = file-based input/output/artifact protocol

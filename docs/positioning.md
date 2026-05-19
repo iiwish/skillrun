@@ -48,12 +48,26 @@ Package       = .skr source + Manifest archive
 
 一个 Capsule 对 Agent 是一个可调用技能；对作者是一个小目录；对 Consumer Mode 是一份静态 Manifest 加 source hashes；对 MCP client 是一个 Manifest-derived tool 和相关 resources。
 
+## Context Skill 与 Runtime Capsule
+
+不要把所有 `SKILL.md` 都叫 SkillRun Capsule。
+
+```text
+Context Skill    = SKILL.md + references/scripts/templates，由 Codex、Claude Code 等 Agent 加载
+Runtime Capsule  = SKILL.md + action + schema + examples + permissions + Manifest，由 SkillRun 执行
+```
+
+Context Skill 的价值是让 Agent 获得工作流、判断标准和上下文。它不需要 SkillRun runtime，不生成 Manifest-derived MCP tool，也不应该进入 `switchboard enable`。
+
+Runtime Capsule 的价值是把一个真实动作放进可检查、可测试、可拒绝、可审计的执行合同。只有作者显式提供 action、schema、examples 和 Manifest 后，普通 Skill 才升级为 SkillRun Capsule。
+
 ## SkillRun 是什么
 
 - Manifest-driven runtime for SOP-backed agent skills。
 - 本地优先的 CLI/Core，用 Rust 实现。
 - 把 `SKILL.md`、action、schema、examples、permissions 和 preflight 编译成 Manifest。
 - 用 Manifest 生成 inspect/check/run/test/pack/MCP 暴露路径。
+- 识别 instruction-only Skill，并拒绝把 Markdown、scripts、references、assets 或 examples 推断成可执行 action。
 - 用 structured output/error envelope、artifact 和 run record 保留执行证据。
 - 用 Consumer Mode 避免为 metadata extraction 动态 import 未信任源码。
 

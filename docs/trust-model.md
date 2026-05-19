@@ -28,6 +28,20 @@ Manifest contract
 
 Guardrail 不是 OS sandbox、恶意代码检测、依赖封装、网络强隔离或 signed registry trust。它的真实收益是让 Agent 不再裸调一个函数，而是通过可检查、可拒绝、可追溯的 Skill Capsule 执行动作。
 
+## Context Skill 边界
+
+只有 `SKILL.md`、`references/`、`assets/`、`scripts/` 或 `templates/` 的 Anthropic-style Skill 是 Context Skill，不是 Runtime Capsule。
+
+Context Skill 的信任边界不同：
+
+- SkillRun 不执行它。
+- SkillRun 不把它暴露为 MCP tool。
+- SkillRun 不从其中的 Markdown、scripts、references、assets 或 examples 推断 action。
+- Agent 加载 Context Skill 后可能改变行为，因此它仍然需要来源审查和目标范围确认。
+- 未来如果 CLI 支持安装 Context Skill，也必须 plan/apply/rollback，不能一键全局启用。
+
+Context Skill 要升级为 Runtime Capsule，必须显式加入 action、schema、examples、permissions 和 Manifest。
+
 ## 当前可信边界
 
 v0.5.1 可以诚实承诺以下边界：

@@ -16,6 +16,7 @@
 - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
 - [Adapter Protocol](adapter-protocol.md)：v0.5 起的 Core-to-adapter 南向协议、capability levels、IPC/envelope 和 conformance 边界。
 - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
+- [Agent Context Skills 与 Runtime Capsules](agent-context-skills.md)：区分纯 `SKILL.md` 上下文技能和可执行 Runtime Capsule，并定义 CLI / Desktop 责任边界。
 - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
 - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。
 - [v0.4 Portable Consumer Checks](v0.4-portable-consumer-checks.md)：dependency-aware Consumer Mode、`check` 边界和 `.skr` 可诊断分发合同。

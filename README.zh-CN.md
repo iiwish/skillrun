@@ -4,9 +4,18 @@
 
 [English](README.md)
 
-FastMCP 把函数变成 MCP tool。SkillRun 把 SOP-backed capability 变成 **Skill Capsule**。
+FastMCP 把函数变成 MCP tool。SkillRun 把 Agent 能力变成可分发 artifact。
 
 SkillRun 是一个 Rust runtime 和 CLI，用一份 SOP 和一个 Action 打包出可检查、可测试、可运行、可分发、可通过 MCP 调用的 Agent skill。它不是通用 Agent framework，不是 marketplace，也不是 OS sandbox。
+
+这里必须区分两层能力：
+
+```text
+Context Skill    = SKILL.md + 可选 references/scripts/templates，由 Agent 加载
+Runtime Capsule  = SKILL.md + action + schema + examples + permissions + Manifest
+```
+
+当前 SkillRun 已实现的是 **Runtime Capsule** 路径。只有 `SKILL.md` 的 instruction-only 目录会被识别并拒绝 runtime 执行，而不是被推断成 tool。未来 CLI 应该负责 Context Skill 的校验、打包和安装到 Codex、Claude Code 等 Agent terminal 的目标目录，但不把它们伪装成 MCP tool。
 
 ## 为什么需要 SkillRun
 
@@ -73,6 +82,10 @@ skillrun --version
   - `skillrun consumer runs list --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+- instruction-only Skill 识别：
+  - `skillrun inspect --cwd <skill-dir>` 会报告 `status: instruction-only`
+  - `skillrun check` / `doctor` 会说明 Markdown、scripts、references、assets 和 examples 不会被推断成 action
+  - runtime 命令会拒绝 instruction-only skill，而不是隐式执行
 
 v0.5.15 冻结 Desktop alpha contract set，并让 `import --json` 的运行期失败也变成机器可读合同。它刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、package update/reinstall、import from URL、marketplace、`--include-input`、artifact content read、log content read、global run index 或 OS sandbox。
 
@@ -178,6 +191,8 @@ skillrun-desktop
 
 一键挂载的核心规则是：挂载 SkillRun Router，而不是直接挂 `.skr` 或 capsule 文件夹。`.skr` 是 import/distribution artifact，Router 才是 MCP runtime entry。
 
+Context Skill 的未来规则不同：通过 CLI 的 plan/apply 合同把 skill 安装或挂载到目标 Agent 的 skill 目录。Desktop 可以展示并确认这个 plan，但不应自己复制文件或发明目标目录规则。
+
 托盘应用应使用 `skillrun host status --json` 做 Core 握手，用短跑 JSON 命令刷新状态。它应绑定 `desktop.alpha` contract version `1`，而不是从人类文本推断兼容性。托盘不应把 `skillrun router serve --mcp` 作为隐藏 daemon 启动；MCP client 通过已挂载配置启动 Router。
 
 ## 版本层级
@@ -232,6 +247,7 @@ SkillRun 同时存在几类版本：
 - [文档入口](docs/README.md)
 - [架构 SSOT](docs/ssot.md)
 - [项目定位](docs/positioning.md)
+- [Agent Context Skills 与 Runtime Capsules](docs/agent-context-skills.md)
 - [信任模型](docs/trust-model.md)
 - [Adapter Protocol](docs/adapter-protocol.md)
 - [v0.5.6 Headless Consumer Contract](docs/v0.5.6-headless-consumer-contract.md)

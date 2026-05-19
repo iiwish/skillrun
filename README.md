@@ -4,9 +4,18 @@
 
 [Simplified Chinese](README.zh-CN.md)
 
-FastMCP turns functions into MCP tools. SkillRun turns SOP-backed capabilities into **Skill Capsules**.
+FastMCP turns functions into MCP tools. SkillRun turns agent capabilities into distributable artifacts.
 
 SkillRun is a Rust runtime and CLI for packaging one SOP and one action into an inspectable, testable, runnable, distributable, and MCP-callable Agent skill. It is not a general Agent framework, not a marketplace, and not an OS sandbox.
+
+There are two capability layers:
+
+```text
+Context Skill    = SKILL.md + optional references/scripts/templates, loaded by an Agent
+Runtime Capsule  = SKILL.md + action + schema + examples + permissions + Manifest
+```
+
+Today, SkillRun's implemented runtime is the **Runtime Capsule** path. Instruction-only `SKILL.md` directories are recognized and refused for runtime execution instead of being inferred into tools. A future CLI contract should manage Context Skill validation, packaging, and target installation for Codex, Claude Code, and other Agent terminals without turning them into MCP tools.
 
 ## Why It Exists
 
@@ -73,6 +82,10 @@ Available today:
   - `skillrun consumer runs list --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+- Instruction-only Skill recognition:
+  - `skillrun inspect --cwd <skill-dir>` reports `status: instruction-only`
+  - `skillrun check` / `doctor` explain that Markdown, scripts, references, assets, and examples are not inferred as actions
+  - runtime commands refuse instruction-only skills instead of executing them implicitly
 
 v0.5.15 freezes the Desktop alpha contract set and makes `import --json` runtime failures machine-readable. It intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
 
@@ -178,6 +191,8 @@ skillrun-desktop
 
 The key rule for one-click mounting is: mount the SkillRun Router, not individual `.skr` files or capsule folders. `.skr` is an import/distribution artifact. Router is the MCP runtime entry.
 
+For Context Skills, the future key rule is different: mount or install the skill into the target Agent's skill directory through a CLI plan/apply contract. Desktop may visualize and confirm that plan, but it should not copy files or invent target directory rules itself.
+
 The tray should use `skillrun host status --json` for Core handshake and short-running JSON commands for refresh. It should bind to `desktop.alpha` contract version `1`, not infer compatibility from human text. It should not run `skillrun router serve --mcp` as a hidden daemon; MCP clients start the Router through their mounted config.
 
 ## Version Layers
@@ -232,6 +247,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [Documentation index](docs/README.md)
 - [Architecture SSOT](docs/ssot.md)
 - [Positioning](docs/positioning.md)
+- [Agent Context Skills and Runtime Capsules](docs/agent-context-skills.md)
 - [Trust model](docs/trust-model.md)
 - [Adapter Protocol](docs/adapter-protocol.md)
 - [v0.5.6 Headless Consumer Contract](docs/v0.5.6-headless-consumer-contract.md)

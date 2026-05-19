@@ -48,7 +48,7 @@ MVP 只服务一个核心用户：
 
 ### 2.3 一句话叙事
 
-> **Turn one SOP and one action into a tested MCP skill package with a Rust CLI/Core.**
+> **Turn one SOP and one action into a tested, manifest-bound Skill Capsule with a Rust CLI/Core.**
 
 中文：
 
@@ -609,7 +609,7 @@ MVP 完成必须同时满足：
 - Negative/Security Matrix 中的高风险边界有 automated tests 或明确 documented exception。
 - B001 `refund` hero example 完整实现，B002-B004 作为 README 或 `docs/business-examples.md` 级业务价值示例出现。
 - `pack` 生成的 `.skr` 可被解包并通过 Manifest inspect。
-- README 可以用同一条叙事解释项目：`Turn one SOP and one action into a tested MCP skill package with a Rust CLI/Core.`
+- README 可以用同一条叙事解释项目：`Turn one SOP and one action into a tested, manifest-bound Skill Capsule with a Rust CLI/Core.`
 
 ---
 

@@ -1213,7 +1213,7 @@ fn print_help() {
         "\
 SkillRun
 
-Rust CLI for turning one SOP and one action into a tested MCP skill package.
+Rust CLI for turning one SOP and one action into a tested, manifest-bound Skill Capsule.
 
 Usage:
   skillrun [--help]
