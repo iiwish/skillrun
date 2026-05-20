@@ -4,6 +4,7 @@ version = "0.5.15"
 edition = "2021"
 description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
 license = "Apache-2.0"
+repository = "https://github.com/iiwish/skillrun"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -17,3 +18,8 @@ tar = "0.4"
 [[bin]]
 name = "skillrun"
 path = "src/main.rs"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
