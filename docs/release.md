@@ -7,7 +7,8 @@ SkillRun 使用 `release-plz` 管理 `skillrun` crate 的版本号、`vX.Y.Z` gi
 - 合并普通 feature PR 到 `main` 后，`.github/workflows/release-plz.yml` 会运行 `release-plz release-pr`，创建或更新 release PR。
 - release PR 负责更新 `Cargo.toml`、`Cargo.lock` 和 `CHANGELOG.md` 等 release metadata。
 - `release-plz.toml` 设置 `release_always = false`，因此 `release-plz release` 只在 release PR 合并后创建 release。
-- `release-plz.toml` 设置 `git_only = true`，版本检测基于 git tag，`cargo publish` 会被跳过。
+- `release-plz.toml` 设置 `git_only = true`，版本检测基于 git tag。
+- `release-plz.toml` 和 `Cargo.toml` 均显式禁用 crates.io publish，`release-plz release` 只负责 git tag 与 GitHub Release。
 - release tag 使用 `v{{ version }}` 格式，例如 `v0.5.16`。
 
 ## 人工 review gate
