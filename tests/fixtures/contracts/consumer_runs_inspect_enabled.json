@@ -1,0 +1,53 @@
+{
+  "command": "consumer runs inspect",
+  "schema_version": "consumer.runs.inspect.v1",
+  "registry_path": "<skillrun_home>/registry.json",
+  "ok": true,
+  "run_ref": {
+    "kind": "local_run",
+    "capsule_id": "runs_contract",
+    "run_id": "<run_id>"
+  },
+  "capsule": {
+    "id": "runs_contract",
+    "path": "<capsule>"
+  },
+  "record": {
+    "run_id": "<run_id>",
+    "mode": "test",
+    "status": "succeeded",
+    "started_at": "<timestamp>",
+    "finished_at": "<timestamp>",
+    "duration_ms": "<duration_ms>",
+    "manifest_sha256": "<sha256>",
+    "skill_sha256": "<sha256>",
+    "action_sha256": "<sha256>"
+  },
+  "input": {
+    "included": false,
+    "available": true
+  },
+  "envelope": {
+    "included": true,
+    "status": "ok",
+    "value": {
+      "artifacts": [],
+      "ok": true,
+      "output": {
+        "message": "fixture complete",
+        "ok": true
+      },
+      "record": "<capsule>/.skillrun/runs/<run_id>/record.json",
+      "run_dir": "<capsule>/.skillrun/runs/<run_id>",
+      "run_id": "<run_id>"
+    }
+  },
+  "artifacts": [],
+  "logs": {
+    "stdout_available": true,
+    "stderr_available": true,
+    "stdout_included": false,
+    "stderr_included": false
+  },
+  "warnings": []
+}
