@@ -47,6 +47,24 @@ skillrun --version
 # skillrun 0.5.15
 ```
 
+## Install
+
+Starting with releases that publish native distribution artifacts, normal users do not need a Rust toolchain. macOS / Linux users can use the shell installer:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.sh | sh
+skillrun --version
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.ps1 | iex"
+skillrun --version
+```
+
+GitHub Releases also include platform-named archives and checksums, such as `skillrun-x86_64-unknown-linux-gnu.tar.xz` and `sha256.sum`. See [Native Binary Distribution](docs/native-distribution.md) for artifact naming and package-manager boundaries.
+
 Available today:
 
 - Python `action.py` stable adapter target.

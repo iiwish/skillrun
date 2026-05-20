@@ -47,6 +47,24 @@ skillrun --version
 # skillrun 0.5.15
 ```
 
+## 安装
+
+从启用原生分发的 release 起，普通用户不需要安装 Rust toolchain。macOS / Linux 可以使用 shell installer：
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.sh | sh
+skillrun --version
+```
+
+Windows PowerShell：
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.ps1 | iex"
+skillrun --version
+```
+
+GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `skillrun-x86_64-unknown-linux-gnu.tar.xz` 和 `sha256.sum`。完整分发边界见 [原生二进制分发](docs/native-distribution.md)。
+
 当前已经可用：
 
 - Python `action.py` 稳定 adapter target。

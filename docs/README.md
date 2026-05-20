@@ -53,6 +53,7 @@
 - [测试策略](testing.md)：本地验证、CI 检查和 release validation。
 - [发布策略](release-policy.md)：版本号、release candidate、tag 和发布流程。
 - [Release Checklist](release-checklist.md)：基于 v0.5.5 发布复盘固化的逐步发布检查清单。
+- [原生二进制分发](native-distribution.md)：GitHub Releases artifacts、checksum、installer、Homebrew tap 与 npm wrapper 边界。
 - [分支保护建议](branch-protection.md)：公开前后 `main` 分支保护规则。
 
 ## 文档维护规则

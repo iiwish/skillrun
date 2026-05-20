@@ -48,12 +48,14 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 git diff --check
 cargo run --quiet -- --version
+dist plan
 ```
 
 必须满足：
 
 - 所有命令退出码为 0。
 - `skillrun --version` 输出与 `Cargo.toml` 和 `RELEASE_NOTES.md` 一致。
+- `dist plan` 列出当前版本 tag 对应的 GitHub Release archives、checksum、`skillrun-installer.sh` 和 `skillrun-installer.ps1`。
 - 如果只做文档变更，可以不强制跑全量 Rust 测试，但 release/tag 前必须在 `main` 上跑完整 validation。
 
 ## Phase 2: 推送 release branch 并等待 CI
@@ -161,6 +163,7 @@ GitHub Release 内容应来自 `RELEASE_NOTES.md` 对应版本段落。
 - boundaries。
 - validation。
 - package publication 是否执行。
+- `cargo-dist` 生成的 platform archives、checksum、`sha256.sum`、shell installer 和 PowerShell installer。
 
 如果使用 GitHub API 创建 release，必须确认：
 
