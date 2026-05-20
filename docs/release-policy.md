@@ -21,6 +21,7 @@ SkillRun 同时存在几类版本号，不能混用：
 - 发布 tag 由 `release-plz` 在 release PR 合并后从 `main` 创建，例如 `v0.5.16`。
 - 只有需要维护旧版本补丁时，才从 tag 创建 `release/v<major>.<minor>` 分支。
 - `skillrun` 当前使用 `git_only = true` 的 release-plz 流程，并在 `release-plz.toml` 与 `Cargo.toml` 中显式禁用 crates.io publish。
+- release PR 只应由用户可见的 runtime 或发布链路变更触发。docs-only / chore-only 提交不应单独 bump 版本。
 
 ## Release Candidate 闸门
 
