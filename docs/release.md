@@ -28,3 +28,15 @@ cargo fmt --check
 cargo test
 cargo clippy --all-targets -- -D warnings
 ```
+
+## 发布后验证
+
+推送 `vX.Y.Z` tag 后，Release workflow 会在上传 assets 后执行 post-release guard：
+
+- GitHub Release 必须是当前 tag、非 draft，并且 GitHub latest release 必须指向当前 tag。
+- Release assets 必须保持精简，只包含两个 installer、五个平台 archive 和一个 `sha256.sum`。
+- `sha256.sum` 只能引用实际展示的五个平台 archive，不能引用内部 manifest、单独 `.sha256` 文件或重复 source archive。
+- Linux runner 会执行 `skillrun-installer.sh`，并验证安装出的 `skillrun --version` 与 tag 一致。
+- Linux、macOS、Windows runner 会分别下载对应 archive，执行 `skillrun --version` 和 `skillrun host status --json`。
+
+这些检查失败时，release run 必须失败。维护者不应手动把失败的 release 标成完成。
