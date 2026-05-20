@@ -276,8 +276,14 @@ jobs:
           merge-multiple: true
       - name: Cleanup
         run: |
-          # Remove the granular manifests
+          # Keep the public release assets focused on installers, platform archives,
+          # and the unified checksum file. The granular manifests and per-archive
+          # checksum files are useful internally but noisy on the GitHub Release page.
           rm -f artifacts/*-dist-manifest.json
+          rm -f artifacts/dist-manifest.json
+          rm -f artifacts/*.sha256
+          rm -f artifacts/source.tar.gz
+          rm -f artifacts/source.tar.gz.sha256
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ fromJson(steps.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"

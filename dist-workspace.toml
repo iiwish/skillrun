@@ -19,5 +19,7 @@ install-path = "CARGO_HOME"
 hosting = "github"
 # release-plz creates the GitHub Release; cargo-dist uploads native assets.
 create-release = false
+# GitHub already adds Source code zip/tar.gz entries to every release.
+source-tarball = false
 # Whether to install an updater program
 install-updater = false
