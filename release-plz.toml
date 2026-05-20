@@ -1,0 +1,7 @@
+[workspace]
+git_only = true
+release_always = false
+git_tag_name = "v{{ version }}"
+pr_name = "chore(release): release v{{ version }}"
+semver_check = false
+
