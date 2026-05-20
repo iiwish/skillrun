@@ -264,6 +264,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.14 Desktop Host Readiness](docs/v0.5.14-desktop-host-readiness.md)
 - [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
+- [v0.6 Skill Capsule Contract](docs/v0.6-skill-capsule-contract.md)
 - [Business examples](docs/business-examples.md)
 - [Test strategy](docs/testing.md)
 - [Release policy](docs/release-policy.md)
