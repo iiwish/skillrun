@@ -1,6 +1,6 @@
 [package]
 name = "skillrun"
-version = "0.5.15"
+version = "0.5.16"
 edition = "2021"
 description = "Rust CLI for building manifest-driven Agent skill capsules from one SOP and one action."
 license = "Apache-2.0"
