@@ -36,15 +36,15 @@ Use FastMCP when you only need to expose a function. Use SkillRun when the SOP m
 
 ## What Works Today
 
-Current development line: `v0.5.15`.
+Current development line: `v0.5.16`.
 
-Latest public release: `v0.5.14`.
+Latest public release: `v0.5.16`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.5.15
+# skillrun 0.5.16
 ```
 
 ## Install
