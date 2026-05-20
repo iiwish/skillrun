@@ -47,6 +47,65 @@ fn generated_capsule(label: &str) -> (PathBuf, PathBuf, PathBuf) {
     (output_root, skillrun_home, capsule)
 }
 
+fn command_capsule(label: &str) -> (PathBuf, PathBuf, PathBuf) {
+    let output_root = temp_dir(label);
+    let skillrun_home = output_root.join("skillrun-home");
+    let capsule = output_root.join("runs_contract");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(capsule.join("SKILL.md"), "# Runs Contract\n").expect("SKILL.md should be written");
+    fs::write(
+        capsule.join("action.sh"),
+        r#"cat > "$SKILLRUN_OUTPUT_JSON" <<'JSON'
+{"ok":true,"output":{"ok":true,"message":"fixture complete"},"artifacts":[]}
+JSON
+"#,
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"task":"validate-runs"}"#,
+    )
+    .expect("default input should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["sh", "action.sh"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["task"],
+    "additionalProperties": false,
+    "properties": {
+      "task": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["ok", "message"],
+    "additionalProperties": false,
+    "properties": {
+      "ok": { "type": "boolean" },
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    (output_root, skillrun_home, capsule)
+}
+
 fn instruction_only_capsule(label: &str) -> (PathBuf, PathBuf, PathBuf) {
     let output_root = temp_dir(label);
     let skillrun_home = output_root.join("skillrun-home");
@@ -106,6 +165,14 @@ fn normalize_json(value: &mut Value, paths: &[(&Path, &str)], key: Option<&str>)
                 *text = "<timestamp>".to_string();
                 return;
             }
+            if matches!(key, Some("started_at" | "finished_at")) {
+                *text = "<timestamp>".to_string();
+                return;
+            }
+            if key == Some("run_id") && text.starts_with("run-") {
+                *text = "<run_id>".to_string();
+                return;
+            }
             if key == Some("version") && text == env!("CARGO_PKG_VERSION") {
                 *text = "<binary_version>".to_string();
                 return;
@@ -125,6 +192,10 @@ fn normalize_json(value: &mut Value, paths: &[(&Path, &str)], key: Option<&str>)
             for (path, placeholder) in paths {
                 replace_path_variants(text, path, placeholder);
             }
+            replace_run_id_segments(text);
+        }
+        Value::Number(_) if key == Some("duration_ms") => {
+            *value = Value::String("<duration_ms>".to_string());
         }
         _ => {}
     }
@@ -143,6 +214,38 @@ fn replace_path_variants(text: &mut String, path: &Path, placeholder: &str) {
         *text = text.replace(&variant, placeholder);
         *text = text.replace(&forward, placeholder);
     }
+}
+
+fn replace_run_id_segments(text: &mut String) {
+    let mut output = String::with_capacity(text.len());
+    let mut index = 0;
+
+    while let Some(relative_start) = text[index..].find("run-") {
+        let start = index + relative_start;
+        if !text[start + "run-".len()..]
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_digit())
+        {
+            output.push_str(&text[index..start + "run-".len()]);
+            index = start + "run-".len();
+            continue;
+        }
+        output.push_str(&text[index..start]);
+        let mut end = start + "run-".len();
+        for (offset, ch) in text[end..].char_indices() {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '.' {
+                end = start + "run-".len() + offset + ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+        output.push_str("<run_id>");
+        index = end;
+    }
+
+    output.push_str(&text[index..]);
+    *text = output;
 }
 
 fn is_sha256(value: &str) -> bool {
@@ -288,6 +391,65 @@ fn registry_and_switchboard_json_match_contract_fixtures() {
     assert_contract(
         consumer_exposure,
         include_str!("fixtures/contracts/consumer_exposure_enabled.json"),
+        &paths,
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn consumer_runs_json_match_contract_fixtures() {
+    let (output_root, skillrun_home, capsule) = command_capsule("json-contract-runs");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let paths = [
+        (&capsule as &Path, "<capsule>"),
+        (&skillrun_home as &Path, "<skillrun_home>"),
+    ];
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        add.status.success(),
+        "registry add should succeed\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+    let run = run_skillrun(&["test", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        run.status.success(),
+        "test run should succeed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let run_json: Value = serde_json::from_slice(&run.stdout).expect("run should emit JSON");
+    let run_id = run_json["run_id"]
+        .as_str()
+        .expect("run should emit run_id")
+        .to_string();
+
+    let runs = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "list", "--json", "--limit", "1"],
+        &skillrun_home,
+    ));
+    assert_contract(
+        runs,
+        include_str!("fixtures/contracts/consumer_runs_list_enabled.json"),
+        &paths,
+    );
+
+    let inspect = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "inspect",
+            &run_id,
+            "--json",
+            "--capsule",
+            "runs_contract",
+        ],
+        &skillrun_home,
+    ));
+    assert_contract(
+        inspect,
+        include_str!("fixtures/contracts/consumer_runs_inspect_enabled.json"),
         &paths,
     );
 
