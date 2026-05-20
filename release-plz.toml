@@ -1,5 +1,6 @@
 [workspace]
 git_only = true
+publish = false
 release_always = false
 git_tag_name = "v{{ version }}"
 pr_name = "chore(release): release v{{ version }}"

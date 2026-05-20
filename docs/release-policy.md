@@ -20,7 +20,7 @@ SkillRun 同时存在几类版本号，不能混用：
 - 版本开发优先在 `codex/v<major>.<minor>-integration` 分支完成，例如 `codex/v0.3-integration`。
 - 发布 tag 由 `release-plz` 在 release PR 合并后从 `main` 创建，例如 `v0.5.16`。
 - 只有需要维护旧版本补丁时，才从 tag 创建 `release/v<major>.<minor>` 分支。
-- `skillrun` 当前使用 `git_only = true` 的 release-plz 流程，不自动执行 `cargo publish`。
+- `skillrun` 当前使用 `git_only = true` 的 release-plz 流程，并在 `release-plz.toml` 与 `Cargo.toml` 中显式禁用 crates.io publish。
 
 ## Release Candidate 闸门
 
