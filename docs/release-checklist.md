@@ -78,7 +78,7 @@ git push -u origin <release-branch>
 - 远端 Linux CI 失败不能用本地 Windows 测试结果覆盖。
 - 如果 CI 失败日志不可见，先增强 CI 可观测性，再定位失败原因。
 
-## Phase 3: 合并到 main
+## Phase 3: 合并到 main 并等待 release PR
 
 更新并切换 `main`：
 
@@ -88,7 +88,7 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-使用显式 merge commit 合入：
+使用显式 merge commit 或 PR 合入：
 
 ```powershell
 git merge --no-ff <release-branch> -m "merge: <release summary>"
@@ -110,48 +110,46 @@ cargo run --quiet -- --version
 git push origin main
 ```
 
-## Phase 4: 等待 main CI
+等待 `release-plz-pr` job 在 `main` 上创建或更新 release PR。普通 feature PR 合并到 `main` 不应直接创建 tag 或 GitHub Release。
 
-必须等待刚推送的 `main` commit 对应远端 CI 全部通过。
+## Phase 4: Review release PR
+
+必须 review release PR 中的版本号、release metadata 和 CI 结果。
 
 必须满足：
 
 - `fmt` 成功。
 - `clippy` 成功。
 - `test` 成功。
-- check run 的 `head_sha` 等于当前 `main` HEAD。
+- release PR 只包含版本号、lockfile、`CHANGELOG.md` 或 release notes metadata 等发布准备变更。
+- release PR 内容能追溯到待发布的合并提交/PR。
 
 禁止事项：
 
-- 不得在 main CI 还在跑时创建 tag。
-- 不得用 release branch CI 代替 main CI。
-- 不得 tag 一个还没有推送到远端 main 的本地 commit。
+- 不得绕过 release PR 直接 tag 普通 feature merge。
+- 不得在 release PR CI 失败时合并。
+- 不得因为 GitHub Release 自动化存在就默认发布 `crates.io`。
 
-## Phase 5: 创建并推送 tag
+## Phase 5: 合并 release PR 并等待 tag
 
-先确认 tag 不存在：
+合并 release PR 后，等待 `release-plz-release` job 创建 tag 和 GitHub Release。当前配置使用 `git_only = true`，因此不会运行 `cargo publish`。
+
+确认 tag 存在：
 
 ```powershell
 git tag --list vX.Y.Z
 git ls-remote --tags origin vX.Y.Z
 ```
 
-创建 annotated tag：
-
-```powershell
-git tag -a vX.Y.Z -m "SkillRun vX.Y.Z"
-git push origin vX.Y.Z
-```
-
 必须满足：
 
-- tag 指向当前 `main` HEAD。
-- tag 对应 commit 已通过 main CI。
+- tag 由 release-plz 创建。
+- tag 对应 commit 已通过 release PR CI。
 - tag 名称使用 `vX.Y.Z`。
 
-## Phase 6: 创建 GitHub Release
+## Phase 6: 确认 GitHub Release
 
-GitHub Release 内容应来自 `RELEASE_NOTES.md` 对应版本段落。
+GitHub Release 内容应来自 release-plz 生成的 changelog 或 release notes 摘要。
 
 必须包含：
 
@@ -160,35 +158,25 @@ GitHub Release 内容应来自 `RELEASE_NOTES.md` 对应版本段落。
 - included behavior。
 - boundaries。
 - validation。
-- package publication 是否执行。
+- package publication 是否执行，默认应为未执行。
 
-如果使用 GitHub API 创建 release，必须确认：
+必须确认：
 
 - `tag_name` 是 `vX.Y.Z`。
-- `target_commitish` 是 `main` 或 tag 已存在时指向正确 commit。
+- tag 指向 release PR 合并后的正确 commit。
 - `draft=false`。
 - `prerelease` 按 release 决策设置；普通稳定 patch 使用 `false`。
 
-## Phase 7: 发布后回写
+## Phase 7: 发布后核对
 
-GitHub Release 创建后，必须回写 `RELEASE_NOTES.md`：
+GitHub Release 创建后，核对 release PR 已经包含必要的 release notes 或 changelog 事实：
 
 - `Status: Released`
 - `Publication:` 明确 main merge、remote push、tag、GitHub Release 是否完成。
 - 明确 package registry publication 是否执行。
-- 将 validation 中的远端 CI 条目改为已完成事实。
+- validation 中的远端 CI 条目是已完成事实。
 
-回写后提交并推送 `main`：
-
-```powershell
-git add RELEASE_NOTES.md
-git commit -m "docs(release): mark vX.Y.Z as released"
-git push origin main
-```
-
-再次等待这个 docs commit 的 main CI 通过。
-
-如果 tag 已经创建在回写前的 commit 上，这是可接受的；但 release notes 回写必须进入 `main` 公开历史。
+默认不要在 GitHub Release 创建后再向 `main` 追加纯发布回写 commit；这类 commit 会触发下一轮 `release-plz-pr`。如确实发现 release metadata 错误，应通过新的修正文档 PR 处理，并明确它可能进入下一次 release notes。
 
 ## Phase 8: 最终核对
 
