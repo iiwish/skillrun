@@ -89,6 +89,12 @@ fn yaml_str_at<'a>(value: &'a YamlValue, path: &[&str]) -> &'a str {
         .unwrap_or_else(|| panic!("YAML path {} should be a string", path.join(".")))
 }
 
+fn yaml_bool_at(value: &YamlValue, path: &[&str]) -> bool {
+    yaml_at(value, path)
+        .as_bool()
+        .unwrap_or_else(|| panic!("YAML path {} should be a boolean", path.join(".")))
+}
+
 fn is_64_hex(value: &str) -> bool {
     value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit())
 }
@@ -113,6 +119,251 @@ export const outputSchema = {
   }
 };
 "#
+}
+
+#[test]
+fn manifest_freezes_v0_6_capsule_contract_fields() {
+    let output_root = temp_dir("manifest-v0-6-freeze");
+    let capsule = output_root.join("contract_freeze");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(
+        capsule.join("SKILL.md"),
+        "# Contract Freeze\n\nRun a stable fixture.",
+    )
+    .expect("skill should be written");
+    fs::write(capsule.join("action.sh"), "echo adapter fixture\n")
+        .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{"task":"validate"}"#,
+    )
+    .expect("example should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["sh", "action.sh"],
+    "timeout": "30s"
+  },
+  "permissions": {
+    "files": {
+      "read": ["examples/**"],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": []
+    },
+    "env": {
+      "read": ["SKILLRUN_TEST_ENV"]
+    }
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["task"],
+    "additionalProperties": false,
+    "properties": {
+      "task": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["ok"],
+    "additionalProperties": false,
+    "properties": {
+      "ok": { "type": "boolean" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg]);
+
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+    let manifest_text =
+        fs::read_to_string(generated_manifest(&capsule)).expect("manifest should be readable");
+    assert_source_hash(&manifest_text, "SKILL.md");
+    assert_source_hash(&manifest_text, "action.sh");
+    assert_source_hash(&manifest_text, "skillrun.config.json");
+
+    let manifest_yaml = manifest_yaml(&capsule);
+    assert_eq!(yaml_str_at(&manifest_yaml, &["manifest_version"]), "0.1.0");
+    assert!(yaml_str_at(&manifest_yaml, &["generated_by"]).starts_with("skillrun@"));
+    assert!(!yaml_str_at(&manifest_yaml, &["generated_at"]).is_empty());
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["sources", "skill", "path"]),
+        "SKILL.md"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["sources", "action", "path"]),
+        "action.sh"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["sources", "config", "path"]),
+        "skillrun.config.json"
+    );
+    assert!(is_64_hex(yaml_str_at(
+        &manifest_yaml,
+        &["sources", "skill", "sha256"]
+    )));
+    assert!(is_64_hex(yaml_str_at(
+        &manifest_yaml,
+        &["sources", "action", "sha256"]
+    )));
+    assert!(is_64_hex(yaml_str_at(
+        &manifest_yaml,
+        &["sources", "config", "sha256"]
+    )));
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["skill", "name"]),
+        "contract_freeze"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["skill", "sop_summary"]),
+        "Contract Freeze"
+    );
+    assert!(is_64_hex(yaml_str_at(
+        &manifest_yaml,
+        &["skill", "skill_hash"]
+    )));
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["tool", "name"]),
+        "contract_freeze"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["tool", "description"]),
+        "Execute the contract_freeze SkillRun capsule."
+    );
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["schemas", "input", "type"]),
+        "object"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["schemas", "input", "required", "0"]),
+        "task"
+    );
+    assert!(!yaml_bool_at(
+        &manifest_yaml,
+        &["schemas", "input", "additionalProperties"]
+    ));
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["schemas", "input", "properties", "task", "type"]
+        ),
+        "string"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["schemas", "output", "type"]),
+        "object"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["schemas", "output", "required", "0"]),
+        "ok"
+    );
+    assert!(!yaml_bool_at(
+        &manifest_yaml,
+        &["schemas", "output", "additionalProperties"]
+    ));
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["schemas", "output", "properties", "ok", "type"]
+        ),
+        "boolean"
+    );
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "adapter"]),
+        "command"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "entrypoint"]),
+        "action.sh"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "command", "0"]),
+        "sh"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "command", "1"]),
+        "action.sh"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["runtime", "protocol_version"]),
+        "adapter.v1"
+    );
+    assert_eq!(yaml_str_at(&manifest_yaml, &["runtime", "timeout"]), "30s");
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["runtime", "requirements", "executable", "name"]
+        ),
+        "sh"
+    );
+    assert_eq!(
+        yaml_str_at(
+            &manifest_yaml,
+            &["runtime", "requirements", "executable", "version"]
+        ),
+        "present"
+    );
+    assert_eq!(
+        yaml_at(&manifest_yaml, &["runtime", "requirements", "packages"])
+            .as_sequence()
+            .expect("packages should be a sequence")
+            .len(),
+        0
+    );
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["permissions", "files", "read", "0"]),
+        "examples/**"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["permissions", "files", "write", "0"]),
+        ".skillrun/runs/**"
+    );
+    assert_eq!(
+        yaml_at(&manifest_yaml, &["permissions", "network", "outbound"])
+            .as_sequence()
+            .expect("network outbound should be a sequence")
+            .len(),
+        0
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["permissions", "env", "read", "0"]),
+        "SKILLRUN_TEST_ENV"
+    );
+
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["ipc", "protocol_version"]),
+        "0.1.0"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["examples", "0", "id"]),
+        "default"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["examples", "0", "input"]),
+        "examples/default.input.json"
+    );
+    assert_eq!(
+        yaml_str_at(&manifest_yaml, &["artifacts", "allowed_kinds", "0"]),
+        "json"
+    );
+    assert!(yaml_bool_at(&manifest_yaml, &["errors", "envelope"]));
+
+    fs::remove_dir_all(output_root).ok();
 }
 
 #[test]
