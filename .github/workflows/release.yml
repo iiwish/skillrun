@@ -294,14 +294,165 @@ jobs:
 
           gh release edit "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --draft=false
 
+  verify-release-assets:
+    name: Verify release assets
+    needs:
+      - plan
+      - host
+    if: ${{ always() && needs.host.result == 'success' && needs.plan.outputs.publishing == 'true' }}
+    runs-on: "ubuntu-22.04"
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - name: Verify release metadata and asset list
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
+
+          actual_tag="$(jq -r '.tagName' <<<"$release_json")"
+          if [[ "$actual_tag" != "$RELEASE_TAG" ]]; then
+            echo "::error title=Release tag mismatch::expected $RELEASE_TAG, got $actual_tag"
+            exit 1
+          fi
+
+          if [[ "$(jq -r '.isDraft' <<<"$release_json")" != "false" ]]; then
+            echo "::error title=Release is still draft::$RELEASE_TAG must be public after cargo-dist upload"
+            exit 1
+          fi
+
+          latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name')"
+          if [[ "$latest_tag" != "$RELEASE_TAG" ]]; then
+            echo "::error title=Latest release mismatch::expected $RELEASE_TAG, got $latest_tag"
+            exit 1
+          fi
+
+          jq -r '.assets[].name' <<<"$release_json" | sort > actual-assets.txt
+          cat > expected-assets.txt <<'EOF'
+          sha256.sum
+          skillrun-aarch64-apple-darwin.tar.xz
+          skillrun-aarch64-unknown-linux-gnu.tar.xz
+          skillrun-installer.ps1
+          skillrun-installer.sh
+          skillrun-x86_64-apple-darwin.tar.xz
+          skillrun-x86_64-pc-windows-msvc.zip
+          skillrun-x86_64-unknown-linux-gnu.tar.xz
+          EOF
+          sed -i 's/^          //' expected-assets.txt
+          sort -o expected-assets.txt expected-assets.txt
+          diff -u expected-assets.txt actual-assets.txt
+
+      - name: Verify checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-verify"
+          gh release download "$RELEASE_TAG" --pattern sha256.sum --dir "$RUNNER_TEMP/release-verify"
+
+          awk 'NF { print $2 }' "$RUNNER_TEMP/release-verify/sha256.sum" | sed 's/^\*//' | sort > checksum-assets.txt
+          cat > expected-checksum-assets.txt <<'EOF'
+          skillrun-aarch64-apple-darwin.tar.xz
+          skillrun-aarch64-unknown-linux-gnu.tar.xz
+          skillrun-x86_64-apple-darwin.tar.xz
+          skillrun-x86_64-pc-windows-msvc.zip
+          skillrun-x86_64-unknown-linux-gnu.tar.xz
+          EOF
+          sed -i 's/^          //' expected-checksum-assets.txt
+          sort -o expected-checksum-assets.txt expected-checksum-assets.txt
+          diff -u expected-checksum-assets.txt checksum-assets.txt
+
+      - name: Smoke shell installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/installer"
+          gh release download "$RELEASE_TAG" --pattern skillrun-installer.sh --dir "$RUNNER_TEMP/installer"
+
+          export CARGO_HOME="$RUNNER_TEMP/skillrun-cargo-home"
+          export SKILLRUN_NO_MODIFY_PATH=1
+          sh "$RUNNER_TEMP/installer/skillrun-installer.sh" --quiet
+
+          expected_version="${RELEASE_TAG#v}"
+          installed="$CARGO_HOME/bin/skillrun"
+          version="$("$installed" --version)"
+          if [[ "$version" != "skillrun $expected_version" ]]; then
+            echo "::error title=Installer version mismatch::expected skillrun $expected_version, got $version"
+            exit 1
+          fi
+          "$installed" host status --json | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+
+  verify-release-archives:
+    name: Smoke release archive (${{ matrix.asset }})
+    needs:
+      - plan
+      - host
+    if: ${{ always() && needs.host.result == 'success' && needs.plan.outputs.publishing == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: "ubuntu-22.04"
+            asset: "skillrun-x86_64-unknown-linux-gnu.tar.xz"
+            binary: "skillrun"
+          - os: "macos-13"
+            asset: "skillrun-x86_64-apple-darwin.tar.xz"
+            binary: "skillrun"
+          - os: "windows-latest"
+            asset: "skillrun-x86_64-pc-windows-msvc.zip"
+            binary: "skillrun.exe"
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+      RELEASE_ASSET: ${{ matrix.asset }}
+      RELEASE_BINARY: ${{ matrix.binary }}
+    steps:
+      - name: Download and run release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-smoke" "$RUNNER_TEMP/release-smoke/extract"
+          gh release download "$RELEASE_TAG" --pattern "$RELEASE_ASSET" --dir "$RUNNER_TEMP/release-smoke"
+
+          case "$RELEASE_ASSET" in
+            *.zip)
+              7z x "$RUNNER_TEMP/release-smoke/$RELEASE_ASSET" -o"$RUNNER_TEMP/release-smoke/extract" >/dev/null
+              ;;
+            *.tar.xz)
+              tar -xJf "$RUNNER_TEMP/release-smoke/$RELEASE_ASSET" -C "$RUNNER_TEMP/release-smoke/extract"
+              ;;
+            *)
+              echo "::error title=Unsupported release archive::$RELEASE_ASSET"
+              exit 1
+              ;;
+          esac
+
+          binary_path="$(find "$RUNNER_TEMP/release-smoke/extract" -type f -name "$RELEASE_BINARY" | head -n 1)"
+          if [[ -z "$binary_path" ]]; then
+            echo "::error title=Release binary missing::$RELEASE_BINARY not found in $RELEASE_ASSET"
+            exit 1
+          fi
+          chmod +x "$binary_path" || true
+
+          expected_version="${RELEASE_TAG#v}"
+          version="$("$binary_path" --version)"
+          if [[ "$version" != "skillrun $expected_version" ]]; then
+            echo "::error title=Archive version mismatch::expected skillrun $expected_version, got $version"
+            exit 1
+          fi
+          "$binary_path" host status --json | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'
+
   announce:
     needs:
       - plan
       - host
+      - verify-release-assets
+      - verify-release-archives
     # use "always() && ..." to allow us to wait for all publish jobs while
     # still allowing individual publish jobs to skip themselves (for prereleases).
     # "host" however must run to completion, no skipping allowed!
-    if: ${{ always() && needs.host.result == 'success' }}
+    if: ${{ always() && needs.host.result == 'success' && needs.verify-release-assets.result == 'success' && needs.verify-release-archives.result == 'success' }}
     runs-on: "ubuntu-22.04"
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
