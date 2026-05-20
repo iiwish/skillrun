@@ -12,6 +12,15 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .expect("skillrun binary should run")
 }
 
+#[cfg(not(windows))]
+fn run_skillrun_with_path(args: &[&str], path: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("PATH", path)
+        .output()
+        .expect("skillrun binary should run")
+}
+
 fn temp_dir(label: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -92,6 +101,36 @@ fn run_id_from(output: &std::process::Output) -> String {
         .to_string()
 }
 
+#[cfg(not(windows))]
+fn write_fake_python3_metadata(fake_dir: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::create_dir_all(fake_dir).expect("fake runtime dir should be created");
+    let schema = r#"{"input":{"type":"object","required":["order_id","amount"],"properties":{"order_id":{"type":"string"},"amount":{"type":"integer"}}},"output":{"type":"object","required":["decision","amount","reasoning_summary"],"properties":{"decision":{"type":"string"},"amount":{"type":"integer"},"reasoning_summary":{"type":"string"}}}}"#;
+    let script = format!(
+        "#!/bin/sh\n\
+if [ \"$1\" = \"--version\" ]; then\n\
+  printf '%s\\n' 'Python 3.11.0'\n\
+  exit 0\n\
+fi\n\
+if [ \"$1\" = \"-c\" ]; then\n\
+  case \"$2\" in\n\
+    *__version__*) printf '%s\\n' '2.7.1'; exit 0 ;;\n\
+    *) printf '%s\\n' '{schema}'; exit 0 ;;\n\
+  esac\n\
+fi\n\
+printf '%s\\n' 'unexpected fake python3 invocation' >&2\n\
+exit 1\n"
+    );
+    let path = fake_dir.join("python3");
+    fs::write(&path, script).expect("fake python3 should be written");
+    let mut permissions = fs::metadata(&path)
+        .expect("fake python3 metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("fake python3 should be executable");
+}
+
 fn run_dir(capsule: &Path, run_id: &str) -> PathBuf {
     capsule.join(".skillrun").join("runs").join(run_id)
 }
@@ -154,6 +193,33 @@ fn python_stable_adapter_manifest_maps_to_protocol_contract() {
         ),
         "metadata"
     );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[cfg(not(windows))]
+#[test]
+fn python_metadata_extractor_uses_python3_when_python_is_missing_on_posix() {
+    let output_root = temp_dir("conformance-python3-metadata");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let fake_path = output_root.join("fake-path");
+    write_fake_python3_metadata(&fake_path);
+
+    let capsule = output_root.join("refund");
+    let cwd = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun_with_path(&["manifest", "--cwd", &cwd], &fake_path);
+    assert!(
+        manifest.status.success(),
+        "manifest should use python3 when python is absent\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stdout),
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    let manifest = manifest_yaml(&capsule);
+    assert_manifest_maps_adapter_contract(&manifest, "python", "action.py", "python");
 
     fs::remove_dir_all(output_root).ok();
 }

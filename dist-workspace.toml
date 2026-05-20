@@ -5,6 +5,8 @@ members = ["cargo:."]
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.31.0"
+# The generated workflow is intentionally patched to wait for release-plz.
+allow-dirty = ["ci"]
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
@@ -15,5 +17,7 @@ targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-da
 install-path = "CARGO_HOME"
 # Where to host releases
 hosting = "github"
+# release-plz creates the GitHub Release; cargo-dist uploads native assets.
+create-release = false
 # Whether to install an updater program
 install-updater = false

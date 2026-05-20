@@ -63,17 +63,35 @@ fn discover_pydantic() -> DiscoveredDependency {
 }
 
 fn run_python_probe(args: &[&str]) -> Result<Output, std::io::Error> {
+    run_python_probe_command(args).map(|(_executable, output)| output)
+}
+
+fn run_python_probe_command(args: &[&str]) -> Result<(&'static str, Output), std::io::Error> {
     let mut last_error = None;
     for executable in python_probe_commands() {
         let output = Command::new(executable).args(args).output();
         match output {
-            Ok(output) => return Ok(output),
-            Err(error) => last_error = Some(error),
+            Ok(output) => return Ok((executable, output)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                last_error = Some(error);
+            }
+            Err(error) => return Err(error),
         }
     }
     Err(last_error.unwrap_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::NotFound, "python executable not found")
     }))
+}
+
+fn python_command() -> Result<&'static str, String> {
+    match run_python_probe_command(&["--version"]) {
+        Ok((executable, output)) if output.status.success() => Ok(executable),
+        Ok((executable, output)) => Err(format!(
+            "{executable} --version failed: {}",
+            command_text(&output)
+        )),
+        Err(error) => Err(format!("python executable not found: {error}")),
+    }
 }
 
 fn python_probe_commands() -> &'static [&'static str] {
@@ -83,7 +101,7 @@ fn python_probe_commands() -> &'static [&'static str] {
     }
     #[cfg(not(windows))]
     {
-        &["python"]
+        &["python", "python3"]
     }
 }
 
@@ -119,7 +137,13 @@ print(json.dumps({
 }, ensure_ascii=False))
 "#;
 
-    let mut command = Command::new("python");
+    let executable = python_command().map_err(|error| {
+        format!(
+            "failed to resolve Python metadata extractor for {}: {error}",
+            action_path.display()
+        )
+    })?;
+    let mut command = Command::new(executable);
     command
         .arg("-c")
         .arg(script)
@@ -281,7 +305,13 @@ except Exception as exc:
     sys.exit(1)
 "#;
 
-    let mut command = Command::new("python");
+    let executable = python_command().map_err(|error| {
+        format!(
+            "failed to resolve Python action adapter for {}: {error}",
+            action_path.display()
+        )
+    })?;
+    let mut command = Command::new(executable);
     command
         .arg("-c")
         .arg(script)

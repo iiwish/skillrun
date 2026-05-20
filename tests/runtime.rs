@@ -87,6 +87,43 @@ fi\n\
     }
 }
 
+#[cfg(not(windows))]
+fn write_fake_python3_runtime(fake_dir: &Path, pydantic_version: &str) {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::create_dir_all(fake_dir).expect("fake runtime dir should be created");
+    let schema = r#"{"input":{"type":"object","required":["order_id","amount"],"properties":{"order_id":{"type":"string"},"amount":{"type":"integer"}}},"output":{"type":"object","required":["decision","amount","reasoning_summary"],"properties":{"decision":{"type":"string"},"amount":{"type":"integer"},"reasoning_summary":{"type":"string"}}}}"#;
+    let script = format!(
+        "#!/bin/sh\n\
+if [ -n \"$SKILLRUN_FAKE_PYTHON_LOG\" ]; then printf '%s\\n' \"$*\" >> \"$SKILLRUN_FAKE_PYTHON_LOG\"; fi\n\
+if [ \"$1\" = \"--version\" ]; then\n\
+  printf '%s\\n' 'Python 3.11.0'\n\
+  exit 0\n\
+fi\n\
+if [ \"$1\" = \"-c\" ]; then\n\
+  case \"$2\" in\n\
+    *__version__*) printf '%s\\n' '{pydantic_version}'; exit 0 ;;\n\
+    *)\n\
+      if [ -n \"$SKILLRUN_OUTPUT_JSON\" ]; then\n\
+        printf '%s\\n' '{{\"ok\":true,\"output\":{{\"decision\":\"approved\",\"amount\":120,\"reasoning_summary\":\"fake python3 runtime\"}},\"artifacts\":[],\"display\":{{\"markdown\":\"fake python3 runtime\"}}}}' > \"$SKILLRUN_OUTPUT_JSON\"\n\
+        exit 0\n\
+      fi\n\
+      printf '%s\\n' '{schema}'\n\
+      exit 0 ;;\n\
+  esac\n\
+fi\n\
+printf '%s\\n' 'unexpected fake python3 invocation' >&2\n\
+exit 1\n"
+    );
+    let path = fake_dir.join("python3");
+    fs::write(&path, script).expect("fake python3 should be written");
+    let mut permissions = fs::metadata(&path)
+        .expect("fake python3 metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("fake python3 should be executable");
+}
+
 fn assert_contains(text: &str, expected: &str) {
     assert!(
         text.contains(expected),
@@ -384,6 +421,54 @@ fn test_returns_dependency_error_when_python_is_missing() {
     assert!(dir.join("record.json").is_file());
     let record = read_json(&dir.join("record.json"));
     assert_eq!(record["status"], "failed");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[cfg(not(windows))]
+#[test]
+fn test_uses_python3_when_python_is_missing_on_posix() {
+    let output_root = temp_dir("runtime-python3-only");
+    let output_arg = output_root.to_string_lossy().to_string();
+    let init = run_skillrun(&["init", "refund", "--python", "--output", &output_arg]);
+    assert!(init.status.success());
+
+    let fake_path = output_root.join("fake-path");
+    write_fake_python3_runtime(&fake_path, "2.7.1");
+    let fake_log = output_root.join("fake-python3.log");
+    let fake_log_arg = fake_log.to_string_lossy().to_string();
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun_with_path_and_env(
+        &["manifest", "--cwd", &cwd_arg],
+        &fake_path,
+        &[("SKILLRUN_FAKE_PYTHON_LOG", &fake_log_arg)],
+    );
+    assert!(
+        manifest.status.success(),
+        "manifest should use python3 when python is absent\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stdout),
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    let output = run_skillrun_with_path_and_env(
+        &["test", "--cwd", &cwd_arg],
+        &fake_path,
+        &[("SKILLRUN_FAKE_PYTHON_LOG", &fake_log_arg)],
+    );
+    let run_id = run_id_from(&output);
+    let output_json = read_json(&run_dir(&capsule, &run_id).join("output.json"));
+    assert_eq!(output_json["ok"], true);
+    assert_eq!(
+        output_json["output"]["reasoning_summary"],
+        "fake python3 runtime"
+    );
+
+    let fake_log = fs::read_to_string(fake_log).expect("fake python3 log should be readable");
+    assert!(fake_log.contains("--version"));
+    assert!(fake_log.contains("pydantic"));
+    assert!(!fake_path.join("python").exists());
 
     fs::remove_dir_all(output_root).ok();
 }

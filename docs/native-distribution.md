@@ -20,7 +20,7 @@ SkillRun 使用 `cargo-dist` 生成 release artifacts、checksum 和安装脚本
 - `.github/workflows/release.yml`
 - `Cargo.toml` 的 `[profile.dist]`
 
-release workflow 在推送 `vX.Y.Z` 形式 tag 时运行，并将 artifacts 上传到对应 GitHub Release。tag 仍按 `docs/release-checklist.md` 的顺序从已验证的 `main` 创建。
+release workflow 在推送 `vX.Y.Z` 形式 tag 时运行，并将 artifacts 上传到对应 GitHub Release。版本号、tag 和 GitHub Release page 仍由 `release-plz` 流程创建；`cargo-dist` 只负责生成和上传 native archives、checksum 与 installer assets。`dist-workspace.toml` 使用 `create-release = false`，并通过 `allow-dirty = ["ci"]` 保留一个很小的 workflow 定制：tag 事件先等待 `release-plz` 创建 release，再上传 assets。
 
 ## 平台矩阵
 
