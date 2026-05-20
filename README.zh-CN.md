@@ -264,6 +264,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.14 Desktop Host Readiness](docs/v0.5.14-desktop-host-readiness.md)
 - [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
+- [v0.6 Skill Capsule Contract](docs/v0.6-skill-capsule-contract.md)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
 - [发布策略](docs/release-policy.md)
