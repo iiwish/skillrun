@@ -118,6 +118,42 @@ cargo run -- serve --mcp --cwd tmp/quickstart/refund
 
 `serve --mcp` 是长运行 stdio server。只想检查 MCP contract 时使用 `serve --mcp --dry-run`。
 
+## v0.6 CLI 命令导航
+
+v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持稳定；本轮只冻结导航和兼容策略，不改变 CLI JSON contract。
+
+| 路径 | 用户问题 | 稳定入口 | v0.6 兼容策略 |
+| --- | --- | --- | --- |
+| Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
+| Consumer | 我如何导入别人给我的 `.skr`，并决定是否启用？ | `import`、`registry`、`switchboard`、`consumer inventory`、`consumer exposure` | `registry` 是本地 inventory；`switchboard enabled=true` 是本地 exposure intent，不是 trust 或 sandbox 证明。 |
+| Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
+| Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
+
+5 分钟核心路径：
+
+```bash
+# Author：创建、生成 Manifest、检查、打包
+skillrun init refund --python --output tmp/quickstart
+skillrun manifest --cwd tmp/quickstart/refund
+skillrun check --cwd tmp/quickstart/refund
+skillrun pack --cwd tmp/quickstart/refund
+
+# Consumer：导入分发 artifact，启用本地暴露意图
+skillrun import <package.skr> --id refund --json
+skillrun switchboard enable refund
+skillrun consumer inventory --json
+skillrun consumer exposure --json
+
+# Router：预览或挂载 MCP runtime entry
+skillrun router serve --mcp --dry-run
+skillrun consumer mount plan --client claude-desktop --json
+skillrun consumer mount apply --client claude-desktop --json
+```
+
+`.skr` 是分发 artifact：source + Manifest archive。它被 `import` 校验并放入本地 registry，但不直接成为 MCP runtime entry。MCP client 应挂载 `skillrun router serve --mcp`，Router 再根据 `switchboard` 中 enabled capsule 暴露 Manifest-derived tools。
+
+本任务不引入新的 Desktop UI、marketplace、daemon、OS sandbox、dependency installation、runtime image 或 package-manager ownership。未来若新增分组命令或 alias，必须保留上述稳定入口，并给 JSON consumer 留出兼容窗口。
+
 ## 核心流程
 
 ```text
