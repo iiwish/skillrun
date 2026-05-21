@@ -36,15 +36,15 @@ Package       = .skr source + Manifest archive
 
 ## 当前状态
 
-当前开发线：`v0.5.16`。
+当前开发线：`v0.6.0`。
 
-最新公开 release：`v0.5.16`。
+最新公开 release：`v0.6.0`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.5.16
+# skillrun 0.6.0
 ```
 
 ## 安装
