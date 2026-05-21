@@ -8,31 +8,52 @@
 
 ## 一句话定位
 
-**SkillRun 是 Manifest 驱动的 Skill Capsule runtime：把一份 SOP、一个类型化 Action、schema、examples、permissions 和 preflight 编译成可检查、可测试、可运行、可分发、可通过 MCP 调用的 Agent skill。**
+**SkillRun 是可执行 Agent Skills 的 runtime 与打包工具链：把一份 SOP、一个类型化 Action、schema、examples、permissions 和 preflight 编译成可检查、可测试、可运行、可分发、可通过 MCP 调用的 Skill Capsule。**
 
 英文表达：
 
-> SkillRun packages SOP-backed actions into tested, manifest-bound skills for AI agents.
+> SkillRun is a runtime and packaging toolchain for executable Agent Skills.
 
 更完整：
 
-> SkillRun compiles `SKILL.md`, typed action code, schemas, examples, permissions and preflight checks into a portable Skill Capsule that can be inspected, checked, run, packed and exposed as MCP tools.
+> SkillRun compiles `SKILL.md`, typed action code, schemas, examples, permissions and preflight checks into a portable Skill Capsule that can be inspected, checked, run, packed, evidenced, and exposed as MCP tools.
+
+## 生态位置
+
+Agent Skills 已经成为“给 agent 增加能力”的事实标准。SkillRun 不应该把自己讲成另一套 Skills 标准，而应该站在 Agent Skills 的心智之上，补足可执行技能需要的 runtime contract。
+
+```text
+Agent Skills = Agent 如何发现和学习一个能力
+MCP          = Agent 如何调用外部能力
+SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
+```
+
+一句话：
+
+```text
+Agent Skills 让技能可移植。
+SkillRun 让可执行技能可检查、可运行、可追溯。
+```
+
+完整边界见 [Agent Skills Compatibility](agent-skills-compatibility.md)。
 
 ## 核心对比
 
 ```text
+Agent Skills package instructions.
 FastMCP exposes functions.
-SkillRun ships skills.
+SkillRun runs executable skills with contracts.
 ```
 
 更精确地说：
 
 ```text
+Agent Skills turn knowledge into portable agent context.
 FastMCP turns code into tools.
-SkillRun turns SOP-backed actions into portable, testable skills.
+SkillRun turns SOP-backed actions into portable, testable, evidenced skills.
 ```
 
-SkillRun 不抢“把函数暴露成 tool”的战场。它解决的是另一个问题：当 Agent 调用一个真实业务动作时，SOP、输入输出结构、前置边界、失败恢复、产物和审计证据必须跟 action 一起移动。
+SkillRun 不抢“定义 Skills 格式”的战场，也不抢“把函数暴露成 tool”的战场。它解决的是另一个问题：当 Agent 调用一个真实业务动作时，SOP、输入输出结构、前置边界、失败恢复、产物和审计证据必须跟 action 一起移动。
 
 ## 产品原子
 
@@ -51,6 +72,7 @@ Package       = .skr source + Manifest archive
 ## SkillRun 是什么
 
 - Manifest-driven runtime for SOP-backed agent skills。
+- 可执行 Agent Skills 的 runtime / contract / evidence 层。
 - 本地优先的 CLI/Core，用 Rust 实现。
 - 把 `SKILL.md`、action、schema、examples、permissions 和 preflight 编译成 Manifest。
 - 用 Manifest 生成 inspect/check/run/test/pack/MCP 暴露路径。
@@ -60,6 +82,7 @@ Package       = .skr source + Manifest archive
 ## SkillRun 不是什么
 
 - 不是 FastMCP 替代品。
+- 不是 Agent Skills 替代标准。
 - 不是通用 Agent framework。
 - 不是任意 Markdown 自动执行器。
 - 不是 OpenAPI-to-MCP 包装器。
@@ -100,6 +123,17 @@ Adapter runs action through IPC
 ```
 
 SkillRun 的长期边界是 Manifest 和 Adapter Protocol；MCP 是当前最重要的对外调用接口之一。
+
+## Agent Skills 的位置
+
+Agent Skills 是 SkillRun 应该兼容的 authoring / discovery 层。普通 instruction-only skill 不需要 SkillRun；只有当 skill 包含真实可执行 action，并且需要 schema、preflight、consumer checks、run evidence、`.skr` packaging 或 Router exposure 时，SkillRun 才进入。
+
+```text
+Agent Skill   = SKILL.md + scripts/references/assets
+Skill Capsule = Agent Skill-compatible SOP + action + Manifest + runtime evidence
+```
+
+SkillRun-specific runtime 配置应优先放在 `skillrun.config.json` 或 generated Manifest 中，而不是强行污染 `SKILL.md` 的 Agent Skills 标准字段。
 
 ## v0.4.2 定位
 

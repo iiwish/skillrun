@@ -4,13 +4,15 @@
 
 [Simplified Chinese](README.zh-CN.md)
 
-FastMCP turns functions into MCP tools. SkillRun turns SOP-backed capabilities into **Skill Capsules**.
+Agent Skills made skills portable. SkillRun makes executable skills dependable.
 
-SkillRun is a Rust runtime and CLI for packaging one SOP and one action into an inspectable, testable, runnable, distributable, and MCP-callable Agent skill. It is not a general Agent framework, not a marketplace, and not an OS sandbox.
+SkillRun is a Rust runtime and CLI for packaging one SOP and one action into an inspectable, testable, runnable, distributable, and MCP-callable **Skill Capsule**. It is not an alternative Agent Skills standard, not a general Agent framework, not a marketplace, and not an OS sandbox.
 
 ## Why It Exists
 
 Most agent tool systems start from a callable function. That is enough when the action is small and low-risk. It is not enough when the agent is touching a real business process.
+
+Agent Skills are becoming the standard mental model for giving agents capabilities: a `SKILL.md` plus scripts, references, and assets that agents discover and load on demand. SkillRun should be compatible with that layer rather than reinvent it.
 
 SkillRun starts from a business capability:
 
@@ -32,7 +34,17 @@ A Skill Capsule carries what a function signature cannot:
 - Run records with hashes, timing, logs, and evidence.
 - Manifest-derived MCP exposure that does not re-import source code in Consumer Mode.
 
-Use FastMCP when you only need to expose a function. Use SkillRun when the SOP matters as much as the code.
+The relationship is:
+
+```text
+Agent Skills = how agents discover and learn a capability
+MCP          = how agents invoke external capabilities
+SkillRun    = how executable capabilities are checked, run, packaged, evidenced, and mounted
+```
+
+Use plain Agent Skills when the capability is mostly instructions, references, templates, or lightweight helper scripts. Use FastMCP when you only need to expose a function. Use SkillRun when SOP, code, schemas, preflight checks, run evidence, and consumer-side checks matter together.
+
+See [Agent Skills Compatibility](docs/agent-skills-compatibility.md) for the full boundary.
 
 ## What Works Today
 

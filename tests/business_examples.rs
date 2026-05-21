@@ -177,7 +177,9 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     assert!(readme.contains("Access Request Approval"));
     assert!(readme.contains("Vendor Risk Review"));
     assert!(readme.contains("portable Agent skill"));
-    assert!(readme.contains("FastMCP turns functions into MCP tools"));
+    assert!(readme.contains("Agent Skills made skills portable"));
+    assert!(readme.contains("SkillRun makes executable skills dependable"));
+    assert!(readme.contains("MCP          = how agents invoke external capabilities"));
     assert!(!readme.contains("tested MCP skill package"));
     assert!(!cargo_toml.contains("tested MCP skill package"));
 }
