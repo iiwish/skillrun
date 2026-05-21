@@ -15,6 +15,7 @@
 - [MVP 合同](mvp.md)：MVP 范围、非目标和发布边界。
 - [架构 SSOT](ssot.md)：核心架构、Manifest、runtime 和 adapter 约定。
 - [Adapter Protocol](adapter-protocol.md)：v0.5 起的 Core-to-adapter 南向协议、capability levels、IPC/envelope 和 conformance 边界。
+- [Agent Skills Compatibility](agent-skills-compatibility.md)：说明 SkillRun 与 Agent Skills、MCP 的关系，以及可执行技能的 runtime / contract / evidence 边界。
 - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
 - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
 - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。

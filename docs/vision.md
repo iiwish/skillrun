@@ -10,6 +10,8 @@
 
 Agent 时代真正稀缺的不是“更多 tool”，而是能被 Agent 调用、能被人审查、能被团队分发、能被运行时约束的业务能力单元。
 
+Agent Skills 已经给生态提供了轻量、可移植的技能格式：`SKILL.md`、scripts、references 和 assets。SkillRun 的愿景不是替代这层标准，而是让其中“需要真实执行”的 skills 拥有 runtime contract、消费前检查、结构化结果和运行证据。
+
 SkillRun 的长期愿景是让团队可以把经验封装成 **Skill Capsule**：
 
 ```text

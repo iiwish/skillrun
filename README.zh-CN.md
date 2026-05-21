@@ -4,13 +4,15 @@
 
 [English](README.md)
 
-FastMCP 把函数变成 MCP tool。SkillRun 把 SOP-backed capability 变成 **Skill Capsule**。
+Agent Skills 让技能可移植。SkillRun 让可执行技能可检查、可运行、可追溯。
 
-SkillRun 是一个 Rust runtime 和 CLI，用一份 SOP 和一个 Action 打包出可检查、可测试、可运行、可分发、可通过 MCP 调用的 Agent skill。它不是通用 Agent framework，不是 marketplace，也不是 OS sandbox。
+SkillRun 是一个 Rust runtime 和 CLI，用一份 SOP 和一个 Action 打包出可检查、可测试、可运行、可分发、可通过 MCP 调用的 **Skill Capsule**。它不是 Agent Skills 的替代标准，不是通用 Agent framework，不是 marketplace，也不是 OS sandbox。
 
 ## 为什么需要 SkillRun
 
 大多数 agent tool 系统从“可调用函数”开始。低风险动作可以这样做，但真实业务流程不够。
+
+Agent Skills 已经成为“给 agent 增加能力”的事实标准：用 `SKILL.md` 加 scripts、references、assets，让 agent 按需发现和学习一个能力。SkillRun 应该兼容这层心智，而不是重新发明它。
 
 SkillRun 从业务能力开始：
 
@@ -32,7 +34,17 @@ Package       = .skr source + Manifest archive
 - run record 保存 hash、耗时、日志和执行证据。
 - MCP 暴露来自 Manifest，Consumer Mode 不为 metadata 动态 import 未信任源码。
 
-如果你只想把一个函数暴露成 MCP tool，用 FastMCP 更轻。SOP 和代码同样重要时，SkillRun 才有价值。
+三者关系可以这样理解：
+
+```text
+Agent Skills = Agent 如何发现和学习一个能力
+MCP          = Agent 如何调用外部能力
+SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
+```
+
+如果你的能力主要是说明、参考资料、模板或轻量脚本，普通 Agent Skills 就够了。如果你只想把一个函数暴露成 MCP tool，用 FastMCP 更轻。SOP、代码、schema、preflight、运行证据和消费前检查同样重要时，SkillRun 才有价值。
+
+更完整的边界见 [Agent Skills Compatibility](docs/agent-skills-compatibility.md)。
 
 ## 当前状态
 
