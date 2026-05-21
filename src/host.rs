@@ -189,6 +189,12 @@ fn desktop_capabilities() -> Vec<CapabilityView> {
             schema_version: Some("router.mcp.v1"),
         },
         CapabilityView {
+            name: "router_status",
+            command: "router status --json",
+            process: "short_running",
+            schema_version: Some("router.status.v1"),
+        },
+        CapabilityView {
             name: "router_mcp",
             command: "router serve --mcp",
             process: "long_running_mcp_stdio",

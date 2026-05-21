@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillrun.local/schemas/router-status.v1.schema.json",
+  "title": "SkillRun Router status contract",
+  "type": "object",
+  "required": [
+    "command",
+    "schema_version",
+    "ok",
+    "router",
+    "tools",
+    "resources",
+    "error"
+  ],
+  "properties": {
+    "command": {
+      "const": "router status"
+    },
+    "schema_version": {
+      "const": "router.status.v1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "router": {
+      "type": "object",
+      "required": ["snapshot", "capsules"],
+      "properties": {
+        "snapshot": {
+          "const": true
+        },
+        "capsules": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capsule_id", "capsule_path", "name", "manifest_sha256"],
+        "properties": {
+          "capsule_id": {
+            "type": "string"
+          },
+          "capsule_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capsule_id", "uri_prefix"],
+        "properties": {
+          "capsule_id": {
+            "type": "string"
+          },
+          "uri_prefix": {
+            "type": "string",
+            "pattern": "^skillrun://router/"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/error"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

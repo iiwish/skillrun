@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillrun.local/schemas/router-mcp.v1.schema.json",
+  "title": "SkillRun Router MCP dry-run contract",
+  "type": "object",
+  "required": [
+    "command",
+    "schema_version",
+    "ok",
+    "mcp",
+    "router",
+    "tools",
+    "resources"
+  ],
+  "properties": {
+    "command": {
+      "enum": ["router serve --mcp", "router serve --mcp --dry-run"]
+    },
+    "schema_version": {
+      "const": "router.mcp.v1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "mcp": {
+      "type": "object",
+      "required": ["dry_run", "transport", "protocol"],
+      "properties": {
+        "dry_run": {
+          "const": true
+        },
+        "transport": {
+          "const": "stdio"
+        },
+        "protocol": {
+          "const": "model-context-protocol"
+        }
+      },
+      "additionalProperties": true
+    },
+    "router": {
+      "type": "object",
+      "required": ["snapshot", "capsules"],
+      "properties": {
+        "snapshot": {
+          "const": true
+        },
+        "capsules": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "capsule_id",
+          "capsule_path",
+          "name",
+          "description",
+          "input_schema",
+          "output_schema",
+          "manifest_sha256",
+          "result_contract"
+        ],
+        "properties": {
+          "capsule_id": {
+            "type": "string"
+          },
+          "capsule_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "input_schema": {
+            "type": "object"
+          },
+          "output_schema": {
+            "type": "object"
+          },
+          "manifest_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
+          },
+          "result_contract": {
+            "const": "SkillRun output/error envelope"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capsule_id", "uri", "name", "path", "mime_type"],
+        "properties": {
+          "capsule_id": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string",
+            "pattern": "^skillrun://router/"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "error": {
+      "$ref": "#/$defs/error"
+    }
+  },
+  "$defs": {
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

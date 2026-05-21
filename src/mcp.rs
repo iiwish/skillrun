@@ -116,6 +116,7 @@ pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
     let contract = json!({
         "command": "router serve --mcp",
         "schema_version": "router.mcp.v1",
+        "ok": true,
         "mcp": {
             "dry_run": true,
             "transport": "stdio",
@@ -131,6 +132,37 @@ pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
 
     serde_json::to_string_pretty(&contract)
         .map_err(|error| format!("failed to serialize Router dry-run contract: {error}"))
+}
+
+pub fn router_error_contract(
+    command: &'static str,
+    schema_version: &'static str,
+    code: &'static str,
+    message: &str,
+) -> Result<String, String> {
+    let contract = json!({
+        "command": command,
+        "schema_version": schema_version,
+        "ok": false,
+        "mcp": {
+            "dry_run": true,
+            "transport": "stdio",
+            "protocol": "model-context-protocol"
+        },
+        "router": {
+            "snapshot": true,
+            "capsules": 0
+        },
+        "tools": [],
+        "resources": [],
+        "error": {
+            "code": code,
+            "message": message
+        }
+    });
+
+    serde_json::to_string_pretty(&contract)
+        .map_err(|error| format!("failed to serialize Router error contract: {error}"))
 }
 
 pub fn serve_stdio(capsule_dir: &Path, manifest: &ValidManifest) -> Result<(), String> {
