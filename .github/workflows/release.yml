@@ -309,7 +309,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_json="$(gh release view "$RELEASE_TAG" --json tagName,isDraft,isPrerelease,assets)"
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease,assets)"
 
           actual_tag="$(jq -r '.tagName' <<<"$release_json")"
           if [[ "$actual_tag" != "$RELEASE_TAG" ]]; then
@@ -348,7 +348,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/release-verify"
-          gh release download "$RELEASE_TAG" --pattern sha256.sum --dir "$RUNNER_TEMP/release-verify"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern sha256.sum --dir "$RUNNER_TEMP/release-verify"
 
           awk 'NF { print $2 }' "$RUNNER_TEMP/release-verify/sha256.sum" | sed 's/^\*//' | sort > checksum-assets.txt
           cat > expected-checksum-assets.txt <<'EOF'
@@ -367,7 +367,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/installer"
-          gh release download "$RELEASE_TAG" --pattern skillrun-installer.sh --dir "$RUNNER_TEMP/installer"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern skillrun-installer.sh --dir "$RUNNER_TEMP/installer"
 
           export CARGO_HOME="$RUNNER_TEMP/skillrun-cargo-home"
           export SKILLRUN_NO_MODIFY_PATH=1
@@ -413,7 +413,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/release-smoke" "$RUNNER_TEMP/release-smoke/extract"
-          gh release download "$RELEASE_TAG" --pattern "$RELEASE_ASSET" --dir "$RUNNER_TEMP/release-smoke"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$RELEASE_ASSET" --dir "$RUNNER_TEMP/release-smoke"
 
           case "$RELEASE_ASSET" in
             *.zip)
