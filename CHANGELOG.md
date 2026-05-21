@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/iiwish/skillrun/compare/v0.6.0...v0.6.1) - 2026-05-21
+
+### Fixed
+
+- *(release)* pass repo to release guard gh commands
+
+### Other
+
+- clarify Agent Skills compatibility
+
 ## [0.6.0](https://github.com/iiwish/skillrun/compare/v0.5.16...v0.6.0) - 2026-05-21
 
 ### Other
