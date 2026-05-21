@@ -27,20 +27,64 @@ fn temp_dir(label: &str) -> PathBuf {
 
 fn generated_capsule(label: &str) -> (PathBuf, PathBuf, PathBuf) {
     let output_root = temp_dir(label);
-    let output_arg = output_root.to_string_lossy().to_string();
     let skillrun_home = output_root.join("skillrun-home");
-
-    let init = run_skillrun(
-        &["init", "refund", "--python", "--output", &output_arg],
-        &skillrun_home,
-    );
-    assert!(
-        init.status.success(),
-        "init should succeed\nstderr: {}",
-        String::from_utf8_lossy(&init.stderr)
-    );
-
     let capsule = output_root.join("refund");
+    fs::create_dir_all(capsule.join("examples")).expect("capsule should be created");
+    fs::write(
+        capsule.join("SKILL.md"),
+        "# Refund\n\nApprove eligible refund requests.\n",
+    )
+    .expect("SKILL.md should be written");
+    fs::write(
+        capsule.join("action.sh"),
+        r#"cat > "$SKILLRUN_OUTPUT_JSON" <<'JSON'
+{"ok":true,"output":{"decision":"approved","message":"refund approved"},"artifacts":[]}
+JSON
+"#,
+    )
+    .expect("action should be written");
+    fs::write(
+        capsule.join("examples").join("default.input.json"),
+        r#"{
+  "order_id": "order_default",
+  "amount": 50,
+  "reason": "damaged",
+  "customer_tier": "standard"
+}"#,
+    )
+    .expect("default input should be written");
+    fs::write(
+        capsule.join("skillrun.config.json"),
+        r#"{
+  "runtime": {
+    "adapter": "command",
+    "command": ["sh", "action.sh"],
+    "timeout": "30s"
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["order_id", "amount", "reason", "customer_tier"],
+    "additionalProperties": false,
+    "properties": {
+      "order_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "reason": { "type": "string" },
+      "customer_tier": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["decision", "message"],
+    "additionalProperties": false,
+    "properties": {
+      "decision": { "type": "string" },
+      "message": { "type": "string" }
+    }
+  }
+}"#,
+    )
+    .expect("config should be written");
+
     let cwd_arg = capsule.to_string_lossy().to_string();
     let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg], &skillrun_home);
     assert!(
@@ -88,6 +132,16 @@ fn assert_success_json(output: &std::process::Output) -> Value {
     serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
 }
 
+fn assert_failure_json(output: &std::process::Output) -> Value {
+    assert!(
+        !output.status.success(),
+        "command should fail\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON")
+}
+
 #[test]
 fn imported_capsule_stays_hidden_until_enabled_then_routes_via_router() {
     let (output_root, archive) = generated_package("router-imported-contract");
@@ -129,6 +183,7 @@ fn imported_capsule_stays_hidden_until_enabled_then_routes_via_router() {
         &["router", "serve", "--mcp", "--dry-run"],
         &skillrun_home,
     ));
+    assert_eq!(router_disabled["ok"], true);
     assert_eq!(router_disabled["router"]["capsules"], 0);
     assert_eq!(router_disabled["tools"].as_array().unwrap().len(), 0);
 
@@ -153,6 +208,7 @@ fn imported_capsule_stays_hidden_until_enabled_then_routes_via_router() {
         &["router", "serve", "--mcp", "--dry-run"],
         &skillrun_home,
     ));
+    assert_eq!(router_enabled["ok"], true);
     assert_eq!(router_enabled["router"]["capsules"], 1);
     assert_eq!(router_enabled["tools"][0]["capsule_id"], "refund");
     assert_eq!(router_enabled["tools"][0]["name"], "refund");
@@ -228,6 +284,7 @@ fn router_dry_run_exposes_only_enabled_ready_capsules() {
     ));
     assert_eq!(disabled["command"], "router serve --mcp");
     assert_eq!(disabled["schema_version"], "router.mcp.v1");
+    assert_eq!(disabled["ok"], true);
     assert_eq!(disabled["router"]["snapshot"], true);
     assert_eq!(disabled["tools"].as_array().unwrap().len(), 0);
 
@@ -238,6 +295,7 @@ fn router_dry_run_exposes_only_enabled_ready_capsules() {
         &["router", "serve", "--mcp", "--dry-run"],
         &skillrun_home,
     ));
+    assert_eq!(enabled["ok"], true);
     assert_eq!(enabled["router"]["capsules"], 1);
     assert_eq!(enabled["tools"][0]["capsule_id"], "refund");
     assert_eq!(enabled["tools"][0]["name"], "refund");
@@ -260,6 +318,84 @@ fn router_dry_run_exposes_only_enabled_ready_capsules() {
             .contains(".skillrun")));
 
     fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn router_status_reports_machine_readable_route_snapshot() {
+    let (output_root, capsule, skillrun_home) = generated_capsule("router-status");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(enable.status.success());
+
+    let status = assert_success_json(&run_skillrun(
+        &["router", "status", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(status["command"], "router status");
+    assert_eq!(status["schema_version"], "router.status.v1");
+    assert_eq!(status["ok"], true);
+    assert_eq!(status["router"]["snapshot"], true);
+    assert_eq!(status["router"]["capsules"], 1);
+    assert_eq!(status["tools"][0]["capsule_id"], "refund");
+    assert_eq!(status["tools"][0]["name"], "refund");
+    assert_eq!(
+        status["resources"][0]["uri_prefix"],
+        "skillrun://router/refund/"
+    );
+    assert!(status["error"].is_null());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn router_dry_run_failure_uses_structured_error_contract() {
+    let (first_root, first_capsule, skillrun_home) = generated_capsule("router-duplicate-first");
+    let (second_root, second_capsule, _) = generated_capsule("router-duplicate-second");
+    let first_arg = first_capsule.to_string_lossy().to_string();
+    let second_arg = second_capsule.to_string_lossy().to_string();
+
+    let add_first = run_skillrun(
+        &["registry", "add", "--cwd", &first_arg, "--id", "refund_a"],
+        &skillrun_home,
+    );
+    assert!(add_first.status.success());
+    let add_second = run_skillrun(
+        &["registry", "add", "--cwd", &second_arg, "--id", "refund_b"],
+        &skillrun_home,
+    );
+    assert!(add_second.status.success());
+    let enable_first = run_skillrun(&["switchboard", "enable", "refund_a"], &skillrun_home);
+    assert!(enable_first.status.success());
+    let enable_second = run_skillrun(&["switchboard", "enable", "refund_b"], &skillrun_home);
+    assert!(enable_second.status.success());
+
+    let dry_run = assert_failure_json(&run_skillrun(
+        &["router", "serve", "--mcp", "--dry-run"],
+        &skillrun_home,
+    ));
+    assert_eq!(dry_run["command"], "router serve --mcp --dry-run");
+    assert_eq!(dry_run["schema_version"], "router.mcp.v1");
+    assert_eq!(dry_run["ok"], false);
+    assert_eq!(dry_run["error"]["code"], "duplicate-tool-name");
+    assert!(dry_run["error"]["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("duplicate MCP tool name refund"));
+
+    let status = assert_failure_json(&run_skillrun(
+        &["router", "status", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(status["command"], "router status");
+    assert_eq!(status["schema_version"], "router.status.v1");
+    assert_eq!(status["ok"], false);
+    assert_eq!(status["error"]["code"], "duplicate-tool-name");
+
+    fs::remove_dir_all(first_root).ok();
+    fs::remove_dir_all(second_root).ok();
 }
 
 #[test]

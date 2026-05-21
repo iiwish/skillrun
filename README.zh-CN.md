@@ -138,8 +138,8 @@ v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持�
 | --- | --- | --- | --- |
 | Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
 | Consumer | 我如何导入别人给我的 `.skr`，并决定是否启用？ | `import`、`registry`、`switchboard`、`consumer inventory`、`consumer exposure` | `registry` 是本地 inventory；`switchboard enabled=true` 是本地 exposure intent，不是 trust 或 sandbox 证明。 |
-| Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
-| Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
+| Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`router status --json`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
+| Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`router status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
 
 5 分钟核心路径：
 
@@ -158,11 +158,18 @@ skillrun consumer exposure --json
 
 # Router：预览或挂载 MCP runtime entry
 skillrun router serve --mcp --dry-run
+skillrun router status --json
 skillrun consumer mount plan --client claude-desktop --json
 skillrun consumer mount apply --client claude-desktop --json
 ```
 
 `.skr` 是分发 artifact：source + Manifest archive。它被 `import` 校验并放入本地 registry，但不直接成为 MCP runtime entry。MCP client 应挂载 `skillrun router serve --mcp`，Router 再根据 `switchboard` 中 enabled capsule 暴露 Manifest-derived tools。
+
+Router 的短跑机器可读合同：
+
+- `skillrun router serve --mcp --dry-run` 输出 `router.mcp.v1`，包含 `ok`、`router.snapshot`、`tools`、`resources` 和失败时的 `error.code` / `error.message`。
+- `skillrun router status --json` 输出 `router.status.v1`，用于 Desktop / Agent 在不启动长运行 MCP stdio server 的情况下检查当前路由快照。
+- 对应 JSON Schema 位于 `docs/contracts/router-mcp.schema.json` 和 `docs/contracts/router-status.schema.json`。
 
 本任务不引入新的 Desktop UI、marketplace、daemon、OS sandbox、dependency installation、runtime image 或 package-manager ownership。未来若新增分组命令或 alias，必须保留上述稳定入口，并给 JSON consumer 留出兼容窗口。
 
@@ -313,6 +320,8 @@ SkillRun 同时存在几类版本：
 - [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [v0.6 Skill Capsule Contract](docs/v0.6-skill-capsule-contract.md)
+- [Router MCP JSON Schema](docs/contracts/router-mcp.schema.json)
+- [Router Status JSON Schema](docs/contracts/router-status.schema.json)
 - [业务示例](docs/business-examples.md)
 - [测试策略](docs/testing.md)
 - [发布策略](docs/release-policy.md)

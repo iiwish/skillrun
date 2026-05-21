@@ -13,7 +13,7 @@ use crate::mcp;
 use crate::mount_plan::{self, MountApplyOptions, MountPlanOptions, MountRollbackOptions};
 use crate::pack::{self, PackOptions};
 use crate::registry::{self, RegistryCommand, RegistryOptions};
-use crate::router::{self, RouterOptions};
+use crate::router::{self, RouterCommand, RouterOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 use crate::switchboard::{self, SwitchboardCommand, SwitchboardOptions};
 
@@ -277,10 +277,14 @@ where
             }
         },
         Some("router") => match parse_router(args.collect()) {
-            Ok(options) => match router::serve_mcp(&options) {
-                Ok(router::RouterOutcome::DryRun(output)) => {
+            Ok(options) => match router::run(&options) {
+                Ok(router::RouterOutcome::Output { output, success }) => {
                     println!("{output}");
-                    ExitCode::SUCCESS
+                    if success {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
                 }
                 Ok(router::RouterOutcome::Served) => ExitCode::SUCCESS,
                 Err(error) => {
@@ -290,7 +294,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun router serve --mcp [--dry-run]");
+                eprintln!("usage: skillrun router <serve|status> [options]");
                 ExitCode::from(2)
             }
         },
@@ -965,13 +969,15 @@ fn parse_router(args: Vec<String>) -> Result<RouterOptions, String> {
         return Err("router requires a subcommand".to_string());
     };
     let rest = args[1..].to_vec();
-    match command {
-        "serve" => parse_router_serve(rest),
-        value => Err(format!("unknown router subcommand: {value}")),
-    }
+    let command = match command {
+        "serve" => parse_router_serve(rest)?,
+        "status" => parse_router_status(rest)?,
+        value => return Err(format!("unknown router subcommand: {value}")),
+    };
+    Ok(RouterOptions { command })
 }
 
-fn parse_router_serve(args: Vec<String>) -> Result<RouterOptions, String> {
+fn parse_router_serve(args: Vec<String>) -> Result<RouterCommand, String> {
     let mut mcp = false;
     let mut dry_run = false;
 
@@ -987,7 +993,20 @@ fn parse_router_serve(args: Vec<String>) -> Result<RouterOptions, String> {
         return Err("router serve currently requires --mcp".to_string());
     }
 
-    Ok(RouterOptions { dry_run })
+    Ok(RouterCommand::Serve { dry_run })
+}
+
+fn parse_router_status(args: Vec<String>) -> Result<RouterCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => return Err(format!("unexpected router status argument: {value}")),
+        }
+    }
+
+    Ok(RouterCommand::Status { json })
 }
 
 fn parse_registry_add(args: Vec<String>) -> Result<RegistryCommand, String> {
@@ -1254,6 +1273,7 @@ Implemented:
   consumer mount apply --client claude-desktop [--config <path>] [--json]
   consumer mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
   router serve --mcp [--dry-run]
+  router status [--json]
   registry add/list/inspect/remove
   switchboard list/enable/disable
   test

@@ -41,6 +41,12 @@
       "schema_version": "router.mcp.v1"
     },
     {
+      "command": "router status --json",
+      "name": "router_status",
+      "process": "short_running",
+      "schema_version": "router.status.v1"
+    },
+    {
       "command": "router serve --mcp",
       "name": "router_mcp",
       "process": "long_running_mcp_stdio",

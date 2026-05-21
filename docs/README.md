@@ -48,6 +48,8 @@
 - [v0.5.15 Desktop Contract Freeze](v0.5.15-desktop-contract-freeze.md)：冻结 `desktop.alpha` contract set，并为 `import --json` 增加结构化失败合同。
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [v0.6 Skill Capsule Contract](v0.6-skill-capsule-contract.md)：冻结 Skill Capsule 作为 Agent Skill 基础单元的 Manifest、Adapter、Consumer JSON、Package、Run Evidence 和 fail-closed 合同。
+- [Router MCP JSON Schema](contracts/router-mcp.schema.json)：`router serve --mcp --dry-run` 的 `router.mcp.v1` 机器可读合同。
+- [Router Status JSON Schema](contracts/router-status.schema.json)：`router status --json` 的 `router.status.v1` 路由快照合同。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
 ## 维护者流程
