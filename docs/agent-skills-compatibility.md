@@ -115,7 +115,7 @@ Recommended direction:
 - Keep `SKILL.md` as the human and agent-facing SOP file.
 - Preserve standard frontmatter concepts such as `name`, `description`, `license`, `compatibility`, `metadata`, and experimental `allowed-tools` where possible.
 - Keep SkillRun-specific runtime configuration in `skillrun.config.json` and generated Manifest fields.
-- Let `skillrun manifest` map compatible `SKILL.md` metadata into the Manifest.
+- Let `skillrun manifest` map compatible `SKILL.md` metadata into the Manifest after a schema-reviewed implementation. The proposed field-level mapping is tracked in [Agent Skills Metadata Mapping](agent-skills-metadata-mapping.md).
 - Treat instruction-only Agent Skills as valid skills, but not runnable capsules unless an action entrypoint and runtime contract exist.
 - Keep `.skr` as a SkillRun distribution artifact, not as the Agent Skills standard package format.
 - Expose enabled executable capsules through `skillrun router serve --mcp`, not by mounting `.skr` directly into MCP clients.
@@ -147,4 +147,3 @@ Chinese:
 ```text
 Agent Skills 定义技能如何被 Agent 发现和学习；SkillRun 定义可执行技能如何被检查、运行、打包、留证和挂载。
 ```
-
