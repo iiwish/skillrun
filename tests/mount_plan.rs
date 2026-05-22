@@ -83,6 +83,35 @@ fn mount_plan_for_missing_config_is_plan_only_router_upsert() {
 }
 
 #[test]
+fn top_level_mount_plan_uses_consumer_mount_contract() {
+    let root = temp_dir("mount-plan-top-level");
+    let config = root.join("claude_desktop_config.json");
+    let config_arg = config.to_string_lossy().to_string();
+
+    let output = assert_success_json(&run_skillrun(&[
+        "mount",
+        "plan",
+        "--client",
+        "claude-desktop",
+        "--config",
+        &config_arg,
+        "--json",
+    ]));
+
+    assert_eq!(output["command"], "consumer mount plan");
+    assert_eq!(output["schema_version"], "consumer.mount_plan.v1");
+    assert_eq!(output["client"]["id"], "claude-desktop");
+    assert_eq!(output["router"]["command"], "skillrun");
+    assert_eq!(output["router"]["args"][0], "router");
+    assert!(
+        !config.exists(),
+        "top-level mount plan must remain plan-only"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
 fn mount_plan_sanitizes_existing_skillrun_entry_and_does_not_write_config() {
     let root = temp_dir("mount-plan-existing-config");
     fs::create_dir_all(&root).expect("test root should be created");
