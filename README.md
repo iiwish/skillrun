@@ -48,15 +48,15 @@ See [Agent Skills Compatibility](docs/agent-skills-compatibility.md) for the ful
 
 ## What Works Today
 
-Current development line: `v0.6.2`.
+Current development line: `v0.6.3`.
 
-Latest public release: `v0.6.2`.
+Latest public release: `v0.6.3`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.2
+# skillrun 0.6.3
 ```
 
 ## Install

@@ -48,15 +48,15 @@ SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
 
 ## 当前状态
 
-当前开发线：`v0.6.2`。
+当前开发线：`v0.6.3`。
 
-最新公开 release：`v0.6.2`。
+最新公开 release：`v0.6.3`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.6.2
+# skillrun 0.6.3
 ```
 
 ## 安装
