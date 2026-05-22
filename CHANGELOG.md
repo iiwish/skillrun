@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3](https://github.com/iiwish/skillrun/compare/v0.6.2...v0.6.3) - 2026-05-22
+
+### Added
+
+- *(runs)* filter local run evidence
+- *(registry)* add guarded file removal
+- *(import)* add replace lifecycle
+- *(cli)* add validate author loop
+- *(cli)* expand doctor host diagnostics
+
 ## [0.6.2](https://github.com/iiwish/skillrun/compare/v0.6.1...v0.6.2) - 2026-05-22
 
 ### Added
