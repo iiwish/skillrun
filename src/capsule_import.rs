@@ -15,6 +15,7 @@ pub struct ImportOptions {
     pub id: Option<String>,
     pub target_dir: Option<PathBuf>,
     pub json: bool,
+    pub replace: bool,
 }
 
 pub struct ImportOutput {
@@ -53,6 +54,7 @@ struct ImportedCapsuleView {
     path: String,
     source_type: String,
     enabled: bool,
+    replaced: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -110,9 +112,15 @@ fn import_from_package(
             .to_string(),
     };
     registry::validate_registry_id(&registry_id)?;
-    registry::ensure_registry_id_available(&registry_id)?;
+    if !options.replace {
+        registry::ensure_registry_id_available(&registry_id)?;
+    }
 
     let final_dir = import_root.join(&registry_id);
+    if options.replace {
+        return replace_imported_package(options, package_path, temp_dir, &registry_id, &final_dir);
+    }
+
     if final_dir.exists() {
         return Err(format!(
             "import target already exists: {}",
@@ -151,6 +159,7 @@ fn import_from_package(
             path: display_path(&final_dir),
             source_type,
             enabled: false,
+            replaced: false,
         },
         warnings: import_warnings(),
     };
@@ -168,6 +177,109 @@ fn import_from_package(
             path = final_dir.display()
         ),
     })
+}
+
+fn replace_imported_package(
+    options: &ImportOptions,
+    package_path: &Path,
+    temp_dir: &Path,
+    registry_id: &str,
+    final_dir: &Path,
+) -> Result<ImportOutput, String> {
+    let existing = registry::imported_capsule_for_replace(registry_id)?;
+    let requested_path = if final_dir.exists() {
+        fs::canonicalize(final_dir)
+            .map_err(|error| format!("failed to resolve {}: {error}", final_dir.display()))?
+    } else {
+        final_dir.to_path_buf()
+    };
+    if existing.path != requested_path {
+        return Err(format!(
+            "import replace target mismatch for {registry_id}: existing path is {}; requested target is {}",
+            existing.path.display(),
+            final_dir.display()
+        ));
+    }
+
+    let backup_dir = final_dir.with_file_name(format!(
+        ".replace-{registry_id}-{}-{}.bak",
+        std::process::id(),
+        nonce()?
+    ));
+    let had_existing_dir = final_dir.exists();
+    if had_existing_dir {
+        fs::rename(final_dir, &backup_dir).map_err(|error| {
+            format!(
+                "failed to stage existing capsule {} for replacement: {error}",
+                final_dir.display()
+            )
+        })?;
+    }
+
+    let moved = fs::rename(temp_dir, final_dir);
+    if let Err(error) = moved {
+        restore_replacement_backup(final_dir, &backup_dir, had_existing_dir);
+        return Err(format!(
+            "failed to move replacement capsule {} to {}: {error}",
+            temp_dir.display(),
+            final_dir.display()
+        ));
+    }
+
+    if let Err(error) = registry::replace_imported_capsule(registry_id, final_dir) {
+        fs::remove_dir_all(final_dir).ok();
+        restore_replacement_backup(final_dir, &backup_dir, had_existing_dir);
+        return Err(error);
+    }
+
+    if had_existing_dir {
+        fs::remove_dir_all(&backup_dir).map_err(|error| {
+            format!(
+                "failed to remove replacement backup {}: {error}",
+                backup_dir.display()
+            )
+        })?;
+    }
+
+    let registry_path = registry::registry_path_display()?;
+    let source_type = registry::IMPORTED_SKR_SOURCE_TYPE.to_string();
+    let view = ImportView {
+        command: "import",
+        schema_version: "import.v1",
+        ok: true,
+        package_path: display_path(package_path),
+        registry_path,
+        capsule: ImportedCapsuleView {
+            id: registry_id.to_string(),
+            path: display_path(final_dir),
+            source_type,
+            enabled: existing.enabled,
+            replaced: true,
+        },
+        warnings: import_warnings(),
+    };
+
+    if options.json {
+        return Ok(ImportOutput {
+            output: serde_json::to_string_pretty(&view).map_err(|error| error.to_string())?,
+        });
+    }
+
+    Ok(ImportOutput {
+        output: format!(
+            "replaced {id}\npath: {path}\nenabled: {enabled}\nnote: replacement validates the .skr before swapping files and does not install dependencies.",
+            id = registry_id,
+            path = final_dir.display(),
+            enabled = existing.enabled,
+        ),
+    })
+}
+
+fn restore_replacement_backup(final_dir: &Path, backup_dir: &Path, had_existing_dir: bool) {
+    if had_existing_dir && backup_dir.exists() {
+        fs::remove_dir_all(final_dir).ok();
+        fs::rename(backup_dir, final_dir).ok();
+    }
 }
 
 fn extract_package(package_path: &Path, target_dir: &Path) -> Result<(), String> {
@@ -255,6 +367,12 @@ fn import_error_code(message: &str) -> &'static str {
         "registry-id-exists"
     } else if message.starts_with("import target already exists") {
         "import-target-exists"
+    } else if message.starts_with("registry id not found") {
+        "registry-id-not-found"
+    } else if message.starts_with("import replace requires imported_skr") {
+        "replace-source-type-unsupported"
+    } else if message.starts_with("import replace target mismatch") {
+        "replace-target-mismatch"
     } else if message.starts_with("package does not exist") {
         "package-not-found"
     } else if message.starts_with("package is not a file") {

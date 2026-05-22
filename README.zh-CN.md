@@ -92,6 +92,7 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
 - `.skr` source + Manifest package。
 - 本地 `.skr` import 到 capsule registry：
   - `skillrun import <package.skr> --json`
+  - `skillrun import <package.skr> --replace --json`
 - 本地 capsule `registry` 和 `switchboard`。
 - 用于一键挂载的本地 MCP Router：
   - `skillrun router serve --mcp`
@@ -170,6 +171,8 @@ skillrun mount apply --client claude-desktop --json
 ```
 
 `.skr` 是分发 artifact：source + Manifest archive。它被 `import` 校验并放入本地 registry，但不直接成为 MCP runtime entry。MCP client 应挂载 `skillrun router serve --mcp`，Router 再根据 `switchboard` 中 enabled capsule 暴露 Manifest-derived tools。
+
+使用 `skillrun import <package.skr> --replace` 可以对同一个 registry id 已导入的 `.skr` 做 reinstall / update。替换会先验证新 package，再交换文件，并保留现有 `switchboard` enabled 状态；它只允许替换 registry `source_type` 为 `imported_skr` 的 capsule，不会覆盖 local-path registry entry，也不会安装 runtime dependencies。
 
 `skillrun mount ...` 是 `skillrun consumer mount ...` 的短入口；JSON 输出继续使用现有 `consumer.mount_*` schema version。
 

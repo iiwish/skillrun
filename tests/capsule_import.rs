@@ -183,6 +183,97 @@ fn import_rejects_duplicate_registry_ids_without_overwriting_existing_capsule() 
 }
 
 #[test]
+fn import_replace_reinstalls_imported_capsule_and_preserves_enabled_state() {
+    let (output_root, archive_path) = generated_package("import-replace");
+    let skillrun_home = output_root.join("consumer-home");
+    let package_arg = archive_path.to_string_lossy().to_string();
+
+    let first = assert_success_json(&run_skillrun(
+        &["import", &package_arg, "--json"],
+        &skillrun_home,
+    ));
+    let imported_path = PathBuf::from(first["capsule"]["path"].as_str().unwrap());
+    let marker = imported_path.join("STALE.txt");
+    fs::write(&marker, "stale imported file").expect("marker should be writable");
+
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(
+        enable.status.success(),
+        "switchboard enable should succeed\nstderr: {}",
+        String::from_utf8_lossy(&enable.stderr)
+    );
+
+    let replaced = assert_success_json(&run_skillrun(
+        &["import", &package_arg, "--replace", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(replaced["command"], "import");
+    assert_eq!(replaced["schema_version"], "import.v1");
+    assert_eq!(replaced["ok"], true);
+    assert_eq!(replaced["capsule"]["id"], "refund");
+    assert_eq!(replaced["capsule"]["source_type"], "imported_skr");
+    assert_eq!(replaced["capsule"]["enabled"], true);
+    assert_eq!(replaced["capsule"]["replaced"], true);
+    assert!(
+        !marker.exists(),
+        "replace should swap the imported capsule directory, not merge stale files"
+    );
+
+    let inventory = assert_success_json(&run_skillrun(
+        &["consumer", "inventory", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(inventory["capsules"].as_array().unwrap().len(), 1);
+    assert_eq!(inventory["capsules"][0]["id"], "refund");
+    assert_eq!(inventory["capsules"][0]["enabled"], true);
+    assert_eq!(inventory["capsules"][0]["source_type"], "imported_skr");
+    assert_eq!(inventory["capsules"][0]["readiness"]["status"], "ok");
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn import_replace_refuses_to_overwrite_local_path_registry_entry() {
+    let (output_root, archive_path) = generated_package("import-replace-local-path");
+    let skillrun_home = output_root.join("consumer-home");
+    let package_arg = archive_path.to_string_lossy().to_string();
+    let local_capsule = output_root.join("local-refund");
+    fs::create_dir_all(&local_capsule).expect("local capsule dir should be created");
+    fs::write(local_capsule.join("KEEP.txt"), "local path").expect("marker should be written");
+    let local_arg = local_capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(
+        &["registry", "add", "--cwd", &local_arg, "--id", "refund"],
+        &skillrun_home,
+    );
+    assert!(
+        add.status.success(),
+        "registry add should succeed\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let replace = run_skillrun(
+        &["import", &package_arg, "--replace", "--json"],
+        &skillrun_home,
+    );
+    let error = assert_failure_json(&replace);
+    assert_eq!(error["command"], "import");
+    assert_eq!(error["schema_version"], "import.v1");
+    assert_eq!(error["ok"], false);
+    assert_eq!(error["error"]["code"], "replace-source-type-unsupported");
+    assert!(error["error"]["message"]
+        .as_str()
+        .expect("error message should be present")
+        .contains("requires imported_skr"));
+    assert!(
+        local_capsule.join("KEEP.txt").is_file(),
+        "replace must not overwrite local_path registry entries"
+    );
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn import_rejects_archive_entries_that_escape_target_directory() {
     let output_root = temp_dir("import-path-traversal");
     let skillrun_home = output_root.join("consumer-home");
