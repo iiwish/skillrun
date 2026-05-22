@@ -174,6 +174,8 @@ skillrun mount apply --client claude-desktop --json
 
 Use `skillrun import <package.skr> --replace` to reinstall or update an already imported `.skr` with the same registry id. Replacement validates the new package before swapping files, preserves the existing `switchboard` enabled state, and is limited to capsules whose registry `source_type` is `imported_skr`; it does not overwrite local-path registry entries or install runtime dependencies.
 
+Use `skillrun registry remove <id>` to remove a capsule from the local registry without deleting capsule files. If the entry came from `.skr` import, `skillrun registry remove <id> --delete-files` also deletes the imported copy after staging it for rollback while the registry is saved; this flag is refused for local-path entries.
+
 `skillrun mount ...` is a short facade over `skillrun consumer mount ...`; JSON output keeps the existing `consumer.mount_*` schema versions.
 
 Router short-running machine-readable contracts:

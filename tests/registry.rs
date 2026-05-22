@@ -181,6 +181,46 @@ fn registry_add_list_inspect_and_remove_local_capsule() {
 }
 
 #[test]
+fn registry_remove_delete_files_refuses_local_path_capsule() {
+    let (output_root, capsule) = generated_capsule("registry-remove-local-files");
+    let skillrun_home = output_root.join("skillrun-home");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(
+        add.status.success(),
+        "registry add should succeed\nstderr: {}",
+        String::from_utf8_lossy(&add.stderr)
+    );
+
+    let remove = run_skillrun(
+        &["registry", "remove", "refund", "--delete-files"],
+        &skillrun_home,
+    );
+    assert!(
+        !remove.status.success(),
+        "delete-files should refuse local_path entries"
+    );
+    assert!(
+        String::from_utf8_lossy(&remove.stderr).contains("requires imported_skr"),
+        "stderr should explain source_type boundary\nstderr: {}",
+        String::from_utf8_lossy(&remove.stderr)
+    );
+    assert!(
+        capsule.join("SKILL.md").is_file(),
+        "delete-files refusal must preserve local capsule files"
+    );
+
+    let list = assert_success_json(&run_skillrun(
+        &["registry", "list", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(list["capsules"].as_array().unwrap().len(), 1);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn switchboard_enable_disable_and_list_json_updates_registry_state() {
     let (output_root, capsule) = generated_capsule("switchboard-happy");
     let skillrun_home = output_root.join("skillrun-home");

@@ -4,6 +4,7 @@ use serde_json::Value as JsonValue;
 use serde_yaml::Value;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::hashing;
 use crate::manifest;
@@ -17,10 +18,22 @@ pub struct RegistryOptions {
 
 #[derive(Debug)]
 pub enum RegistryCommand {
-    Add { cwd: PathBuf, id: Option<String> },
-    List { json: bool },
-    Inspect { id: String, json: bool },
-    Remove { id: String },
+    Add {
+        cwd: PathBuf,
+        id: Option<String>,
+    },
+    List {
+        json: bool,
+    },
+    Inspect {
+        id: String,
+        json: bool,
+    },
+    Remove {
+        id: String,
+        delete_files: bool,
+        json: bool,
+    },
 }
 
 pub struct RegistryOutput {
@@ -74,6 +87,39 @@ struct RegistryInspectView {
     command: &'static str,
     registry_path: String,
     capsule: CapsuleView,
+}
+
+#[derive(Debug, Serialize)]
+struct RegistryRemoveView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    registry_path: String,
+    capsule: RemovedCapsuleView,
+    removed: RegistryRemoveResultView,
+    warnings: Vec<RegistryRemoveWarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct RemovedCapsuleView {
+    id: String,
+    path: String,
+    source_type: String,
+    enabled: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct RegistryRemoveResultView {
+    registry_entry: bool,
+    files_deleted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    files_path: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct RegistryRemoveWarningView {
+    code: &'static str,
+    message: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -315,7 +361,11 @@ pub fn run(options: &RegistryOptions) -> Result<RegistryOutput, String> {
         RegistryCommand::Add { cwd, id } => add(cwd, id.as_deref()),
         RegistryCommand::List { json } => list(*json),
         RegistryCommand::Inspect { id, json } => inspect(id, *json),
-        RegistryCommand::Remove { id } => remove(id),
+        RegistryCommand::Remove {
+            id,
+            delete_files,
+            json,
+        } => remove(id, *delete_files, *json),
     }
 }
 
@@ -426,17 +476,131 @@ fn inspect(id: &str, json: bool) -> Result<RegistryOutput, String> {
     })
 }
 
-fn remove(id: &str) -> Result<RegistryOutput, String> {
+fn remove(id: &str, delete_files: bool, json: bool) -> Result<RegistryOutput, String> {
     let mut registry = load_registry()?;
-    let before = registry.capsules.len();
-    registry.capsules.retain(|entry| entry.id != id);
-    if registry.capsules.len() == before {
+    let registry_path = registry_path()?;
+    let Some(index) = registry.capsules.iter().position(|entry| entry.id == id) else {
         return Err(format!("registry id not found: {id}"));
+    };
+    let entry = registry.capsules[index].clone();
+    if delete_files && entry.source_type != IMPORTED_SKR_SOURCE_TYPE {
+        return Err(format!(
+            "registry remove --delete-files requires imported_skr source_type for {id}; found {}",
+            entry.source_type
+        ));
     }
-    save_registry(&registry)?;
-    Ok(RegistryOutput {
-        output: format!("removed {id}"),
-    })
+
+    let mut staged_files = None;
+    let mut warnings = Vec::new();
+    if delete_files {
+        staged_files = stage_imported_files_for_delete(&entry)?;
+        if staged_files.is_none() {
+            warnings.push(RegistryRemoveWarningView {
+                code: "files-missing",
+                message: format!(
+                    "imported capsule files were already missing at {}",
+                    entry.path
+                ),
+            });
+        }
+    }
+
+    registry.capsules.remove(index);
+    if let Err(error) = save_registry(&registry) {
+        if let Some((original, backup)) = &staged_files {
+            restore_staged_delete(original, backup);
+        }
+        return Err(error);
+    }
+
+    let mut files_deleted = false;
+    let mut files_path = None;
+    if let Some((original, backup)) = staged_files {
+        files_path = Some(display_path(&original));
+        match fs::remove_dir_all(&backup) {
+            Ok(()) => files_deleted = true,
+            Err(error) => warnings.push(RegistryRemoveWarningView {
+                code: "files-delete-failed",
+                message: format!(
+                    "registry entry was removed, but staged files remain at {}: {error}",
+                    backup.display()
+                ),
+            }),
+        }
+    }
+
+    let view = RegistryRemoveView {
+        command: "registry remove",
+        schema_version: "registry.remove.v1",
+        ok: true,
+        registry_path: display_path(&registry_path),
+        capsule: RemovedCapsuleView {
+            id: entry.id.clone(),
+            path: entry.path.clone(),
+            source_type: entry.source_type.clone(),
+            enabled: entry.enabled,
+        },
+        removed: RegistryRemoveResultView {
+            registry_entry: true,
+            files_deleted,
+            files_path,
+        },
+        warnings,
+    };
+
+    if json {
+        return json_output(&view);
+    }
+
+    let mut output = format!(
+        "removed {id}\nregistry_entry: true\nfiles_deleted: {}",
+        view.removed.files_deleted
+    );
+    for warning in view.warnings {
+        output.push_str(&format!("\nwarning: {}", warning.message));
+    }
+    Ok(RegistryOutput { output })
+}
+
+fn stage_imported_files_for_delete(
+    entry: &RegistryEntry,
+) -> Result<Option<(PathBuf, PathBuf)>, String> {
+    let path = PathBuf::from(&entry.path);
+    if !path.exists() {
+        return Ok(None);
+    }
+    if !path.is_dir() {
+        return Err(format!(
+            "registry remove --delete-files expected a directory at {}",
+            path.display()
+        ));
+    }
+    let backup = path.with_file_name(format!(
+        ".remove-{}-{}-{}.bak",
+        entry.id,
+        std::process::id(),
+        nonce()?
+    ));
+    fs::rename(&path, &backup).map_err(|error| {
+        format!(
+            "failed to stage imported capsule files {} for deletion: {error}",
+            path.display()
+        )
+    })?;
+    Ok(Some((path, backup)))
+}
+
+fn restore_staged_delete(original: &Path, backup: &Path) {
+    if backup.exists() && !original.exists() {
+        fs::rename(backup, original).ok();
+    }
+}
+
+fn nonce() -> Result<u128, String> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .map_err(|error| format!("system clock is before unix epoch: {error}"))
 }
 
 pub fn switchboard_list(json: bool) -> Result<RegistryOutput, String> {
