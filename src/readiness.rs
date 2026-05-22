@@ -597,7 +597,7 @@ sources:
 examples:
 {examples}
 {reason}next step: {next_step}
-note: check reads Manifest, files and hashes only; it does not run or import action source.",
+note: check reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker.",
         cwd = report.cwd.display(),
         status = report.status,
         files = render_files(&report.files),
@@ -631,7 +631,9 @@ examples:
 {examples}
 reason: {reason}
 next step: {next_step}
-note: doctor reads files and hashes only; it does not run or import action source.",
+host diagnostics:
+{host_diagnostics}
+note: doctor reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker.",
             cwd = report.cwd.display(),
             status = report.status,
             manifest_path = report.manifest_path.display(),
@@ -639,6 +641,7 @@ note: doctor reads files and hashes only; it does not run or import action sourc
             examples = render_example_checks(&report.example_checks),
             reason = report.reason.as_deref().unwrap_or("unknown"),
             next_step = report.next_step,
+            host_diagnostics = render_host_diagnostics(),
         );
     }
 
@@ -656,12 +659,18 @@ manifest:
 runtime:
   adapter: {adapter}
   entrypoint: {entrypoint}
+requirements:
+{requirements}
+host readiness:
+{host_readiness}
+host diagnostics:
+{host_diagnostics}
 sources:
 {sources}
 examples:
 {examples}
 next step: {next_step}
-note: doctor reads files and hashes only; it does not run or import action source.",
+note: doctor reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker.",
         cwd = report.cwd.display(),
         status = report.status,
         files = render_files(&report.files),
@@ -669,6 +678,9 @@ note: doctor reads files and hashes only; it does not run or import action sourc
         freshness = report.freshness,
         adapter = report.adapter.as_deref().unwrap_or("unknown"),
         entrypoint = report.entrypoint.as_deref().unwrap_or("unknown"),
+        requirements = render_requirements(&report.requirements),
+        host_readiness = render_host_readiness(&report.dependency_checks),
+        host_diagnostics = render_host_diagnostics(),
         sources = render_source_checks(&report.source_checks),
         examples = render_example_checks(&report.example_checks),
         next_step = report.next_step,
@@ -686,6 +698,7 @@ struct JsonReadinessReport<'a> {
     runtime: JsonRuntime<'a>,
     requirements: &'a RequirementsView,
     dependency_checks: &'a [HostDependencyCheck],
+    host_diagnostics: JsonHostDiagnostics,
     source_checks: &'a [SourceCheck],
     example_checks: &'a [ExampleCheck],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -707,6 +720,23 @@ struct JsonRuntime<'a> {
     entrypoint: Option<&'a str>,
 }
 
+#[derive(Serialize)]
+struct JsonHostDiagnostics {
+    scope: &'static str,
+    path_env: JsonPathDiagnostics,
+    dependency_probes: &'static str,
+    docker_required: bool,
+    auto_install: bool,
+    action_execution: bool,
+}
+
+#[derive(Serialize)]
+struct JsonPathDiagnostics {
+    name: &'static str,
+    present: bool,
+    entries: usize,
+}
+
 pub fn render_json(command: &str, report: &ReadinessReport) -> Result<String, String> {
     let json = JsonReadinessReport {
         command,
@@ -725,11 +755,12 @@ pub fn render_json(command: &str, report: &ReadinessReport) -> Result<String, St
         },
         requirements: &report.requirements,
         dependency_checks: &report.dependency_checks,
+        host_diagnostics: json_host_diagnostics(),
         source_checks: &report.source_checks,
         example_checks: &report.example_checks,
         reason: report.reason.as_deref(),
         next_step: &report.next_step,
-        note: "readiness reads Manifest, files and hashes only; it does not run or import action source.",
+        note: "readiness reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker.",
     };
 
     serde_json::to_string_pretty(&json).map_err(|error| error.to_string())
@@ -798,6 +829,46 @@ fn render_host_readiness(checks: &[HostDependencyCheck]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn render_host_diagnostics() -> String {
+    let path = path_diagnostics();
+    let path_status = if path.present { "present" } else { "missing" };
+    format!(
+        "  scope: current host environment
+  PATH: {path_status} ({entries} entries)
+  dependency probes: runtime version/package import/path lookup only
+  Docker: not required
+  auto install: no
+  action execution: no",
+        entries = path.entries,
+    )
+}
+
+fn json_host_diagnostics() -> JsonHostDiagnostics {
+    JsonHostDiagnostics {
+        scope: "current host environment",
+        path_env: path_diagnostics(),
+        dependency_probes: "runtime version/package import/path lookup only",
+        docker_required: false,
+        auto_install: false,
+        action_execution: false,
+    }
+}
+
+fn path_diagnostics() -> JsonPathDiagnostics {
+    match std::env::var_os("PATH") {
+        Some(path) => JsonPathDiagnostics {
+            name: "PATH",
+            present: true,
+            entries: std::env::split_paths(&path).count(),
+        },
+        None => JsonPathDiagnostics {
+            name: "PATH",
+            present: false,
+            entries: 0,
+        },
+    }
 }
 
 fn render_files(files: &FileStatus) -> String {

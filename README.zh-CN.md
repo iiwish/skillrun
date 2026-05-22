@@ -84,6 +84,7 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
 - Level 0 `command` adapter，用显式 argv 进程遵守 SkillRun IPC。
 - Manifest generation，包含 source hash 与 runtime contract 字段。
 - `inspect`、`check`、`doctor` 的 human 和 JSON surface。
+- `doctor` 会诊断当前 host 中声明的 Python、Node、command adapter、`PATH` 和 package requirements；诊断不使用 Docker、不安装依赖，也不执行 action 业务逻辑。
 - `host status --json`，用于 Desktop / tray host readiness 握手和 `desktop.alpha` contract set。
 - `test`、`run` 输出结构化 output/error envelope。
 - 从 Manifest 派生 MCP stdio server。

@@ -52,6 +52,18 @@
       "status": "satisfied"
     }
   ],
+  "host_diagnostics": {
+    "scope": "current host environment",
+    "path_env": {
+      "name": "PATH",
+      "present": true,
+      "entries": "<path_entries>"
+    },
+    "dependency_probes": "runtime version/package import/path lookup only",
+    "docker_required": false,
+    "auto_install": false,
+    "action_execution": false
+  },
   "source_checks": [
     {
       "path": "SKILL.md",
@@ -73,5 +85,5 @@
     }
   ],
   "next_step": "none",
-  "note": "readiness reads Manifest, files and hashes only; it does not run or import action source."
+  "note": "readiness reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker."
 }

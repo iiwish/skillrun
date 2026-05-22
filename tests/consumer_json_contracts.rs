@@ -197,6 +197,9 @@ fn normalize_json(value: &mut Value, paths: &[(&Path, &str)], key: Option<&str>)
         Value::Number(_) if key == Some("duration_ms") => {
             *value = Value::String("<duration_ms>".to_string());
         }
+        Value::Number(number) if key == Some("entries") && number.as_u64().is_some() => {
+            *value = Value::String("<path_entries>".to_string());
+        }
         _ => {}
     }
 }

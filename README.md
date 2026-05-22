@@ -84,6 +84,7 @@ Available today:
 - Level 0 `command` adapter for explicit argv processes that obey SkillRun IPC.
 - Manifest generation with source hashes and runtime contract fields.
 - `inspect`, `check`, and `doctor` human and JSON surfaces.
+- `doctor` host diagnostics for declared Python, Node, command adapter, `PATH`, and package requirements; diagnostics do not use Docker, install dependencies, or execute action business logic.
 - `host status --json` for Desktop/tray host readiness and the `desktop.alpha` contract set.
 - `test` and `run` with structured output/error envelopes.
 - MCP stdio server from Manifest-derived tools and resources.
