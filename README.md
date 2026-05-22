@@ -92,6 +92,7 @@ Available today:
 - `.skr` source + Manifest packaging.
 - Local `.skr` import into the capsule registry:
   - `skillrun import <package.skr> --json`
+  - `skillrun import <package.skr> --replace --json`
 - Local capsule `registry` and `switchboard`.
 - Local MCP Router for one-click mounting:
   - `skillrun router serve --mcp`
@@ -170,6 +171,8 @@ skillrun mount apply --client claude-desktop --json
 ```
 
 `.skr` is the distribution artifact: a source + Manifest archive. `import` validates it and places it in the local registry, but it is not the MCP runtime entry. MCP clients should mount `skillrun router serve --mcp`; the Router then exposes Manifest-derived tools for capsules enabled through `switchboard`.
+
+Use `skillrun import <package.skr> --replace` to reinstall or update an already imported `.skr` with the same registry id. Replacement validates the new package before swapping files, preserves the existing `switchboard` enabled state, and is limited to capsules whose registry `source_type` is `imported_skr`; it does not overwrite local-path registry entries or install runtime dependencies.
 
 `skillrun mount ...` is a short facade over `skillrun consumer mount ...`; JSON output keeps the existing `consumer.mount_*` schema versions.
 

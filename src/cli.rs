@@ -190,7 +190,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun import <package.skr> [--id <id>] [--to <dir>] [--json]");
+                eprintln!("usage: skillrun import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]");
                 ExitCode::from(2)
             }
         },
@@ -682,6 +682,7 @@ fn parse_import(args: Vec<String>) -> Result<ImportOptions, String> {
     let mut id = None;
     let mut target_dir = None;
     let mut json = false;
+    let mut replace = false;
     let mut index = 0;
 
     while index < args.len() {
@@ -704,6 +705,10 @@ fn parse_import(args: Vec<String>) -> Result<ImportOptions, String> {
                 json = true;
                 index += 1;
             }
+            "--replace" => {
+                replace = true;
+                index += 1;
+            }
             value if value.starts_with('-') => {
                 return Err(format!("unexpected import argument: {value}"));
             }
@@ -723,6 +728,7 @@ fn parse_import(args: Vec<String>) -> Result<ImportOptions, String> {
         id,
         target_dir,
         json,
+        replace,
     })
 }
 
@@ -1326,7 +1332,7 @@ Implemented:
   check [--json]
   doctor [--json]
   validate [--json]
-  import <package.skr> [--id <id>] [--to <dir>] [--json]
+  import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--limit <n>]

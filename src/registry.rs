@@ -56,6 +56,11 @@ pub struct RegisteredCapsule {
     pub id: String,
 }
 
+pub struct ImportedCapsuleForReplace {
+    pub path: PathBuf,
+    pub enabled: bool,
+}
+
 #[derive(Debug, Serialize)]
 struct RegistryListView {
     command: &'static str,
@@ -1415,6 +1420,45 @@ pub fn ensure_registry_id_available(id: &str) -> Result<(), String> {
         return Err(format!("registry id already exists: {id}"));
     }
     Ok(())
+}
+
+pub fn imported_capsule_for_replace(id: &str) -> Result<ImportedCapsuleForReplace, String> {
+    validate_registry_id(id)?;
+    let registry = load_registry()?;
+    let entry = registry
+        .capsules
+        .iter()
+        .find(|entry| entry.id == id)
+        .ok_or_else(|| format!("registry id not found: {id}"))?;
+    if entry.source_type != IMPORTED_SKR_SOURCE_TYPE {
+        return Err(format!(
+            "import replace requires imported_skr source_type for {id}; found {}",
+            entry.source_type
+        ));
+    }
+    Ok(ImportedCapsuleForReplace {
+        path: PathBuf::from(&entry.path),
+        enabled: entry.enabled,
+    })
+}
+
+pub fn replace_imported_capsule(id: &str, path: &Path) -> Result<(), String> {
+    validate_registry_id(id)?;
+    let capsule_path = absolute_existing_dir(path)?;
+    let mut registry = load_registry()?;
+    let entry = registry
+        .capsules
+        .iter_mut()
+        .find(|entry| entry.id == id)
+        .ok_or_else(|| format!("registry id not found: {id}"))?;
+    if entry.source_type != IMPORTED_SKR_SOURCE_TYPE {
+        return Err(format!(
+            "import replace requires imported_skr source_type for {id}; found {}",
+            entry.source_type
+        ));
+    }
+    entry.path = display_path(&capsule_path);
+    save_registry(&registry)
 }
 
 fn absolute_existing_dir(path: &Path) -> Result<PathBuf, String> {
