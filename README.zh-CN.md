@@ -174,6 +174,8 @@ skillrun mount apply --client claude-desktop --json
 
 使用 `skillrun import <package.skr> --replace` 可以对同一个 registry id 已导入的 `.skr` 做 reinstall / update。替换会先验证新 package，再交换文件，并保留现有 `switchboard` enabled 状态；它只允许替换 registry `source_type` 为 `imported_skr` 的 capsule，不会覆盖 local-path registry entry，也不会安装 runtime dependencies。
 
+使用 `skillrun registry remove <id>` 会从本地 registry 移除 capsule，但默认不删除 capsule 文件。如果 entry 来自 `.skr` import，`skillrun registry remove <id> --delete-files` 会在保存 registry 时先暂存可回滚目录，再删除 imported copy；这个 flag 会拒绝 local-path entry。
+
 `skillrun mount ...` 是 `skillrun consumer mount ...` 的短入口；JSON 输出继续使用现有 `consumer.mount_*` schema version。
 
 Router 的短跑机器可读合同：

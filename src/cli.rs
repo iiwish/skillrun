@@ -1140,11 +1140,31 @@ fn parse_registry_inspect(args: Vec<String>) -> Result<RegistryCommand, String> 
 }
 
 fn parse_registry_remove(args: Vec<String>) -> Result<RegistryCommand, String> {
-    if args.len() != 1 {
-        return Err("registry remove requires exactly one id".to_string());
+    let mut id = None;
+    let mut delete_files = false;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--delete-files" => delete_files = true,
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!("unexpected registry remove argument: {value}"));
+            }
+            value => {
+                if id.is_some() {
+                    return Err(format!("unexpected registry remove argument: {value}"));
+                }
+                id = Some(value.to_string());
+            }
+        }
     }
+
+    let id = id.ok_or_else(|| "registry remove requires an id".to_string())?;
     Ok(RegistryCommand::Remove {
-        id: args[0].clone(),
+        id,
+        delete_files,
+        json,
     })
 }
 
@@ -1346,6 +1366,7 @@ Implemented:
   router serve --mcp [--dry-run]
   router status [--json]
   registry add/list/inspect/remove
+  registry remove <id> [--delete-files] [--json]
   switchboard list/enable/disable
   test
   run

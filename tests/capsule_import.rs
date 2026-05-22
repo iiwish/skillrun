@@ -274,6 +274,47 @@ fn import_replace_refuses_to_overwrite_local_path_registry_entry() {
 }
 
 #[test]
+fn registry_remove_delete_files_deletes_imported_capsule_copy() {
+    let (output_root, archive_path) = generated_package("import-remove-delete-files");
+    let skillrun_home = output_root.join("consumer-home");
+    let package_arg = archive_path.to_string_lossy().to_string();
+
+    let imported = assert_success_json(&run_skillrun(
+        &["import", &package_arg, "--json"],
+        &skillrun_home,
+    ));
+    let imported_path = PathBuf::from(imported["capsule"]["path"].as_str().unwrap());
+    assert!(
+        imported_path.join("SKILL.md").is_file(),
+        "imported capsule files should exist before remove"
+    );
+
+    let removed = assert_success_json(&run_skillrun(
+        &["registry", "remove", "refund", "--delete-files", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(removed["command"], "registry remove");
+    assert_eq!(removed["schema_version"], "registry.remove.v1");
+    assert_eq!(removed["ok"], true);
+    assert_eq!(removed["capsule"]["id"], "refund");
+    assert_eq!(removed["capsule"]["source_type"], "imported_skr");
+    assert_eq!(removed["removed"]["registry_entry"], true);
+    assert_eq!(removed["removed"]["files_deleted"], true);
+    assert!(
+        !imported_path.exists(),
+        "registry remove --delete-files should delete imported copies"
+    );
+
+    let list = assert_success_json(&run_skillrun(
+        &["registry", "list", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(list["capsules"].as_array().unwrap().len(), 0);
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
 fn import_rejects_archive_entries_that_escape_target_directory() {
     let output_root = temp_dir("import-path-traversal");
     let skillrun_home = output_root.join("consumer-home");
