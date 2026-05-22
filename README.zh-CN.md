@@ -85,6 +85,7 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
 - Manifest generation，包含 source hash 与 runtime contract 字段。
 - `inspect`、`check`、`doctor` 的 human 和 JSON surface。
 - `doctor` 会诊断当前 host 中声明的 Python、Node、command adapter、`PATH` 和 package requirements；诊断不使用 Docker、不安装依赖，也不执行 action 业务逻辑。
+- `validate` 作者闭环，串起 Manifest freshness、readiness 诊断、默认 example test 和下一步显式 `run`；它不安装依赖，也不使用 Docker。
 - `host status --json`，用于 Desktop / tray host readiness 握手和 `desktop.alpha` contract set。
 - `test`、`run` 输出结构化 output/error envelope。
 - 从 Manifest 派生 MCP stdio server。
@@ -119,6 +120,7 @@ cargo run -- manifest --cwd tmp/quickstart/refund
 cargo run -- inspect --cwd tmp/quickstart/refund
 cargo run -- check --cwd tmp/quickstart/refund
 cargo run -- doctor --cwd tmp/quickstart/refund
+cargo run -- validate --cwd tmp/quickstart/refund
 cargo run -- test --cwd tmp/quickstart/refund
 cargo run -- run --cwd tmp/quickstart/refund --input examples/default.input.json
 cargo run -- serve --mcp --cwd tmp/quickstart/refund --dry-run
@@ -139,7 +141,7 @@ v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持�
 
 | 路径 | 用户问题 | 稳定入口 | v0.6 兼容策略 |
 | --- | --- | --- | --- |
-| Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
+| Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`validate`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
 | Consumer | 我如何导入别人给我的 `.skr`，并决定是否启用？ | `import`、`registry`、`switchboard`、`consumer inventory`、`consumer exposure` | `registry` 是本地 inventory；`switchboard enabled=true` 是本地 exposure intent，不是 trust 或 sandbox 证明。 |
 | Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`router status --json`、`mount plan/apply/rollback`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`mount` 是短入口；`consumer mount` 保持稳定 headless JSON surface。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
 | Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`router status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
@@ -151,6 +153,7 @@ v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持�
 skillrun init refund --python --output tmp/quickstart
 skillrun manifest --cwd tmp/quickstart/refund
 skillrun check --cwd tmp/quickstart/refund
+skillrun validate --cwd tmp/quickstart/refund
 skillrun pack --cwd tmp/quickstart/refund
 
 # Consumer：导入分发 artifact，启用本地暴露意图
@@ -203,6 +206,7 @@ Manifest-driven contract
 
         |
         +-- inspect / check / doctor
+        +-- validate
         +-- import / registry / switchboard
         +-- consumer inventory / exposure / runs / mount plan
         +-- test / run

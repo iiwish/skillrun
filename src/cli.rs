@@ -16,6 +16,7 @@ use crate::registry::{self, RegistryCommand, RegistryOptions};
 use crate::router::{self, RouterCommand, RouterOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 use crate::switchboard::{self, SwitchboardCommand, SwitchboardOptions};
+use crate::validate::{self, ValidateOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn run<I>(args: I) -> ExitCode
@@ -140,6 +141,27 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun doctor [--json] [--cwd <dir>]");
+                ExitCode::from(2)
+            }
+        },
+        Some("validate") => match parse_validate(args.collect()) {
+            Ok(options) => match validate::run(&options) {
+                Ok(report) => {
+                    println!("{}", report.output);
+                    if report.ok {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::from(2)
+                    }
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun validate [--json] [--cwd <dir>]");
                 ExitCode::from(2)
             }
         },
@@ -628,6 +650,31 @@ fn parse_check(args: Vec<String>) -> Result<CheckOptions, String> {
     }
 
     Ok(CheckOptions { cwd, json })
+}
+
+fn parse_validate(args: Vec<String>) -> Result<ValidateOptions, String> {
+    let mut cwd = PathBuf::from(".");
+    let mut json = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--json" => {
+                json = true;
+                index += 1;
+            }
+            "--cwd" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--cwd requires a directory".to_string());
+                };
+                cwd = PathBuf::from(value);
+                index += 2;
+            }
+            value => return Err(format!("unexpected validate argument: {value}")),
+        }
+    }
+
+    Ok(ValidateOptions { cwd, json })
 }
 
 fn parse_import(args: Vec<String>) -> Result<ImportOptions, String> {
@@ -1258,6 +1305,7 @@ MVP commands:
   inspect    show capsule contract, permissions and instruction-only status
   check      check capsule readiness from Manifest without running action source
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
+  validate   run the author validation loop from readiness to default example test
   import     import a .skr package into the local capsule registry
   consumer   expose headless consumer control-plane JSON
   mount      plan, apply or rollback the SkillRun Router MCP client entry
@@ -1277,6 +1325,7 @@ Implemented:
   inspect [--json]
   check [--json]
   doctor [--json]
+  validate [--json]
   import <package.skr> [--id <id>] [--to <dir>] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
