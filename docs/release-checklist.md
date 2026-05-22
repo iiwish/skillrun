@@ -132,9 +132,25 @@ git push origin main
 - 不得在 release PR CI 失败时合并。
 - 不得因为 GitHub Release 自动化存在就默认发布 `crates.io`。
 
-## Phase 5: 合并 release PR 并等待 tag
+## Phase 5: 合并 release PR 并创建 tag / draft release
 
-合并 release PR 后，等待 `release-plz-release` job 创建 tag 和 GitHub Release。当前配置使用 `git_only = true`，因此不会运行 `cargo publish`。
+合并 release PR 后，先等待 `main` Rust CI 通过。当前配置使用 `git_only = true` 且 `publish = false`，因此不会运行 `cargo publish`，也不能假设 `release-plz release` 会自动创建 GitHub-only tag / release。
+
+从通过验证的 `main` 提交创建 tag：
+
+```powershell
+git fetch origin main --tags
+git checkout main
+git pull --ff-only origin main
+git tag vX.Y.Z <main-commit>
+git push origin vX.Y.Z
+```
+
+创建同 tag 的 draft GitHub Release，让 cargo-dist workflow 接管 assets 上传和公开发布：
+
+```powershell
+gh release create vX.Y.Z --draft --title "SkillRun vX.Y.Z" --target <main-commit> --notes-file <release-notes-file>
+```
 
 确认 tag 存在：
 
@@ -145,13 +161,14 @@ git ls-remote --tags origin vX.Y.Z
 
 必须满足：
 
-- tag 由 release-plz 创建。
-- tag 对应 commit 已通过 release PR CI。
+- tag 对应 commit 已通过 release PR CI 和 `main` CI。
+- GitHub Release 已创建为同 tag draft，等待 cargo-dist workflow 上传产物并公开。
 - tag 名称使用 `vX.Y.Z`。
+- 如果 `Release-plz` workflow 的 release consistency guard 已因缺少 tag / release 失败，创建 tag 和 draft release 后应 rerun 该 workflow，确认 guard 变绿。
 
 ## Phase 6: 确认 GitHub Release
 
-GitHub Release 内容应来自 release-plz 生成的 changelog 或 release notes 摘要。
+GitHub Release 内容应来自已 review 的 changelog 或 release notes 摘要。
 
 必须包含：
 
