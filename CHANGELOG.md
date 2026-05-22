@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - clarify Agent Skills compatibility
+- sync README release version examples
 
 ## [0.6.0](https://github.com/iiwish/skillrun/compare/v0.5.16...v0.6.0) - 2026-05-21
 
