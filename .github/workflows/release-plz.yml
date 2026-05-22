@@ -55,3 +55,46 @@ jobs:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-consistency-guard:
+    name: Release consistency guard
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'iiwish/skillrun' }}
+    needs:
+      - release-plz-release
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Verify Cargo version has a tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "skillrun") | .version')"
+          tag="v${version}"
+
+          echo "Cargo.toml package.version is ${version}"
+          echo "Expected public release tag is ${tag}"
+
+          git fetch --force --tags origin "refs/tags/${tag}:refs/tags/${tag}" || true
+
+          if ! git rev-parse --quiet --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error title=Release tag missing::Cargo.toml is at ${version}, but ${tag} does not exist. If this was a release metadata merge, create the reviewed tag and draft GitHub Release before cargo-dist runs, or fix the release automation."
+            exit 1
+          fi
+
+          if ! gh release view "${tag}" >/dev/null 2>&1; then
+            echo "::error title=GitHub Release missing::${tag} exists, but the matching GitHub Release does not. Create a draft GitHub Release for cargo-dist to fill, or fix the release automation."
+            exit 1
+          fi
+
+          echo "${tag} and its GitHub Release exist."

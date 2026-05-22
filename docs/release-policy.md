@@ -18,9 +18,9 @@ SkillRun 同时存在几类版本号，不能混用：
 
 - `main` 是稳定主线。
 - 版本开发优先在 `codex/v<major>.<minor>-integration` 分支完成，例如 `codex/v0.3-integration`。
-- 发布 tag 由 `release-plz` 在 release PR 合并后从 `main` 创建，例如 `v0.5.16`。
+- 发布 tag 从已通过验证的 `main` 创建，例如 `v0.5.16`。当前 GitHub-only 流程需要维护者在 release gate 后创建 tag 和 draft GitHub Release，再由 cargo-dist workflow 上传产物并公开 release。
 - 只有需要维护旧版本补丁时，才从 tag 创建 `release/v<major>.<minor>` 分支。
-- `skillrun` 当前使用 `git_only = true` 的 release-plz 流程，并在 `release-plz.toml` 与 `Cargo.toml` 中显式禁用 crates.io publish。
+- `skillrun` 当前使用 `release-plz` 生成版本 metadata PR，并在 `release-plz.toml` 与 `Cargo.toml` 中显式禁用 crates.io publish。由于 `Cargo.toml` 使用 `publish = false`，不能假设 `release-plz release` 会创建 GitHub-only tag / release。
 - release PR 只应由用户可见的 runtime 或发布链路变更触发。docs-only / chore-only 提交不应单独 bump 版本。
 
 ## Release Candidate 闸门
@@ -43,8 +43,10 @@ SkillRun 同时存在几类版本号，不能混用：
 3. Review release PR 中的版本号、`Cargo.toml`、`Cargo.lock`、`CHANGELOG.md` 或 release notes 摘要。
 4. 在 release PR 上确认 release validation 与远端 CI 结果。
 5. 合并 release PR 到 `main`。
-6. 由 `release-plz-release` job 创建 `vX.Y.Z` tag 和 GitHub Release。
-7. 确认 GitHub Release 内容可追溯到合并提交/PR，并记录本次是否执行 package registry publication；默认不发布 `crates.io`。
+6. 等待 `main` Rust CI 通过。
+7. 从该 `main` 提交创建并推送 `vX.Y.Z` tag，并创建同 tag 的 draft GitHub Release。
+8. 等待 Release workflow 上传 cargo-dist assets、公开 release 并执行 post-release smoke。
+9. 确认 GitHub Release 内容可追溯到合并提交/PR，并记录本次是否执行 package registry publication；默认不发布 `crates.io`。
 
 ## 回滚与补丁
 
