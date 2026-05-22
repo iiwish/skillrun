@@ -4,7 +4,9 @@
   "registry_path": "<skillrun_home>/registry.json",
   "scope": {
     "kind": "registry",
-    "capsule_id": null
+    "capsule_id": null,
+    "status": null,
+    "mode": null
   },
   "runs": [
     {

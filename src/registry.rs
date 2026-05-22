@@ -195,6 +195,8 @@ struct ConsumerRunsInspectErrorView {
 struct RunsScopeView {
     kind: &'static str,
     capsule_id: Option<String>,
+    status: Option<String>,
+    mode: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -773,6 +775,8 @@ pub fn consumer_runs_list(
     json: bool,
     capsule_id: Option<&str>,
     limit: Option<usize>,
+    status_filter: Option<&str>,
+    mode_filter: Option<&str>,
 ) -> Result<RegistryOutput, String> {
     let registry = load_registry()?;
     let registry_path = registry_path()?;
@@ -800,7 +804,11 @@ pub fn consumer_runs_list(
             else {
                 continue;
             };
-            runs.push(run_summary_view(entry, &run_dir, &run_id));
+            let summary = run_summary_view(entry, &run_dir, &run_id);
+            if !run_summary_matches(&summary, status_filter, mode_filter) {
+                continue;
+            }
+            runs.push(summary);
         }
     }
 
@@ -822,6 +830,8 @@ pub fn consumer_runs_list(
             scope: RunsScopeView {
                 kind: "registry",
                 capsule_id: capsule_id.map(str::to_string),
+                status: status_filter.map(str::to_string),
+                mode: mode_filter.map(str::to_string),
             },
             runs,
         };
@@ -849,6 +859,24 @@ pub fn consumer_runs_list(
         format!("SkillRun Consumer Runs\nevidence:\n{items}")
     };
     Ok(RegistryOutput { output })
+}
+
+fn run_summary_matches(
+    summary: &RunSummaryView,
+    status_filter: Option<&str>,
+    mode_filter: Option<&str>,
+) -> bool {
+    if let Some(status) = status_filter {
+        if summary.status != status {
+            return false;
+        }
+    }
+    if let Some(mode) = mode_filter {
+        if summary.mode.as_deref() != Some(mode) {
+            return false;
+        }
+    }
+    true
 }
 
 pub fn consumer_runs_inspect(

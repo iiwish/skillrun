@@ -381,6 +381,8 @@ enum ConsumerCommand {
         json: bool,
         capsule: Option<String>,
         limit: Option<usize>,
+        status: Option<String>,
+        mode: Option<String>,
     },
     RunsInspect {
         run_id: String,
@@ -418,7 +420,15 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
             json,
             capsule,
             limit,
-        } => match registry::consumer_runs_list(json, capsule.as_deref(), limit) {
+            status,
+            mode,
+        } => match registry::consumer_runs_list(
+            json,
+            capsule.as_deref(),
+            limit,
+            status.as_deref(),
+            mode.as_deref(),
+        ) {
             Ok(output) => {
                 println!("{}", output.output);
                 ExitCode::SUCCESS
@@ -788,6 +798,8 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
     let mut json = false;
     let mut capsule = None;
     let mut limit = None;
+    let mut status = None;
+    let mut mode = None;
     let mut index = 0;
 
     while index < args.len() {
@@ -816,6 +828,20 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
                 limit = Some(parsed);
                 index += 2;
             }
+            "--status" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--status requires a value".to_string());
+                };
+                status = Some(value.to_string());
+                index += 2;
+            }
+            "--mode" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--mode requires a value".to_string());
+                };
+                mode = Some(value.to_string());
+                index += 2;
+            }
             value => return Err(format!("unexpected consumer runs list argument: {value}")),
         }
     }
@@ -824,6 +850,8 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
         json,
         capsule,
         limit,
+        status,
+        mode,
     })
 }
 
@@ -1355,7 +1383,7 @@ Implemented:
   import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
-  consumer runs list [--json] [--capsule <id>] [--limit <n>]
+  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--limit <n>]
   consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]

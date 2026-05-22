@@ -315,6 +315,8 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert_eq!(list["schema_version"], "consumer.runs.list.v1");
     assert_eq!(list["scope"]["kind"], "registry");
     assert!(list["scope"]["capsule_id"].is_null());
+    assert!(list["scope"]["status"].is_null());
+    assert!(list["scope"]["mode"].is_null());
 
     let runs = list["runs"].as_array().expect("runs should be an array");
     assert_eq!(runs.len(), 1);
@@ -390,6 +392,30 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     ));
     assert_eq!(scoped["scope"]["capsule_id"], "refund");
     assert_eq!(scoped["runs"].as_array().unwrap().len(), 1);
+
+    let filtered = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "list",
+            "--json",
+            "--status",
+            "succeeded",
+            "--mode",
+            "test",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(filtered["scope"]["status"], "succeeded");
+    assert_eq!(filtered["scope"]["mode"], "test");
+    assert_eq!(filtered["runs"].as_array().unwrap().len(), 1);
+
+    let no_match = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "list", "--json", "--status", "failed"],
+        &skillrun_home,
+    ));
+    assert_eq!(no_match["scope"]["status"], "failed");
+    assert_eq!(no_match["runs"].as_array().unwrap().len(), 0);
 
     fs::remove_dir_all(output_root).ok();
 }
