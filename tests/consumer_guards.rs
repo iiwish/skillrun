@@ -430,6 +430,16 @@ fn doctor_reports_valid_python_and_js_capsules_without_language_flags() {
         "status: ok",
         "adapter: python",
         "entrypoint: action.py",
+        "requirements:",
+        "executable: python >=3.10",
+        "package: pydantic >=2,<3",
+        "host readiness:",
+        "package: pydantic required: >=2,<3 detected:",
+        "host diagnostics:",
+        "PATH: present",
+        "Docker: not required",
+        "auto install: no",
+        "action execution: no",
         "manifest freshness: fresh",
         "examples/default.input.json: present",
     ] {
@@ -450,6 +460,13 @@ fn doctor_reports_valid_python_and_js_capsules_without_language_flags() {
         "status: ok",
         "adapter: node",
         "entrypoint: action.mjs",
+        "requirements:",
+        "executable: node >=18",
+        "host readiness:",
+        "executable: node required: >=18 detected:",
+        "host diagnostics:",
+        "Docker: not required",
+        "auto install: no",
         "manifest freshness: fresh",
         "examples/default.input.json: present",
     ] {
@@ -544,6 +561,15 @@ fn check_json_reports_valid_capsule_readiness_contract() {
         .expect("dependency_checks should be an array")
         .iter()
         .any(|check| check["name"] == "pydantic"));
+    assert_eq!(
+        report["host_diagnostics"]["scope"],
+        "current host environment"
+    );
+    assert_eq!(report["host_diagnostics"]["path_env"]["name"], "PATH");
+    assert_eq!(report["host_diagnostics"]["path_env"]["present"], true);
+    assert_eq!(report["host_diagnostics"]["docker_required"], false);
+    assert_eq!(report["host_diagnostics"]["auto_install"], false);
+    assert_eq!(report["host_diagnostics"]["action_execution"], false);
     assert!(report["source_checks"]
         .as_array()
         .expect("source_checks should be an array")
@@ -831,7 +857,7 @@ fn check_reports_invalid_schema_contract_without_creating_run_records() {
         "status: invalid-manifest",
         "manifest freshness: fresh",
         "reason: schemas.input $ schema type must be a string or string array",
-        "note: check reads Manifest, files and hashes only; it does not run or import action source.",
+        "note: check reads Manifest, files, hashes and host dependency probes only; it does not run or import action source, install dependencies, or require Docker.",
     ] {
         assert!(
             stdout.contains(expected),
