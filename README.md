@@ -95,6 +95,8 @@ Available today:
   - `skillrun router serve --mcp`
   - `skillrun router serve --mcp --dry-run`
 - Reversible Claude Desktop MCP config mounting:
+  - `skillrun mount plan --client <id> --json`
+  - `skillrun mount apply --client claude-desktop --json`
   - `skillrun consumer mount apply --client claude-desktop --json`
   - `skillrun consumer mount rollback --client claude-desktop --backup <path> --json`
 - Headless consumer JSON surfaces for Desktop, Router checks, and automation consumers:
@@ -138,7 +140,7 @@ The v0.6 CLI information architecture is organized around four paths. Existing t
 | --- | --- | --- | --- |
 | Author | How do I create, check, test, and package a Skill Capsule? | `init`, `manifest`, `inspect`, `check`, `doctor`, `test`, `run`, `serve --mcp --dry-run`, `pack` | Keep these as top-level commands. `init --py` is the existing `init --python` alias; `init --js` remains an alpha adapter target. |
 | Consumer | How do I import a `.skr` from someone else and decide whether to enable it? | `import`, `registry`, `switchboard`, `consumer inventory`, `consumer exposure` | `registry` is local inventory. `switchboard enabled=true` is local exposure intent, not proof of trust or sandboxing. |
-| Router | How do I expose enabled capsules to an MCP client? | `router serve --mcp`, `router serve --mcp --dry-run`, `router status --json`, `consumer mount plan/apply/rollback` | MCP clients mount the SkillRun Router. `serve --mcp` remains compatible as a single-capsule / author-debug entrypoint. |
+| Router | How do I expose enabled capsules to an MCP client? | `router serve --mcp`, `router serve --mcp --dry-run`, `router status --json`, `mount plan/apply/rollback`, `consumer mount plan/apply/rollback` | MCP clients mount the SkillRun Router. `mount` is the short CLI facade; `consumer mount` remains the stable headless JSON surface. `serve --mcp` remains compatible as a single-capsule / author-debug entrypoint. |
 | Ops | How do I inspect host readiness, diagnostics, mount previews, and run evidence? | `host status --json`, `router status --json`, `doctor`, `check`, `consumer mount plan --json`, `consumer runs list/inspect --json` | Headless JSON surfaces remain machine-readable; field additions must stay compatible with existing consumers. |
 
 The five-minute core path:
@@ -159,11 +161,13 @@ skillrun consumer exposure --json
 # Router: preview or mount the MCP runtime entry
 skillrun router serve --mcp --dry-run
 skillrun router status --json
-skillrun consumer mount plan --client claude-desktop --json
-skillrun consumer mount apply --client claude-desktop --json
+skillrun mount plan --client claude-desktop --json
+skillrun mount apply --client claude-desktop --json
 ```
 
 `.skr` is the distribution artifact: a source + Manifest archive. `import` validates it and places it in the local registry, but it is not the MCP runtime entry. MCP clients should mount `skillrun router serve --mcp`; the Router then exposes Manifest-derived tools for capsules enabled through `switchboard`.
+
+`skillrun mount ...` is a short facade over `skillrun consumer mount ...`; JSON output keeps the existing `consumer.mount_*` schema versions.
 
 Router short-running machine-readable contracts:
 

@@ -95,6 +95,8 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
   - `skillrun router serve --mcp`
   - `skillrun router serve --mcp --dry-run`
 - 可逆的 Claude Desktop MCP config 挂载：
+  - `skillrun mount plan --client <id> --json`
+  - `skillrun mount apply --client claude-desktop --json`
   - `skillrun consumer mount apply --client claude-desktop --json`
   - `skillrun consumer mount rollback --client claude-desktop --backup <path> --json`
 - 面向 Desktop、Router 检查和自动化消费者的 headless consumer JSON surface：
@@ -138,7 +140,7 @@ v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持�
 | --- | --- | --- | --- |
 | Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
 | Consumer | 我如何导入别人给我的 `.skr`，并决定是否启用？ | `import`、`registry`、`switchboard`、`consumer inventory`、`consumer exposure` | `registry` 是本地 inventory；`switchboard enabled=true` 是本地 exposure intent，不是 trust 或 sandbox 证明。 |
-| Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`router status --json`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
+| Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`router status --json`、`mount plan/apply/rollback`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`mount` 是短入口；`consumer mount` 保持稳定 headless JSON surface。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
 | Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`router status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
 
 5 分钟核心路径：
@@ -159,11 +161,13 @@ skillrun consumer exposure --json
 # Router：预览或挂载 MCP runtime entry
 skillrun router serve --mcp --dry-run
 skillrun router status --json
-skillrun consumer mount plan --client claude-desktop --json
-skillrun consumer mount apply --client claude-desktop --json
+skillrun mount plan --client claude-desktop --json
+skillrun mount apply --client claude-desktop --json
 ```
 
 `.skr` 是分发 artifact：source + Manifest archive。它被 `import` 校验并放入本地 registry，但不直接成为 MCP runtime entry。MCP client 应挂载 `skillrun router serve --mcp`，Router 再根据 `switchboard` 中 enabled capsule 暴露 Manifest-derived tools。
+
+`skillrun mount ...` 是 `skillrun consumer mount ...` 的短入口；JSON 输出继续使用现有 `consumer.mount_*` schema version。
 
 Router 的短跑机器可读合同：
 

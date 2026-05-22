@@ -173,89 +173,18 @@ where
             }
         },
         Some("consumer") => match parse_consumer(args.collect()) {
-            Ok(command) => match command {
-                ConsumerCommand::Inventory { json } => match registry::consumer_inventory(json) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::Exposure { json } => match registry::consumer_exposure(json) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::RunsList {
-                    json,
-                    capsule,
-                    limit,
-                } => match registry::consumer_runs_list(json, capsule.as_deref(), limit) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::RunsInspect {
-                    run_id,
-                    json,
-                    capsule,
-                } => match registry::consumer_runs_inspect(&run_id, json, capsule.as_deref()) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::MountPlan(options) => match mount_plan::plan(&options) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::MountApply(options) => match mount_plan::apply(&options) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-                ConsumerCommand::MountRollback(options) => match mount_plan::rollback(&options) {
-                    Ok(output) => {
-                        println!("{}", output.output);
-                        ExitCode::SUCCESS
-                    }
-                    Err(error) => {
-                        eprintln!("error: {error}");
-                        ExitCode::from(2)
-                    }
-                },
-            },
+            Ok(command) => run_consumer_command(command),
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun consumer <inventory|exposure|runs|mount> [options]");
+                ExitCode::from(2)
+            }
+        },
+        Some("mount") => match parse_consumer_mount(args.collect()) {
+            Ok(command) => run_consumer_command(command),
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun mount <plan|apply|rollback> --client <id> [options]");
                 ExitCode::from(2)
             }
         },
@@ -439,6 +368,89 @@ enum ConsumerCommand {
     MountPlan(MountPlanOptions),
     MountApply(MountApplyOptions),
     MountRollback(MountRollbackOptions),
+}
+
+fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
+    match command {
+        ConsumerCommand::Inventory { json } => match registry::consumer_inventory(json) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::Exposure { json } => match registry::consumer_exposure(json) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::RunsList {
+            json,
+            capsule,
+            limit,
+        } => match registry::consumer_runs_list(json, capsule.as_deref(), limit) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::RunsInspect {
+            run_id,
+            json,
+            capsule,
+        } => match registry::consumer_runs_inspect(&run_id, json, capsule.as_deref()) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::MountPlan(options) => match mount_plan::plan(&options) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::MountApply(options) => match mount_plan::apply(&options) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        ConsumerCommand::MountRollback(options) => match mount_plan::rollback(&options) {
+            Ok(output) => {
+                println!("{}", output.output);
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+    }
 }
 
 fn parse_init(args: Vec<String>) -> Result<InitOptions, String> {
@@ -1248,6 +1260,7 @@ MVP commands:
   doctor     diagnose capsule files, Manifest freshness and adapter recovery steps
   import     import a .skr package into the local capsule registry
   consumer   expose headless consumer control-plane JSON
+  mount      plan, apply or rollback the SkillRun Router MCP client entry
   registry   manage local capsule inventory
   switchboard enable or disable registered capsules
   test       run the default example through the runtime contract
@@ -1272,6 +1285,9 @@ Implemented:
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]
   consumer mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
+  mount plan --client <id> [--config <path>] [--json]
+  mount apply --client claude-desktop [--config <path>] [--json]
+  mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
   router serve --mcp [--dry-run]
   router status [--json]
   registry add/list/inspect/remove
