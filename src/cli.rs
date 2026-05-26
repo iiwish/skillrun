@@ -391,6 +391,9 @@ enum ConsumerCommand {
     RunsIndexRebuild {
         json: bool,
     },
+    RunsIndexStatus {
+        json: bool,
+    },
     RunsInspect {
         run_id: String,
         json: bool,
@@ -455,6 +458,18 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
         },
         ConsumerCommand::RunsIndexRebuild { json } => {
             match registry::consumer_runs_index_rebuild(json) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            }
+        }
+        ConsumerCommand::RunsIndexStatus { json } => {
+            match registry::consumer_runs_index_status(json) {
                 Ok(output) => {
                     println!("{}", output.output);
                     ExitCode::SUCCESS
@@ -829,6 +844,7 @@ fn parse_consumer_runs_index(args: Vec<String>) -> Result<ConsumerCommand, Strin
     let rest = args[1..].to_vec();
     match command {
         "rebuild" => parse_consumer_runs_index_rebuild(rest),
+        "status" => parse_consumer_runs_index_status(rest),
         value => Err(format!("unknown consumer runs index subcommand: {value}")),
     }
 }
@@ -848,6 +864,23 @@ fn parse_consumer_runs_index_rebuild(args: Vec<String>) -> Result<ConsumerComman
     }
 
     Ok(ConsumerCommand::RunsIndexRebuild { json })
+}
+
+fn parse_consumer_runs_index_status(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => {
+                return Err(format!(
+                    "unexpected consumer runs index status argument: {value}"
+                ));
+            }
+        }
+    }
+
+    Ok(ConsumerCommand::RunsIndexStatus { json })
 }
 
 fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String> {
@@ -1485,6 +1518,7 @@ Implemented:
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>] [--limit <n>]
   consumer runs index rebuild [--json]
+  consumer runs index status [--json]
   consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]
