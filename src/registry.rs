@@ -197,6 +197,8 @@ struct RunsScopeView {
     capsule_id: Option<String>,
     status: Option<String>,
     mode: Option<String>,
+    ok: Option<bool>,
+    error_code: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -777,6 +779,8 @@ pub fn consumer_runs_list(
     limit: Option<usize>,
     status_filter: Option<&str>,
     mode_filter: Option<&str>,
+    ok_filter: Option<bool>,
+    error_code_filter: Option<&str>,
 ) -> Result<RegistryOutput, String> {
     let registry = load_registry()?;
     let registry_path = registry_path()?;
@@ -805,7 +809,13 @@ pub fn consumer_runs_list(
                 continue;
             };
             let summary = run_summary_view(entry, &run_dir, &run_id);
-            if !run_summary_matches(&summary, status_filter, mode_filter) {
+            if !run_summary_matches(
+                &summary,
+                status_filter,
+                mode_filter,
+                ok_filter,
+                error_code_filter,
+            ) {
                 continue;
             }
             runs.push(summary);
@@ -832,6 +842,8 @@ pub fn consumer_runs_list(
                 capsule_id: capsule_id.map(str::to_string),
                 status: status_filter.map(str::to_string),
                 mode: mode_filter.map(str::to_string),
+                ok: ok_filter,
+                error_code: error_code_filter.map(str::to_string),
             },
             runs,
         };
@@ -865,6 +877,8 @@ fn run_summary_matches(
     summary: &RunSummaryView,
     status_filter: Option<&str>,
     mode_filter: Option<&str>,
+    ok_filter: Option<bool>,
+    error_code_filter: Option<&str>,
 ) -> bool {
     if let Some(status) = status_filter {
         if summary.status != status {
@@ -873,6 +887,16 @@ fn run_summary_matches(
     }
     if let Some(mode) = mode_filter {
         if summary.mode.as_deref() != Some(mode) {
+            return false;
+        }
+    }
+    if let Some(ok) = ok_filter {
+        if summary.ok != Some(ok) {
+            return false;
+        }
+    }
+    if let Some(error_code) = error_code_filter {
+        if summary.error_code.as_deref() != Some(error_code) {
             return false;
         }
     }

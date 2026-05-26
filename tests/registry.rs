@@ -317,6 +317,8 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert!(list["scope"]["capsule_id"].is_null());
     assert!(list["scope"]["status"].is_null());
     assert!(list["scope"]["mode"].is_null());
+    assert!(list["scope"]["ok"].is_null());
+    assert!(list["scope"]["error_code"].is_null());
 
     let runs = list["runs"].as_array().expect("runs should be an array");
     assert_eq!(runs.len(), 1);
@@ -408,6 +410,8 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     ));
     assert_eq!(filtered["scope"]["status"], "succeeded");
     assert_eq!(filtered["scope"]["mode"], "test");
+    assert!(filtered["scope"]["ok"].is_null());
+    assert!(filtered["scope"]["error_code"].is_null());
     assert_eq!(filtered["runs"].as_array().unwrap().len(), 1);
 
     let no_match = assert_success_json(&run_skillrun(
@@ -416,6 +420,54 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     ));
     assert_eq!(no_match["scope"]["status"], "failed");
     assert_eq!(no_match["runs"].as_array().unwrap().len(), 0);
+
+    fs::write(
+        capsule
+            .join(".skillrun")
+            .join("runs")
+            .join(run_id)
+            .join("output.json"),
+        r#"{"ok":false,"error":{"code":"policy_violation"},"artifacts":[]}"#,
+    )
+    .expect("test should rewrite run envelope");
+
+    let failed_by_code = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "list",
+            "--json",
+            "--ok",
+            "false",
+            "--error-code",
+            "policy_violation",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(failed_by_code["scope"]["ok"], false);
+    assert_eq!(failed_by_code["scope"]["error_code"], "policy_violation");
+    assert_eq!(failed_by_code["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(failed_by_code["runs"][0]["ok"], false);
+    assert_eq!(failed_by_code["runs"][0]["error_code"], "policy_violation");
+    assert!(failed_by_code["runs"][0].get("input").is_none());
+    assert!(failed_by_code["runs"][0].get("envelope").is_none());
+
+    let ok_true_no_match = assert_success_json(&run_skillrun(
+        &[
+            "consumer",
+            "runs",
+            "list",
+            "--json",
+            "--ok",
+            "true",
+            "--error-code",
+            "policy_violation",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(ok_true_no_match["scope"]["ok"], true);
+    assert_eq!(ok_true_no_match["scope"]["error_code"], "policy_violation");
+    assert_eq!(ok_true_no_match["runs"].as_array().unwrap().len(), 0);
 
     fs::remove_dir_all(output_root).ok();
 }

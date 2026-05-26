@@ -35,6 +35,8 @@ fn help_lists_core_commands() {
     assert!(stdout.contains("import <package.skr>"));
     assert!(stdout.contains("--replace"));
     assert!(stdout.contains("--status <status>"));
+    assert!(stdout.contains("--ok true|false"));
+    assert!(stdout.contains("--error-code <code>"));
     assert!(stdout.contains("registry remove <id> [--delete-files] [--json]"));
     assert!(stdout.contains("mount apply --client claude-desktop"));
 }
