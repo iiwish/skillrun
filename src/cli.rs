@@ -388,6 +388,9 @@ enum ConsumerCommand {
         since: Option<String>,
         until: Option<String>,
     },
+    RunsIndexRebuild {
+        json: bool,
+    },
     RunsInspect {
         run_id: String,
         json: bool,
@@ -450,6 +453,18 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        ConsumerCommand::RunsIndexRebuild { json } => {
+            match registry::consumer_runs_index_rebuild(json) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            }
+        }
         ConsumerCommand::RunsInspect {
             run_id,
             json,
@@ -801,9 +816,38 @@ fn parse_consumer_runs(args: Vec<String>) -> Result<ConsumerCommand, String> {
     let rest = args[1..].to_vec();
     match command {
         "list" => parse_consumer_runs_list(rest),
+        "index" => parse_consumer_runs_index(rest),
         "inspect" => parse_consumer_runs_inspect(rest),
         value => Err(format!("unknown consumer runs subcommand: {value}")),
     }
+}
+
+fn parse_consumer_runs_index(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("consumer runs index requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "rebuild" => parse_consumer_runs_index_rebuild(rest),
+        value => Err(format!("unknown consumer runs index subcommand: {value}")),
+    }
+}
+
+fn parse_consumer_runs_index_rebuild(args: Vec<String>) -> Result<ConsumerCommand, String> {
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value => {
+                return Err(format!(
+                    "unexpected consumer runs index rebuild argument: {value}"
+                ));
+            }
+        }
+    }
+
+    Ok(ConsumerCommand::RunsIndexRebuild { json })
 }
 
 fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String> {
@@ -1440,6 +1484,7 @@ Implemented:
   consumer inventory [--json]
   consumer exposure [--json]
   consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>] [--limit <n>]
+  consumer runs index rebuild [--json]
   consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]
