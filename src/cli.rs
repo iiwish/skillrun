@@ -383,6 +383,8 @@ enum ConsumerCommand {
         limit: Option<usize>,
         status: Option<String>,
         mode: Option<String>,
+        ok: Option<bool>,
+        error_code: Option<String>,
     },
     RunsInspect {
         run_id: String,
@@ -422,12 +424,16 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
             limit,
             status,
             mode,
+            ok,
+            error_code,
         } => match registry::consumer_runs_list(
             json,
             capsule.as_deref(),
             limit,
             status.as_deref(),
             mode.as_deref(),
+            ok,
+            error_code.as_deref(),
         ) {
             Ok(output) => {
                 println!("{}", output.output);
@@ -800,6 +806,8 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
     let mut limit = None;
     let mut status = None;
     let mut mode = None;
+    let mut ok = None;
+    let mut error_code = None;
     let mut index = 0;
 
     while index < args.len() {
@@ -842,6 +850,20 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
                 mode = Some(value.to_string());
                 index += 2;
             }
+            "--ok" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--ok requires true or false".to_string());
+                };
+                ok = Some(parse_bool_flag("--ok", value)?);
+                index += 2;
+            }
+            "--error-code" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--error-code requires a value".to_string());
+                };
+                error_code = Some(value.to_string());
+                index += 2;
+            }
             value => return Err(format!("unexpected consumer runs list argument: {value}")),
         }
     }
@@ -852,7 +874,17 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
         limit,
         status,
         mode,
+        ok,
+        error_code,
     })
+}
+
+fn parse_bool_flag(flag: &str, value: &str) -> Result<bool, String> {
+    match value {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(format!("{flag} must be true or false: {value}")),
+    }
 }
 
 fn parse_consumer_runs_inspect(args: Vec<String>) -> Result<ConsumerCommand, String> {
@@ -1383,7 +1415,7 @@ Implemented:
   import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
-  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--limit <n>]
+  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--limit <n>]
   consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]

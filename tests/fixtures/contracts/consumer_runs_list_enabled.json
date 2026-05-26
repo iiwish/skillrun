@@ -6,7 +6,9 @@
     "kind": "registry",
     "capsule_id": null,
     "status": null,
-    "mode": null
+    "mode": null,
+    "ok": null,
+    "error_code": null
   },
   "runs": [
     {
