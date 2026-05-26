@@ -541,6 +541,20 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
         "runs index must not include full input content"
     );
 
+    let status = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "index", "status", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(status["command"], "consumer runs index status");
+    assert_eq!(status["schema_version"], "consumer.runs.index.status.v1");
+    assert_eq!(status["ok"], true);
+    assert_eq!(status["index"]["exists"], true);
+    assert_eq!(status["index"]["readable"], true);
+    assert_eq!(status["index"]["supported_schema"], true);
+    assert_eq!(status["index"]["runs_indexed"], 1);
+    assert_eq!(status["index"]["stale"], false);
+    assert_eq!(status["warnings"].as_array().unwrap().len(), 0);
+
     fs::remove_dir_all(output_root).ok();
 }
 

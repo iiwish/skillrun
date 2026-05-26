@@ -447,6 +447,15 @@ fn consumer_runs_json_match_contract_fixtures() {
         include_str!("fixtures/contracts/consumer_runs_index_rebuild_enabled.json"),
         &paths,
     );
+    let runs_index_status = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "index", "status", "--json"],
+        &skillrun_home,
+    ));
+    assert_contract(
+        runs_index_status,
+        include_str!("fixtures/contracts/consumer_runs_index_status_ready.json"),
+        &paths,
+    );
 
     let inspect = assert_success_json(&run_skillrun(
         &[

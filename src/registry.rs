@@ -198,6 +198,30 @@ struct ConsumerRunsIndexRebuildView {
 }
 
 #[derive(Debug, Serialize)]
+struct ConsumerRunsIndexStatusView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    registry_path: String,
+    index_path: String,
+    index: RunsIndexStatusDetailView,
+    warnings: Vec<WarningView>,
+}
+
+#[derive(Debug, Serialize)]
+struct RunsIndexStatusDetailView {
+    exists: bool,
+    readable: bool,
+    supported_schema: bool,
+    schema_version: Option<String>,
+    generated_at: Option<String>,
+    runs_indexed: Option<usize>,
+    stale: Option<bool>,
+    registry_modified_after_generated_at: Option<bool>,
+    evidence_modified_after_generated_at: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
 struct ConsumerRunsInspectView {
     command: &'static str,
     schema_version: &'static str,
@@ -929,6 +953,151 @@ pub fn consumer_runs_index_rebuild(json: bool) -> Result<RegistryOutput, String>
     }
 }
 
+pub fn consumer_runs_index_status(json: bool) -> Result<RegistryOutput, String> {
+    let registry = load_registry()?;
+    let registry_path = registry_path()?;
+    let index_path = runs_index_path()?;
+    let entries = registry_entries_for_scope(&registry, None)?;
+    let mut warnings = Vec::new();
+    let mut detail = RunsIndexStatusDetailView {
+        exists: index_path.is_file(),
+        readable: false,
+        supported_schema: false,
+        schema_version: None,
+        generated_at: None,
+        runs_indexed: None,
+        stale: None,
+        registry_modified_after_generated_at: None,
+        evidence_modified_after_generated_at: None,
+    };
+
+    if !detail.exists {
+        warnings.push(WarningView {
+            code: "missing-index",
+            message: "runs-index.json is missing; run `skillrun consumer runs index rebuild`"
+                .to_string(),
+        });
+    } else {
+        match fs::read_to_string(&index_path) {
+            Ok(text) => {
+                detail.readable = true;
+                match serde_json::from_str::<JsonValue>(&text) {
+                    Ok(index) => {
+                        detail.schema_version = index
+                            .get("schema_version")
+                            .and_then(JsonValue::as_str)
+                            .map(str::to_string);
+                        detail.supported_schema =
+                            detail.schema_version.as_deref() == Some("consumer.runs.index.v1");
+                        detail.generated_at = index
+                            .get("generated_at")
+                            .and_then(JsonValue::as_str)
+                            .map(str::to_string);
+                        detail.runs_indexed = index
+                            .get("runs")
+                            .and_then(JsonValue::as_array)
+                            .map(Vec::len);
+
+                        if !detail.supported_schema {
+                            warnings.push(WarningView {
+                                code: "unsupported-index-schema",
+                                message: format!(
+                                    "runs index schema is unsupported: {}",
+                                    detail
+                                        .schema_version
+                                        .as_deref()
+                                        .unwrap_or("<missing schema_version>")
+                                ),
+                            });
+                        }
+
+                        if let Some(generated_at) = &detail.generated_at {
+                            match DateTime::parse_from_rfc3339(generated_at) {
+                                Ok(timestamp) => {
+                                    let generated_at = timestamp.with_timezone(&Utc);
+                                    let registry_stale =
+                                        path_modified_after(&registry_path, &generated_at);
+                                    let evidence_stale =
+                                        evidence_modified_after(&entries, &generated_at);
+                                    detail.registry_modified_after_generated_at =
+                                        Some(registry_stale);
+                                    detail.evidence_modified_after_generated_at =
+                                        Some(evidence_stale);
+                                    detail.stale = Some(registry_stale || evidence_stale);
+                                    if detail.stale == Some(true) {
+                                        warnings.push(WarningView {
+                                            code: "stale-index",
+                                            message: "runs index may be stale; rebuild it before using it as a query cache".to_string(),
+                                        });
+                                    }
+                                }
+                                Err(error) => warnings.push(WarningView {
+                                    code: "invalid-generated-at",
+                                    message: format!("runs index generated_at is invalid: {error}"),
+                                }),
+                            }
+                        } else {
+                            warnings.push(WarningView {
+                                code: "missing-generated-at",
+                                message: "runs index is missing generated_at".to_string(),
+                            });
+                        }
+                    }
+                    Err(error) => warnings.push(WarningView {
+                        code: "invalid-index",
+                        message: format!("runs-index.json is not valid JSON: {error}"),
+                    }),
+                }
+            }
+            Err(error) => warnings.push(WarningView {
+                code: "unreadable-index",
+                message: format!("failed to read {}: {error}", index_path.display()),
+            }),
+        }
+    }
+
+    let ok = detail.exists
+        && detail.readable
+        && detail.supported_schema
+        && detail.generated_at.is_some()
+        && detail.runs_indexed.is_some()
+        && detail.stale == Some(false);
+    let view = ConsumerRunsIndexStatusView {
+        command: "consumer runs index status",
+        schema_version: "consumer.runs.index.status.v1",
+        ok,
+        registry_path: display_path(&registry_path),
+        index_path: display_path(&index_path),
+        index: detail,
+        warnings,
+    };
+
+    if json {
+        json_output(&view)
+    } else {
+        let status = if view.ok {
+            "ready"
+        } else if view.index.stale == Some(true) {
+            "stale"
+        } else if !view.index.exists {
+            "missing"
+        } else {
+            "invalid"
+        };
+        let runs_indexed = view
+            .index
+            .runs_indexed
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        Ok(RegistryOutput {
+            output: format!(
+                "SkillRun Consumer Runs Index\nstatus: {status}\nruns indexed: {runs_indexed}\npath: {}",
+                view.index_path
+            ),
+        })
+    }
+}
+
 fn collect_run_summaries(entries: Vec<&RegistryEntry>) -> Vec<RunSummaryView> {
     let mut runs = Vec::new();
 
@@ -958,6 +1127,63 @@ fn collect_run_summaries(entries: Vec<&RegistryEntry>) -> Vec<RunSummaryView> {
     }
 
     runs
+}
+
+fn path_modified_after(path: &Path, generated_at: &DateTime<Utc>) -> bool {
+    path_modified_at(path)
+        .map(|modified_at| modified_at.timestamp() > generated_at.timestamp())
+        .unwrap_or(false)
+}
+
+fn evidence_modified_after(entries: &[&RegistryEntry], generated_at: &DateTime<Utc>) -> bool {
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let run_root = Path::new(&entry.path).join(".skillrun").join("runs");
+            latest_tree_modified_at(&run_root)
+        })
+        .any(|modified_at| modified_at.timestamp() > generated_at.timestamp())
+}
+
+fn latest_tree_modified_at(root: &Path) -> Option<DateTime<Utc>> {
+    let mut latest = path_modified_at(root);
+    let Ok(children) = fs::read_dir(root) else {
+        return latest;
+    };
+
+    for child in children.flatten() {
+        let child_path = child.path();
+        if child
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or(false)
+        {
+            latest = latest_datetime(latest, latest_tree_modified_at(&child_path));
+        } else {
+            latest = latest_datetime(latest, path_modified_at(&child_path));
+        }
+    }
+
+    latest
+}
+
+fn path_modified_at(path: &Path) -> Option<DateTime<Utc>> {
+    fs::symlink_metadata(path)
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .map(DateTime::<Utc>::from)
+}
+
+fn latest_datetime(
+    left: Option<DateTime<Utc>>,
+    right: Option<DateTime<Utc>>,
+) -> Option<DateTime<Utc>> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left.max(right)),
+        (Some(left), None) => Some(left),
+        (None, Some(right)) => Some(right),
+        (None, None) => None,
+    }
 }
 
 fn run_summary_matches(

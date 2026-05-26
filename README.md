@@ -107,6 +107,7 @@ Available today:
   - `skillrun consumer exposure --json`
   - `skillrun consumer runs list --json [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
   - `skillrun consumer runs index rebuild --json`
+  - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
