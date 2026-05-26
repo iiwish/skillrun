@@ -1,4 +1,4 @@
-use chrono::{SecondsFormat, Utc};
+use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serde_yaml::Value;
@@ -38,6 +38,18 @@ pub enum RegistryCommand {
 
 pub struct RegistryOutput {
     pub output: String,
+}
+
+pub struct ConsumerRunsListOptions<'a> {
+    pub json: bool,
+    pub capsule_id: Option<&'a str>,
+    pub limit: Option<usize>,
+    pub status_filter: Option<&'a str>,
+    pub mode_filter: Option<&'a str>,
+    pub ok_filter: Option<bool>,
+    pub error_code_filter: Option<&'a str>,
+    pub since_filter: Option<&'a str>,
+    pub until_filter: Option<&'a str>,
 }
 
 #[derive(Debug, Clone)]
@@ -199,6 +211,8 @@ struct RunsScopeView {
     mode: Option<String>,
     ok: Option<bool>,
     error_code: Option<String>,
+    since: Option<String>,
+    until: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -773,18 +787,17 @@ pub fn exposed_capsules() -> Result<Vec<ExposedCapsule>, String> {
     Ok(capsules)
 }
 
-pub fn consumer_runs_list(
-    json: bool,
-    capsule_id: Option<&str>,
-    limit: Option<usize>,
-    status_filter: Option<&str>,
-    mode_filter: Option<&str>,
-    ok_filter: Option<bool>,
-    error_code_filter: Option<&str>,
-) -> Result<RegistryOutput, String> {
+pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<RegistryOutput, String> {
     let registry = load_registry()?;
     let registry_path = registry_path()?;
-    let entries = registry_entries_for_scope(&registry, capsule_id)?;
+    let entries = registry_entries_for_scope(&registry, options.capsule_id)?;
+    let since_filter = parse_run_time_filter("--since", options.since_filter)?;
+    let until_filter = parse_run_time_filter("--until", options.until_filter)?;
+    if let (Some(since), Some(until)) = (since_filter, until_filter) {
+        if since > until {
+            return Err("--since must be earlier than or equal to --until".to_string());
+        }
+    }
     let mut runs = Vec::new();
 
     for entry in entries {
@@ -811,10 +824,12 @@ pub fn consumer_runs_list(
             let summary = run_summary_view(entry, &run_dir, &run_id);
             if !run_summary_matches(
                 &summary,
-                status_filter,
-                mode_filter,
-                ok_filter,
-                error_code_filter,
+                options.status_filter,
+                options.mode_filter,
+                options.ok_filter,
+                options.error_code_filter,
+                since_filter,
+                until_filter,
             ) {
                 continue;
             }
@@ -828,22 +843,24 @@ pub fn consumer_runs_list(
             .cmp(&left.started_at)
             .then_with(|| right.run_id.cmp(&left.run_id))
     });
-    if let Some(limit) = limit {
+    if let Some(limit) = options.limit {
         runs.truncate(limit);
     }
 
-    if json {
+    if options.json {
         let view = ConsumerRunsListView {
             command: "consumer runs list",
             schema_version: "consumer.runs.list.v1",
             registry_path: display_path(&registry_path),
             scope: RunsScopeView {
                 kind: "registry",
-                capsule_id: capsule_id.map(str::to_string),
-                status: status_filter.map(str::to_string),
-                mode: mode_filter.map(str::to_string),
-                ok: ok_filter,
-                error_code: error_code_filter.map(str::to_string),
+                capsule_id: options.capsule_id.map(str::to_string),
+                status: options.status_filter.map(str::to_string),
+                mode: options.mode_filter.map(str::to_string),
+                ok: options.ok_filter,
+                error_code: options.error_code_filter.map(str::to_string),
+                since: since_filter.map(|timestamp| timestamp.to_rfc3339()),
+                until: until_filter.map(|timestamp| timestamp.to_rfc3339()),
             },
             runs,
         };
@@ -879,6 +896,8 @@ fn run_summary_matches(
     mode_filter: Option<&str>,
     ok_filter: Option<bool>,
     error_code_filter: Option<&str>,
+    since_filter: Option<DateTime<Utc>>,
+    until_filter: Option<DateTime<Utc>>,
 ) -> bool {
     if let Some(status) = status_filter {
         if summary.status != status {
@@ -900,7 +919,37 @@ fn run_summary_matches(
             return false;
         }
     }
+    if since_filter.is_some() || until_filter.is_some() {
+        let Some(started_at) = summary.started_at.as_deref().and_then(parse_run_timestamp) else {
+            return false;
+        };
+        if let Some(since) = since_filter {
+            if started_at < since {
+                return false;
+            }
+        }
+        if let Some(until) = until_filter {
+            if started_at > until {
+                return false;
+            }
+        }
+    }
     true
+}
+
+fn parse_run_time_filter(flag: &str, value: Option<&str>) -> Result<Option<DateTime<Utc>>, String> {
+    value
+        .map(|timestamp| {
+            parse_run_timestamp(timestamp)
+                .ok_or_else(|| format!("{flag} must be an RFC3339 timestamp: {timestamp}"))
+        })
+        .transpose()
+}
+
+fn parse_run_timestamp(value: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .ok()
 }
 
 pub fn consumer_runs_inspect(
