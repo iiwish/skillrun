@@ -102,6 +102,12 @@ pub struct ImportedCapsuleForReplace {
     pub enabled: bool,
 }
 
+pub struct RegistryEntryStatus {
+    pub source_type: String,
+    pub enabled: bool,
+    pub path: String,
+}
+
 #[derive(Debug, Serialize)]
 struct RegistryListView {
     command: &'static str,
@@ -2110,6 +2116,20 @@ pub fn imported_capsule_for_replace(id: &str) -> Result<ImportedCapsuleForReplac
         path: PathBuf::from(&entry.path),
         enabled: entry.enabled,
     })
+}
+
+pub fn registry_entry_status(id: &str) -> Result<Option<RegistryEntryStatus>, String> {
+    validate_registry_id(id)?;
+    let registry = load_registry()?;
+    Ok(registry
+        .capsules
+        .iter()
+        .find(|entry| entry.id == id)
+        .map(|entry| RegistryEntryStatus {
+            source_type: entry.source_type.clone(),
+            enabled: entry.enabled,
+            path: entry.path.clone(),
+        }))
 }
 
 pub fn replace_imported_capsule(id: &str, path: &Path) -> Result<(), String> {

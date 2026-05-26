@@ -1,6 +1,6 @@
 # Team Catalog Contract Draft
 
-**文档状态**：Draft / Not Implemented
+**文档状态**：Partially Implemented
 **最后更新**：2026-05-26
 
 ## 目标
@@ -14,7 +14,7 @@ Team Catalog 是 Team Library 的 Core 前置合同：让团队可以用一个�
 - install / update 仍复用现有 `.skr` import / `import --replace` 语义。
 - Desktop 不直接下载、解包、复制或执行能力。
 
-这份文档不是已实现合同；它给后续实现和 PR review 提供草案边界。
+这份文档是 Team Catalog 的分阶段合同。当前已实现 `inspect` 和 `install plan` 的最小 Core surface；`install apply` 仍未实现。
 
 ## 非目标
 
@@ -148,11 +148,16 @@ Optional display fields:
 
 ## Proposed Core Commands
 
-命令名称为草案，可在实现 PR 中重新评估。
+当前实现：
 
 ```bash
 skillrun team catalog inspect <catalog> --json
 skillrun team catalog install plan <catalog> <item-id> --json
+```
+
+仍未实现：
+
+```bash
 skillrun team catalog install apply <catalog> <item-id> --json
 ```
 
@@ -169,6 +174,8 @@ skillrun team catalog install apply <catalog> <item-id> --json
 ## Proposed JSON Surfaces
 
 ### Inspect
+
+JSON Schema：[`contracts/team-catalog-inspect.schema.json`](contracts/team-catalog-inspect.schema.json)。
 
 ```json
 {
@@ -196,6 +203,8 @@ skillrun team catalog install apply <catalog> <item-id> --json
 ```
 
 ### Install Plan
+
+JSON Schema：[`contracts/team-catalog-install-plan.schema.json`](contracts/team-catalog-install-plan.schema.json)。
 
 ```json
 {
@@ -270,6 +279,7 @@ Suggested error code families:
 - `catalog.source_checksum_required`
 - `catalog.download_failed`
 - `catalog.sha256_mismatch`
+- `catalog.registry_read_failed`
 - `catalog.registry_conflict`
 - `catalog.replace_refused`
 - `catalog.import_failed`
