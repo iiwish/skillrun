@@ -512,6 +512,35 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert_eq!(ok_true_no_match["scope"]["error_code"], "policy_violation");
     assert_eq!(ok_true_no_match["runs"].as_array().unwrap().len(), 0);
 
+    let rebuilt = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "index", "rebuild", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(rebuilt["command"], "consumer runs index rebuild");
+    assert_eq!(rebuilt["schema_version"], "consumer.runs.index.v1");
+    assert_eq!(rebuilt["ok"], true);
+    assert_eq!(rebuilt["capsules_scanned"], 1);
+    assert_eq!(rebuilt["runs_indexed"], 1);
+
+    let index_path = skillrun_home.join("runs-index.json");
+    assert!(index_path.is_file(), "runs index file should be written");
+    let index_text = fs::read_to_string(&index_path).expect("runs index should be readable");
+    let index: Value = serde_json::from_str(&index_text).expect("runs index should be JSON");
+    assert_eq!(index["schema_version"], "consumer.runs.index.v1");
+    assert_eq!(index["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(index["runs"][0]["run_ref"]["kind"], "local_run");
+    assert_eq!(index["runs"][0]["run_ref"]["capsule_id"], "refund");
+    assert_eq!(index["runs"][0]["run_ref"]["run_id"], run_id);
+    assert_eq!(index["runs"][0]["input_included"], false);
+    assert!(index["runs"][0].get("input").is_none());
+    assert!(index["runs"][0].get("envelope").is_none());
+    assert!(index["runs"][0].get("stdout").is_none());
+    assert!(index["runs"][0].get("stderr").is_none());
+    assert!(
+        !index_text.contains("refund_amount"),
+        "runs index must not include full input content"
+    );
+
     fs::remove_dir_all(output_root).ok();
 }
 

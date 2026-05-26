@@ -178,6 +178,26 @@ struct ConsumerRunsListView {
 }
 
 #[derive(Debug, Serialize)]
+struct ConsumerRunsIndexFile {
+    schema_version: &'static str,
+    generated_at: String,
+    registry_path: String,
+    runs: Vec<RunSummaryView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ConsumerRunsIndexRebuildView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    registry_path: String,
+    index_path: String,
+    generated_at: String,
+    capsules_scanned: usize,
+    runs_indexed: usize,
+}
+
+#[derive(Debug, Serialize)]
 struct ConsumerRunsInspectView {
     command: &'static str,
     schema_version: &'static str,
@@ -798,50 +818,23 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
             return Err("--since must be earlier than or equal to --until".to_string());
         }
     }
-    let mut runs = Vec::new();
-
-    for entry in entries {
-        let run_root = Path::new(&entry.path).join(".skillrun").join("runs");
-        let Ok(children) = fs::read_dir(&run_root) else {
-            continue;
-        };
-
-        for child in children {
-            let Ok(child) = child else {
-                continue;
-            };
-            let run_dir = child.path();
-            if !run_dir.is_dir() {
-                continue;
-            }
-            let Some(run_id) = run_dir
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(str::to_string)
-            else {
-                continue;
-            };
-            let summary = run_summary_view(entry, &run_dir, &run_id);
-            if !run_summary_matches(
-                &summary,
-                options.status_filter,
-                options.mode_filter,
-                options.ok_filter,
-                options.error_code_filter,
-                since_filter,
-                until_filter,
-            ) {
-                continue;
-            }
-            runs.push(summary);
-        }
-    }
-
+    let mut runs = collect_run_summaries(entries);
     runs.sort_by(|left, right| {
         right
             .started_at
             .cmp(&left.started_at)
             .then_with(|| right.run_id.cmp(&left.run_id))
+    });
+    runs.retain(|summary| {
+        run_summary_matches(
+            summary,
+            options.status_filter,
+            options.mode_filter,
+            options.ok_filter,
+            options.error_code_filter,
+            since_filter,
+            until_filter,
+        )
     });
     if let Some(limit) = options.limit {
         runs.truncate(limit);
@@ -888,6 +881,83 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
         format!("SkillRun Consumer Runs\nevidence:\n{items}")
     };
     Ok(RegistryOutput { output })
+}
+
+pub fn consumer_runs_index_rebuild(json: bool) -> Result<RegistryOutput, String> {
+    let registry = load_registry()?;
+    let registry_path = registry_path()?;
+    let index_path = runs_index_path()?;
+    let entries = registry_entries_for_scope(&registry, None)?;
+    let capsules_scanned = entries.len();
+    let mut runs = collect_run_summaries(entries);
+    runs.sort_by(|left, right| {
+        right
+            .started_at
+            .cmp(&left.started_at)
+            .then_with(|| right.run_id.cmp(&left.run_id))
+    });
+    let runs_indexed = runs.len();
+    let generated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+    let index = ConsumerRunsIndexFile {
+        schema_version: "consumer.runs.index.v1",
+        generated_at: generated_at.clone(),
+        registry_path: display_path(&registry_path),
+        runs,
+    };
+    write_json_file(&index_path, &index)?;
+
+    let view = ConsumerRunsIndexRebuildView {
+        command: "consumer runs index rebuild",
+        schema_version: "consumer.runs.index.v1",
+        ok: true,
+        registry_path: display_path(&registry_path),
+        index_path: display_path(&index_path),
+        generated_at,
+        capsules_scanned,
+        runs_indexed,
+    };
+
+    if json {
+        json_output(&view)
+    } else {
+        Ok(RegistryOutput {
+            output: format!(
+                "SkillRun Consumer Runs Index\nstatus: rebuilt\nruns indexed: {}\npath: {}",
+                view.runs_indexed, view.index_path
+            ),
+        })
+    }
+}
+
+fn collect_run_summaries(entries: Vec<&RegistryEntry>) -> Vec<RunSummaryView> {
+    let mut runs = Vec::new();
+
+    for entry in entries {
+        let run_root = Path::new(&entry.path).join(".skillrun").join("runs");
+        let Ok(children) = fs::read_dir(&run_root) else {
+            continue;
+        };
+
+        for child in children {
+            let Ok(child) = child else {
+                continue;
+            };
+            let run_dir = child.path();
+            if !run_dir.is_dir() {
+                continue;
+            }
+            let Some(run_id) = run_dir
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_string)
+            else {
+                continue;
+            };
+            runs.push(run_summary_view(entry, &run_dir, &run_id));
+        }
+    }
+
+    runs
 }
 
 fn run_summary_matches(
@@ -1647,20 +1717,27 @@ fn load_registry() -> Result<RegistryFile, String> {
 
 fn save_registry(registry: &RegistryFile) -> Result<(), String> {
     let path = registry_path()?;
+    write_json_file(&path, registry)
+}
+
+fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
     }
 
     let tmp = path.with_extension("json.tmp");
-    let text = serde_json::to_string_pretty(registry).map_err(|error| error.to_string())?;
+    let text = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     fs::write(&tmp, text).map_err(|error| format!("failed to write {}: {error}", tmp.display()))?;
     if path.exists() {
-        fs::remove_file(&path)
+        fs::remove_file(path)
             .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
     }
-    fs::rename(&tmp, &path)
-        .map_err(|error| format!("failed to replace {}: {error}", path.display()))
+    fs::rename(&tmp, path).map_err(|error| format!("failed to replace {}: {error}", path.display()))
+}
+
+fn runs_index_path() -> Result<PathBuf, String> {
+    registry_path().map(|path| path.with_file_name("runs-index.json"))
 }
 
 fn registry_path() -> Result<PathBuf, String> {

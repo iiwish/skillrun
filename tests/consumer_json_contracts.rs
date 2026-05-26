@@ -165,7 +165,7 @@ fn normalize_json(value: &mut Value, paths: &[(&Path, &str)], key: Option<&str>)
                 *text = "<timestamp>".to_string();
                 return;
             }
-            if matches!(key, Some("started_at" | "finished_at")) {
+            if matches!(key, Some("generated_at" | "started_at" | "finished_at")) {
                 *text = "<timestamp>".to_string();
                 return;
             }
@@ -435,6 +435,16 @@ fn consumer_runs_json_match_contract_fixtures() {
     assert_contract(
         runs,
         include_str!("fixtures/contracts/consumer_runs_list_enabled.json"),
+        &paths,
+    );
+
+    let runs_index = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "index", "rebuild", "--json"],
+        &skillrun_home,
+    ));
+    assert_contract(
+        runs_index,
+        include_str!("fixtures/contracts/consumer_runs_index_rebuild_enabled.json"),
         &paths,
     );
 
