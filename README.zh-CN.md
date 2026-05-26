@@ -105,13 +105,13 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
 - 面向 Desktop、Router 检查和自动化消费者的 headless consumer JSON surface：
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
-  - `skillrun consumer runs list --json [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
+  - `skillrun consumer runs list --json [--capsule <id>] [--source scan|index] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
   - `skillrun consumer runs index rebuild --json`
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.6.4 扩展 run evidence 查询能力，新增摘要过滤和可重建的本地 metadata index。`consumer runs list` 仍是 registry-scoped、summary-only；本地 index 只保存 metadata 和 `run_ref`，不保存 input、envelope body、stdout 或 stderr 内容。隐私与 staleness 边界见 [Run Evidence and Local Index](docs/run-evidence-index.md)。
+v0.6.4 扩展 run evidence 查询能力，新增摘要过滤和可重建的本地 metadata index。`consumer runs list` 仍是 registry-scoped、summary-only，默认实时扫描 registry，也可以通过 `--source index` 显式读取本地 metadata index；本地 index 只保存 metadata 和 `run_ref`，不保存 input、envelope body、stdout 或 stderr 内容。隐私与 staleness 边界见 [Run Evidence and Local Index](docs/run-evidence-index.md)。
 
 它刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、import from URL、marketplace、`--include-input`、artifact content read、log content read 或 OS sandbox。
 

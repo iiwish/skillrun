@@ -318,6 +318,7 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert!(list["scope"]["capsule_id"].is_null());
     assert!(list["scope"]["status"].is_null());
     assert!(list["scope"]["mode"].is_null());
+    assert_eq!(list["scope"]["source"], "scan");
     assert!(list["scope"]["ok"].is_null());
     assert!(list["scope"]["error_code"].is_null());
     assert!(list["scope"]["since"].is_null());
@@ -554,6 +555,39 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert_eq!(status["index"]["runs_indexed"], 1);
     assert_eq!(status["index"]["stale"], false);
     assert_eq!(status["warnings"].as_array().unwrap().len(), 0);
+
+    let indexed = assert_success_json(&run_skillrun(
+        &[
+            "consumer", "runs", "list", "--json", "--source", "index", "--ok", "false",
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(indexed["source"]["kind"], "index");
+    assert!(indexed["source"]["index_path"]
+        .as_str()
+        .unwrap()
+        .ends_with("runs-index.json"));
+    assert_eq!(indexed["source"]["stale"], false);
+    assert_eq!(indexed["scope"]["source"], "index");
+    assert_eq!(indexed["scope"]["ok"], false);
+    assert_eq!(indexed["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(indexed["runs"][0]["run_id"], run_id);
+    assert!(indexed["runs"][0].get("input").is_none());
+    assert!(indexed["runs"][0].get("envelope").is_none());
+
+    let mut stale_index = index.clone();
+    stale_index["generated_at"] = Value::String("2000-01-01T00:00:00Z".to_string());
+    fs::write(
+        &index_path,
+        serde_json::to_string_pretty(&stale_index).expect("stale index should render"),
+    )
+    .expect("test should write stale index");
+    let stale = run_skillrun(
+        &["consumer", "runs", "list", "--json", "--source", "index"],
+        &skillrun_home,
+    );
+    assert!(!stale.status.success());
+    assert!(String::from_utf8_lossy(&stale.stderr).contains("runs index is stale"));
 
     fs::remove_dir_all(output_root).ok();
 }

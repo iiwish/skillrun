@@ -14,13 +14,17 @@ skillrun consumer runs list --json --mode <mode>
 skillrun consumer runs list --json --ok true
 skillrun consumer runs list --json --error-code <code>
 skillrun consumer runs list --json --since <rfc3339> --until <rfc3339>
+skillrun consumer runs list --json --source scan
+skillrun consumer runs list --json --source index
 skillrun consumer runs inspect <run-id> --json
 skillrun consumer runs inspect <run-id> --json --capsule <id>
 skillrun consumer runs index rebuild --json
 skillrun consumer runs index status --json
 ```
 
-`consumer runs list` remains the source-of-truth query path today. It scans currently registered capsules and returns summary metadata. It does not return full input, envelope body, stdout, or stderr content.
+`consumer runs list` remains registry-scoped and summary-only. By default it uses `--source scan`, which scans currently registered capsules and returns summary metadata. It does not return full input, envelope body, stdout, or stderr content.
+
+`consumer runs list --source index` is an explicit opt-in cache read path. It reads `$SKILLRUN_HOME/runs-index.json`, applies the same list filters to indexed summaries, and returns `source.kind = "index"` in JSON output. It fails instead of silently falling back when the index is missing, unreadable, unsupported, invalid, or stale.
 
 `consumer runs inspect` is the detail surface for a single run. It reports availability of private evidence files by default. It does not include input or log bodies unless a future explicit contract adds that behavior.
 
@@ -58,6 +62,8 @@ skillrun consumer runs index rebuild --json
 
 The status command reads index metadata and filesystem modification times. It does not read input, envelope body, stdout, or stderr content.
 
+`consumer runs list --source index` uses the same readiness checks. If the registry or any registered capsule run evidence appears newer than the index `generated_at`, the command fails with a stale-index error and asks the caller to rebuild. This keeps Desktop and automation from accidentally treating old cached data as current data.
+
 ## Privacy Boundary
 
 The list and index surfaces are intentionally summary-only. They must not include:
@@ -82,5 +88,3 @@ The run evidence index does not introduce:
 - OS sandboxing
 - global history across unregistered capsules
 - default `consumer runs list` reads from the index
-
-If `consumer runs list` later gains an indexed read path, it should be explicit and should define stale-index behavior before Desktop or automation depends on it.

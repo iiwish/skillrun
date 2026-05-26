@@ -43,6 +43,7 @@ pub struct RegistryOutput {
 pub struct ConsumerRunsListOptions<'a> {
     pub json: bool,
     pub capsule_id: Option<&'a str>,
+    pub source: RunsListSource,
     pub limit: Option<usize>,
     pub status_filter: Option<&'a str>,
     pub mode_filter: Option<&'a str>,
@@ -50,6 +51,21 @@ pub struct ConsumerRunsListOptions<'a> {
     pub error_code_filter: Option<&'a str>,
     pub since_filter: Option<&'a str>,
     pub until_filter: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunsListSource {
+    Scan,
+    Index,
+}
+
+impl RunsListSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Scan => "scan",
+            Self::Index => "index",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -173,13 +189,22 @@ struct ConsumerRunsListView {
     command: &'static str,
     schema_version: &'static str,
     registry_path: String,
+    source: RunsListSourceView,
     scope: RunsScopeView,
     runs: Vec<RunSummaryView>,
 }
 
 #[derive(Debug, Serialize)]
+struct RunsListSourceView {
+    kind: &'static str,
+    index_path: Option<String>,
+    generated_at: Option<String>,
+    stale: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct ConsumerRunsIndexFile {
-    schema_version: &'static str,
+    schema_version: String,
     generated_at: String,
     registry_path: String,
     runs: Vec<RunSummaryView>,
@@ -251,6 +276,7 @@ struct ConsumerRunsInspectErrorView {
 struct RunsScopeView {
     kind: &'static str,
     capsule_id: Option<String>,
+    source: &'static str,
     status: Option<String>,
     mode: Option<String>,
     ok: Option<bool>,
@@ -259,7 +285,7 @@ struct RunsScopeView {
     until: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct RunSummaryView {
     run_id: String,
     run_ref: RunRefView,
@@ -279,9 +305,9 @@ struct RunSummaryView {
     input_included: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct RunRefView {
-    kind: &'static str,
+    kind: String,
     capsule_id: String,
     run_id: String,
 }
@@ -842,7 +868,31 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
             return Err("--since must be earlier than or equal to --until".to_string());
         }
     }
-    let mut runs = collect_run_summaries(entries);
+    let index_path = runs_index_path()?;
+    let (source_view, mut runs) = match options.source {
+        RunsListSource::Scan => (
+            RunsListSourceView {
+                kind: "scan",
+                index_path: None,
+                generated_at: None,
+                stale: None,
+            },
+            collect_run_summaries(entries),
+        ),
+        RunsListSource::Index => {
+            let all_entries = registry_entries_for_scope(&registry, None)?;
+            let index = read_ready_runs_index(&index_path, &registry_path, &all_entries)?;
+            (
+                RunsListSourceView {
+                    kind: "index",
+                    index_path: Some(display_path(&index_path)),
+                    generated_at: Some(index.generated_at.clone()),
+                    stale: Some(false),
+                },
+                index.runs,
+            )
+        }
+    };
     runs.sort_by(|left, right| {
         right
             .started_at
@@ -850,6 +900,11 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
             .then_with(|| right.run_id.cmp(&left.run_id))
     });
     runs.retain(|summary| {
+        if let Some(capsule_id) = options.capsule_id {
+            if summary.capsule_id != capsule_id {
+                return false;
+            }
+        }
         run_summary_matches(
             summary,
             options.status_filter,
@@ -869,9 +924,11 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
             command: "consumer runs list",
             schema_version: "consumer.runs.list.v1",
             registry_path: display_path(&registry_path),
+            source: source_view,
             scope: RunsScopeView {
                 kind: "registry",
                 capsule_id: options.capsule_id.map(str::to_string),
+                source: options.source.as_str(),
                 status: options.status_filter.map(str::to_string),
                 mode: options.mode_filter.map(str::to_string),
                 ok: options.ok_filter,
@@ -885,7 +942,10 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
     }
 
     let output = if runs.is_empty() {
-        "SkillRun Consumer Runs\nevidence: none".to_string()
+        format!(
+            "SkillRun Consumer Runs\nsource: {}\nevidence: none",
+            options.source.as_str()
+        )
     } else {
         let items = runs
             .iter()
@@ -902,7 +962,10 @@ pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<Regist
             })
             .collect::<Vec<_>>()
             .join("\n");
-        format!("SkillRun Consumer Runs\nevidence:\n{items}")
+        format!(
+            "SkillRun Consumer Runs\nsource: {}\nevidence:\n{items}",
+            options.source.as_str()
+        )
     };
     Ok(RegistryOutput { output })
 }
@@ -923,7 +986,7 @@ pub fn consumer_runs_index_rebuild(json: bool) -> Result<RegistryOutput, String>
     let runs_indexed = runs.len();
     let generated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
     let index = ConsumerRunsIndexFile {
-        schema_version: "consumer.runs.index.v1",
+        schema_version: "consumer.runs.index.v1".to_string(),
         generated_at: generated_at.clone(),
         registry_path: display_path(&registry_path),
         runs,
@@ -1096,6 +1159,45 @@ pub fn consumer_runs_index_status(json: bool) -> Result<RegistryOutput, String> 
             ),
         })
     }
+}
+
+fn read_ready_runs_index(
+    index_path: &Path,
+    registry_path: &Path,
+    entries: &[&RegistryEntry],
+) -> Result<ConsumerRunsIndexFile, String> {
+    if !index_path.is_file() {
+        return Err(
+            "runs list --source index requires runs-index.json; run `skillrun consumer runs index rebuild`"
+                .to_string(),
+        );
+    }
+
+    let text = fs::read_to_string(index_path)
+        .map_err(|error| format!("failed to read {}: {error}", index_path.display()))?;
+    let index: ConsumerRunsIndexFile = serde_json::from_str(&text)
+        .map_err(|error| format!("runs-index.json is not valid JSON: {error}"))?;
+
+    if index.schema_version != "consumer.runs.index.v1" {
+        return Err(format!(
+            "runs index schema is unsupported: {}",
+            index.schema_version
+        ));
+    }
+
+    let generated_at = DateTime::parse_from_rfc3339(&index.generated_at)
+        .map_err(|error| format!("runs index generated_at is invalid: {error}"))?
+        .with_timezone(&Utc);
+    let registry_stale = path_modified_after(registry_path, &generated_at);
+    let evidence_stale = evidence_modified_after(entries, &generated_at);
+    if registry_stale || evidence_stale {
+        return Err(
+            "runs index is stale; run `skillrun consumer runs index rebuild` before using --source index"
+                .to_string(),
+        );
+    }
+
+    Ok(index)
 }
 
 fn collect_run_summaries(entries: Vec<&RegistryEntry>) -> Vec<RunSummaryView> {
@@ -1283,7 +1385,7 @@ pub fn consumer_runs_inspect(
         let refs = matches
             .iter()
             .map(|(entry, _)| RunRefView {
-                kind: "local_run",
+                kind: "local_run".to_string(),
                 capsule_id: entry.id.clone(),
                 run_id: run_id.to_string(),
             })
@@ -1574,7 +1676,7 @@ fn run_inspect_view(
     fallback_run_id: &str,
 ) -> ConsumerRunsInspectView {
     let run_ref = RunRefView {
-        kind: "local_run",
+        kind: "local_run".to_string(),
         capsule_id: entry.id.clone(),
         run_id: fallback_run_id.to_string(),
     };
@@ -1792,7 +1894,7 @@ fn run_summary_view(
 ) -> RunSummaryView {
     let record_path = run_dir.join("record.json");
     let run_ref = RunRefView {
-        kind: "local_run",
+        kind: "local_run".to_string(),
         capsule_id: entry.id.clone(),
         run_id: fallback_run_id.to_string(),
     };
