@@ -105,13 +105,13 @@ Available today:
 - Headless consumer JSON surfaces for Desktop, Router checks, and automation consumers:
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
-  - `skillrun consumer runs list --json [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
+  - `skillrun consumer runs list --json [--capsule <id>] [--source scan|index] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
   - `skillrun consumer runs index rebuild --json`
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.6.4 extends run evidence querying with summary filters and a rebuildable local metadata index. `consumer runs list` remains registry-scoped and summary-only, and the local index stores metadata and `run_ref` values rather than input, envelope bodies, stdout, or stderr content. See [Run Evidence and Local Index](docs/run-evidence-index.md) for the privacy and staleness boundaries.
+v0.6.4 extends run evidence querying with summary filters and a rebuildable local metadata index. `consumer runs list` remains registry-scoped and summary-only, defaults to live registry scanning, and can explicitly read the local metadata index with `--source index`. The local index stores metadata and `run_ref` values rather than input, envelope bodies, stdout, or stderr content. See [Run Evidence and Local Index](docs/run-evidence-index.md) for the privacy and staleness boundaries.
 
 It intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, or OS sandboxing.
 

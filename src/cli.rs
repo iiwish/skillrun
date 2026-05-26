@@ -380,6 +380,7 @@ enum ConsumerCommand {
     RunsList {
         json: bool,
         capsule: Option<String>,
+        source: registry::RunsListSource,
         limit: Option<usize>,
         status: Option<String>,
         mode: Option<String>,
@@ -429,6 +430,7 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
         ConsumerCommand::RunsList {
             json,
             capsule,
+            source,
             limit,
             status,
             mode,
@@ -439,6 +441,7 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
         } => match registry::consumer_runs_list(registry::ConsumerRunsListOptions {
             json,
             capsule_id: capsule.as_deref(),
+            source,
             limit,
             status_filter: status.as_deref(),
             mode_filter: mode.as_deref(),
@@ -886,6 +889,7 @@ fn parse_consumer_runs_index_status(args: Vec<String>) -> Result<ConsumerCommand
 fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String> {
     let mut json = false;
     let mut capsule = None;
+    let mut source = registry::RunsListSource::Scan;
     let mut limit = None;
     let mut status = None;
     let mut mode = None;
@@ -906,6 +910,17 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
                     return Err("--capsule requires a registry id".to_string());
                 };
                 capsule = Some(value.to_string());
+                index += 2;
+            }
+            "--source" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--source requires scan or index".to_string());
+                };
+                source = match value.as_str() {
+                    "scan" => registry::RunsListSource::Scan,
+                    "index" => registry::RunsListSource::Index,
+                    _ => return Err(format!("--source must be scan or index: {value}")),
+                };
                 index += 2;
             }
             "--limit" => {
@@ -970,6 +985,7 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
     Ok(ConsumerCommand::RunsList {
         json,
         capsule,
+        source,
         limit,
         status,
         mode,
@@ -1516,7 +1532,7 @@ Implemented:
   import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
-  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>] [--limit <n>]
+  consumer runs list [--json] [--capsule <id>] [--source scan|index] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>] [--limit <n>]
   consumer runs index rebuild [--json]
   consumer runs index status [--json]
   consumer runs inspect <run-id> [--json] [--capsule <id>]

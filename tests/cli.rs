@@ -39,6 +39,7 @@ fn help_lists_core_commands() {
     assert!(stdout.contains("--error-code <code>"));
     assert!(stdout.contains("--since <rfc3339>"));
     assert!(stdout.contains("--until <rfc3339>"));
+    assert!(stdout.contains("--source scan|index"));
     assert!(stdout.contains("consumer runs index rebuild [--json]"));
     assert!(stdout.contains("consumer runs index status [--json]"));
     assert!(stdout.contains("registry remove <id> [--delete-files] [--json]"));
