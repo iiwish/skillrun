@@ -110,7 +110,7 @@ Desktop 最终应该支持一个 Team Library 页面：
 - 通过 Router 挂载到 MCP client。
 - 跳转到 run evidence explorer。
 
-Core 应该先提供稳定、可自动化的底层合同，再让 Desktop 消费。Desktop 不能直接读取 catalog 私有缓存或 `.skillrun/` 内部结构。
+Core 应该先提供稳定、可自动化的底层合同，再让 Desktop 消费。Desktop 不能直接读取 catalog 私有缓存或 `.skillrun/` 内部结构。第一版 catalog / install plan 草案见 [Team Catalog Contract Draft](team-catalog-contract.md)。
 
 ## Catalog 方向
 
