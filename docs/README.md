@@ -18,6 +18,7 @@
 - [Agent Skills Compatibility](agent-skills-compatibility.md)：说明 SkillRun 与 Agent Skills、MCP 的关系，以及可执行技能的 runtime / contract / evidence 边界。
 - [Agent Skills Metadata Mapping](agent-skills-metadata-mapping.md)：设计 `SKILL.md` frontmatter 中 `name`、`description`、`license`、`compatibility`、`metadata`、`allowed-tools` 到 Manifest 的兼容映射。
 - [Team Distribution Route](team-distribution.md)：记录目标不变、路线调整的产品基线：用团队分发 MCP tools 和 Agent Skills 作为外部入口，但保持 SkillRun 的 runtime / contract / evidence 边界。
+- [Team Catalog Contract Draft](team-catalog-contract.md)：为 Team Library 设计保守的 catalog / install plan 草案，第一阶段只让 `.skr` item 进入 Core install/update 路径。
 - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
 - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
 - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。
@@ -51,6 +52,7 @@
 - [v0.6 Consumer Era 愿景](v0.6-consumer-era-vision.md)：本地消费者控制面、SkillRun Router、一键 MCP 挂载、Tauri/Desktop 边界和官方领域包策略。
 - [v0.6 Skill Capsule Contract](v0.6-skill-capsule-contract.md)：冻结 Skill Capsule 作为 Agent Skill 基础单元的 Manifest、Adapter、Consumer JSON、Package、Run Evidence 和 fail-closed 合同。
 - [Run Evidence and Local Index](run-evidence-index.md)：说明 `consumer runs list/inspect/index` 的稳定 surface、summary-only 隐私边界和 index staleness 诊断。
+- [Team Catalog Draft JSON Schema](contracts/team-catalog.draft.schema.json)：`team.catalog.v1` catalog 文件的草案 schema；未实现，不能视为稳定 CLI contract。
 - [Router MCP JSON Schema](contracts/router-mcp.schema.json)：`router serve --mcp --dry-run` 的 `router.mcp.v1` 机器可读合同。
 - [Router Status JSON Schema](contracts/router-status.schema.json)：`router status --json` 的 `router.status.v1` 路由快照合同。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
