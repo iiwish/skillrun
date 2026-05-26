@@ -1,3 +1,4 @@
+use chrono::{DateTime, Duration, Utc};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -319,6 +320,8 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert!(list["scope"]["mode"].is_null());
     assert!(list["scope"]["ok"].is_null());
     assert!(list["scope"]["error_code"].is_null());
+    assert!(list["scope"]["since"].is_null());
+    assert!(list["scope"]["until"].is_null());
 
     let runs = list["runs"].as_array().expect("runs should be an array");
     assert_eq!(runs.len(), 1);
@@ -332,6 +335,13 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert_eq!(summary["status"], "succeeded");
     assert_eq!(summary["ok"], true);
     assert!(summary["error_code"].is_null());
+    let started_at = DateTime::parse_from_rfc3339(
+        summary["started_at"]
+            .as_str()
+            .expect("summary should include started_at"),
+    )
+    .expect("started_at should be RFC3339")
+    .with_timezone(&Utc);
     assert_eq!(summary["artifact_count"], 0);
     assert_eq!(summary["input_included"], false);
     assert!(summary.get("input").is_none());
@@ -412,7 +422,40 @@ fn consumer_runs_list_summarizes_registered_capsule_runs_without_inputs() {
     assert_eq!(filtered["scope"]["mode"], "test");
     assert!(filtered["scope"]["ok"].is_null());
     assert!(filtered["scope"]["error_code"].is_null());
+    assert!(filtered["scope"]["since"].is_null());
+    assert!(filtered["scope"]["until"].is_null());
     assert_eq!(filtered["runs"].as_array().unwrap().len(), 1);
+
+    let since = (started_at - Duration::seconds(1)).to_rfc3339();
+    let until = (started_at + Duration::seconds(1)).to_rfc3339();
+    let time_filtered = assert_success_json(&run_skillrun(
+        &[
+            "consumer", "runs", "list", "--json", "--since", &since, "--until", &until,
+        ],
+        &skillrun_home,
+    ));
+    assert_eq!(time_filtered["scope"]["since"], since);
+    assert_eq!(time_filtered["scope"]["until"], until);
+    assert_eq!(time_filtered["runs"].as_array().unwrap().len(), 1);
+
+    let after_run = (started_at + Duration::seconds(1)).to_rfc3339();
+    let after_run_no_match = assert_success_json(&run_skillrun(
+        &["consumer", "runs", "list", "--json", "--since", &after_run],
+        &skillrun_home,
+    ));
+    assert_eq!(after_run_no_match["scope"]["since"], after_run);
+    assert!(after_run_no_match["scope"]["until"].is_null());
+    assert_eq!(after_run_no_match["runs"].as_array().unwrap().len(), 0);
+
+    let reversed_range = run_skillrun(
+        &[
+            "consumer", "runs", "list", "--json", "--since", &until, "--until", &since,
+        ],
+        &skillrun_home,
+    );
+    assert!(!reversed_range.status.success());
+    assert!(String::from_utf8_lossy(&reversed_range.stderr)
+        .contains("--since must be earlier than or equal to --until"));
 
     let no_match = assert_success_json(&run_skillrun(
         &["consumer", "runs", "list", "--json", "--status", "failed"],

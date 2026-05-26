@@ -385,6 +385,8 @@ enum ConsumerCommand {
         mode: Option<String>,
         ok: Option<bool>,
         error_code: Option<String>,
+        since: Option<String>,
+        until: Option<String>,
     },
     RunsInspect {
         run_id: String,
@@ -426,15 +428,19 @@ fn run_consumer_command(command: ConsumerCommand) -> ExitCode {
             mode,
             ok,
             error_code,
-        } => match registry::consumer_runs_list(
+            since,
+            until,
+        } => match registry::consumer_runs_list(registry::ConsumerRunsListOptions {
             json,
-            capsule.as_deref(),
+            capsule_id: capsule.as_deref(),
             limit,
-            status.as_deref(),
-            mode.as_deref(),
-            ok,
-            error_code.as_deref(),
-        ) {
+            status_filter: status.as_deref(),
+            mode_filter: mode.as_deref(),
+            ok_filter: ok,
+            error_code_filter: error_code.as_deref(),
+            since_filter: since.as_deref(),
+            until_filter: until.as_deref(),
+        }) {
             Ok(output) => {
                 println!("{}", output.output);
                 ExitCode::SUCCESS
@@ -808,6 +814,8 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
     let mut mode = None;
     let mut ok = None;
     let mut error_code = None;
+    let mut since = None;
+    let mut until = None;
     let mut index = 0;
 
     while index < args.len() {
@@ -864,6 +872,20 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
                 error_code = Some(value.to_string());
                 index += 2;
             }
+            "--since" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--since requires an RFC3339 timestamp".to_string());
+                };
+                since = Some(value.to_string());
+                index += 2;
+            }
+            "--until" => {
+                let Some(value) = args.get(index + 1) else {
+                    return Err("--until requires an RFC3339 timestamp".to_string());
+                };
+                until = Some(value.to_string());
+                index += 2;
+            }
             value => return Err(format!("unexpected consumer runs list argument: {value}")),
         }
     }
@@ -876,6 +898,8 @@ fn parse_consumer_runs_list(args: Vec<String>) -> Result<ConsumerCommand, String
         mode,
         ok,
         error_code,
+        since,
+        until,
     })
 }
 
@@ -1415,7 +1439,7 @@ Implemented:
   import <package.skr> [--id <id>] [--to <dir>] [--replace] [--json]
   consumer inventory [--json]
   consumer exposure [--json]
-  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--limit <n>]
+  consumer runs list [--json] [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>] [--limit <n>]
   consumer runs inspect <run-id> [--json] [--capsule <id>]
   consumer mount plan --client <id> [--config <path>] [--json]
   consumer mount apply --client claude-desktop [--config <path>] [--json]

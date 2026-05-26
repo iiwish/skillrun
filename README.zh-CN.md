@@ -105,7 +105,7 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
 - 面向 Desktop、Router 检查和自动化消费者的 headless consumer JSON surface：
   - `skillrun consumer inventory --json`
   - `skillrun consumer exposure --json`
-  - `skillrun consumer runs list --json [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>]`
+  - `skillrun consumer runs list --json [--capsule <id>] [--status <status>] [--mode <mode>] [--ok true|false] [--error-code <code>] [--since <rfc3339>] [--until <rfc3339>]`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
