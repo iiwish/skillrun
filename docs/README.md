@@ -17,6 +17,7 @@
 - [Adapter Protocol](adapter-protocol.md)：v0.5 起的 Core-to-adapter 南向协议、capability levels、IPC/envelope 和 conformance 边界。
 - [Agent Skills Compatibility](agent-skills-compatibility.md)：说明 SkillRun 与 Agent Skills、MCP 的关系，以及可执行技能的 runtime / contract / evidence 边界。
 - [Agent Skills Metadata Mapping](agent-skills-metadata-mapping.md)：设计 `SKILL.md` frontmatter 中 `name`、`description`、`license`、`compatibility`、`metadata`、`allowed-tools` 到 Manifest 的兼容映射。
+- [Team Distribution Route](team-distribution.md)：记录目标不变、路线调整的产品基线：用团队分发 MCP tools 和 Agent Skills 作为外部入口，但保持 SkillRun 的 runtime / contract / evidence 边界。
 - [项目定位](positioning.md)：SkillRun 的最强公开定位、生态边界和 v0.4.2 叙事。
 - [愿景](vision.md)：长期愿景、信任演进阶段和官方胶囊策略。
 - [信任模型](trust-model.md)：当前可信边界、非承诺和 `.skr` 消费边界。

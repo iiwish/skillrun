@@ -46,6 +46,8 @@ Use plain Agent Skills when the capability is mostly instructions, references, t
 
 See [Agent Skills Compatibility](docs/agent-skills-compatibility.md) for the full boundary.
 
+The product route is to make this easier to adopt through team distribution: teams should be able to share MCP tools and Agent Skills that local users can inspect, install, update, and mount through SkillRun. This does not change the core goal or turn SkillRun into a marketplace. See [Team Distribution Route](docs/team-distribution.md).
+
 ## What Works Today
 
 Current development line: `v0.6.4`.
@@ -338,6 +340,7 @@ Docs-level business patterns remain part of the narrative without expanding curr
 - [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [v0.6 Skill Capsule Contract](docs/v0.6-skill-capsule-contract.md)
+- [Team Distribution Route](docs/team-distribution.md)
 - [Router MCP JSON Schema](docs/contracts/router-mcp.schema.json)
 - [Router Status JSON Schema](docs/contracts/router-status.schema.json)
 - [Business examples](docs/business-examples.md)

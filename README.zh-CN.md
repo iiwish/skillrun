@@ -46,6 +46,8 @@ SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
 
 更完整的边界见 [Agent Skills Compatibility](docs/agent-skills-compatibility.md)。
 
+产品路线会优先用团队分发降低采用门槛：团队可以分享 MCP tools 和 Agent Skills，普通用户通过 SkillRun 检查、安装、更新并挂载到本地 AI 客户端。这不改变 SkillRun 的核心目标，也不把 SkillRun 变成 marketplace。见 [Team Distribution Route](docs/team-distribution.md)。
+
 ## 当前状态
 
 当前开发线：`v0.6.4`。
@@ -338,6 +340,7 @@ SkillRun 同时存在几类版本：
 - [v0.5.15 Desktop Contract Freeze](docs/v0.5.15-desktop-contract-freeze.md)
 - [v0.6 Consumer Era vision](docs/v0.6-consumer-era-vision.md)
 - [v0.6 Skill Capsule Contract](docs/v0.6-skill-capsule-contract.md)
+- [Team Distribution Route](docs/team-distribution.md)
 - [Router MCP JSON Schema](docs/contracts/router-mcp.schema.json)
 - [Router Status JSON Schema](docs/contracts/router-status.schema.json)
 - [业务示例](docs/business-examples.md)
