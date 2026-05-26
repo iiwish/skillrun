@@ -395,7 +395,9 @@ jobs:
           - os: "ubuntu-22.04"
             asset: "skillrun-x86_64-unknown-linux-gnu.tar.xz"
             binary: "skillrun"
-          - os: "macos-13"
+          # Keep the Intel archive smoke on a current Intel macOS runner label;
+          # older labels have shown long queue delays on release runs.
+          - os: "macos-15-intel"
             asset: "skillrun-x86_64-apple-darwin.tar.xz"
             binary: "skillrun"
           - os: "windows-latest"
