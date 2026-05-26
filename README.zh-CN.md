@@ -48,15 +48,15 @@ SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
 
 ## 当前状态
 
-当前开发线：`v0.6.3`。
+当前开发线：`v0.6.4`。
 
-最新公开 release：`v0.6.3`。
+最新公开 release：`v0.6.4`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.6.3
+# skillrun 0.6.4
 ```
 
 ## 安装
@@ -111,7 +111,9 @@ GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `ski
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.15 冻结 Desktop alpha contract set，并让 `import --json` 的运行期失败也变成机器可读合同。它刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、package update/reinstall、import from URL、marketplace、`--include-input`、artifact content read、log content read、global run index 或 OS sandbox。
+v0.6.4 扩展 run evidence 查询能力，新增摘要过滤和可重建的本地 metadata index。`consumer runs list` 仍是 registry-scoped、summary-only；本地 index 只保存 metadata 和 `run_ref`，不保存 input、envelope body、stdout 或 stderr 内容。隐私与 staleness 边界见 [Run Evidence and Local Index](docs/run-evidence-index.md)。
+
+它刻意不加入 Desktop、Tauri、`skillrun ui`、daemon API、Router hot reload、Router process management、Cursor apply、多客户端 mount adapter、signed package trust、dependency installation、import from URL、marketplace、`--include-input`、artifact content read、log content read 或 OS sandbox。
 
 ## 快速开始
 
@@ -147,7 +149,7 @@ v0.6 的 CLI 信息架构按四条路径理解。现有 top-level 命令保持�
 | Author | 我如何创建、检查、测试和打包一个 Skill Capsule？ | `init`、`manifest`、`inspect`、`check`、`doctor`、`validate`、`test`、`run`、`serve --mcp --dry-run`、`pack` | 继续保持 top-level。`init --py` 是现有 `init --python` alias；`init --js` 仍是 alpha adapter target。 |
 | Consumer | 我如何导入别人给我的 `.skr`，并决定是否启用？ | `import`、`registry`、`switchboard`、`consumer inventory`、`consumer exposure` | `registry` 是本地 inventory；`switchboard enabled=true` 是本地 exposure intent，不是 trust 或 sandbox 证明。 |
 | Router | 我如何把已启用 capsule 暴露给 MCP client？ | `router serve --mcp`、`router serve --mcp --dry-run`、`router status --json`、`mount plan/apply/rollback`、`consumer mount plan/apply/rollback` | MCP client 挂载 SkillRun Router。`mount` 是短入口；`consumer mount` 保持稳定 headless JSON surface。`serve --mcp` 继续作为单 capsule / 作者调试入口保持兼容。 |
-| Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`router status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
+| Ops | 我如何做 host readiness、诊断、挂载预览和运行证据追踪？ | `host status --json`、`router status --json`、`doctor`、`check`、`consumer mount plan --json`、`consumer runs list/index/inspect --json` | Headless JSON surface 保持机器可读；字段扩展必须兼容现有 consumer。 |
 
 5 分钟核心路径：
 

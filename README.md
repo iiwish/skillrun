@@ -48,15 +48,15 @@ See [Agent Skills Compatibility](docs/agent-skills-compatibility.md) for the ful
 
 ## What Works Today
 
-Current development line: `v0.6.3`.
+Current development line: `v0.6.4`.
 
-Latest public release: `v0.6.3`.
+Latest public release: `v0.6.4`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.3
+# skillrun 0.6.4
 ```
 
 ## Install
@@ -111,7 +111,9 @@ Available today:
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.5.15 freezes the Desktop alpha contract set and makes `import --json` runtime failures machine-readable. It intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, package update/reinstall, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, global run indexing, or OS sandboxing.
+v0.6.4 extends run evidence querying with summary filters and a rebuildable local metadata index. `consumer runs list` remains registry-scoped and summary-only, and the local index stores metadata and `run_ref` values rather than input, envelope bodies, stdout, or stderr content. See [Run Evidence and Local Index](docs/run-evidence-index.md) for the privacy and staleness boundaries.
+
+It intentionally does not add Desktop, Tauri, `skillrun ui`, a daemon API, Router hot reload, Router process management, Cursor apply, multi-client mount adapters, signed package trust, dependency installation, import from URL, marketplace behavior, `--include-input`, artifact content reads, log content reads, or OS sandboxing.
 
 ## Quickstart
 
@@ -147,7 +149,7 @@ The v0.6 CLI information architecture is organized around four paths. Existing t
 | Author | How do I create, check, test, and package a Skill Capsule? | `init`, `manifest`, `inspect`, `check`, `doctor`, `validate`, `test`, `run`, `serve --mcp --dry-run`, `pack` | Keep these as top-level commands. `init --py` is the existing `init --python` alias; `init --js` remains an alpha adapter target. |
 | Consumer | How do I import a `.skr` from someone else and decide whether to enable it? | `import`, `registry`, `switchboard`, `consumer inventory`, `consumer exposure` | `registry` is local inventory. `switchboard enabled=true` is local exposure intent, not proof of trust or sandboxing. |
 | Router | How do I expose enabled capsules to an MCP client? | `router serve --mcp`, `router serve --mcp --dry-run`, `router status --json`, `mount plan/apply/rollback`, `consumer mount plan/apply/rollback` | MCP clients mount the SkillRun Router. `mount` is the short CLI facade; `consumer mount` remains the stable headless JSON surface. `serve --mcp` remains compatible as a single-capsule / author-debug entrypoint. |
-| Ops | How do I inspect host readiness, diagnostics, mount previews, and run evidence? | `host status --json`, `router status --json`, `doctor`, `check`, `consumer mount plan --json`, `consumer runs list/inspect --json` | Headless JSON surfaces remain machine-readable; field additions must stay compatible with existing consumers. |
+| Ops | How do I inspect host readiness, diagnostics, mount previews, and run evidence? | `host status --json`, `router status --json`, `doctor`, `check`, `consumer mount plan --json`, `consumer runs list/index/inspect --json` | Headless JSON surfaces remain machine-readable; field additions must stay compatible with existing consumers. |
 
 The five-minute core path:
 

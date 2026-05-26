@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(runs)* add local index rebuild
 - *(runs)* filter evidence by time range
 - *(runs)* filter evidence by ok and error code
+- document run evidence local index boundaries and synchronize README version examples
 
 ## [0.6.3](https://github.com/iiwish/skillrun/compare/v0.6.2...v0.6.3) - 2026-05-22
 
