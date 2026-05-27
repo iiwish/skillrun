@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5](https://github.com/iiwish/skillrun/compare/v0.6.4...v0.6.5) - 2026-05-27
+
+### Added
+
+- *(team)* add Team Catalog install apply
+- *(team)* add catalog inspect and plan
+- *(consumer)* add indexed runs list source
+
+### Other
+
+- add public site data snapshot
+- draft team catalog contract
+- document team distribution route
+- *(release)* use current macos intel smoke runner
+
 ## [0.6.4](https://github.com/iiwish/skillrun/compare/v0.6.3...v0.6.4) - 2026-05-26
 
 ### Added
