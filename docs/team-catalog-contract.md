@@ -14,7 +14,7 @@ Team Catalog 是 Team Library 的 Core 前置合同：让团队可以用一个�
 - install / update 仍复用现有 `.skr` import / `import --replace` 语义。
 - Desktop 不直接下载、解包、复制或执行能力。
 
-这份文档是 Team Catalog 的分阶段合同。当前已实现 `inspect` 和 `install plan` 的最小 Core surface；`install apply` 仍未实现。
+这份文档是 Team Catalog 的分阶段合同。当前已实现 `inspect`、`install plan` 和本地 `file` source 的 `install apply` 最小 Core surface；HTTPS download 仍待后续显式 downloader。
 
 ## 非目标
 
@@ -155,8 +155,6 @@ skillrun team catalog inspect <catalog> --json
 skillrun team catalog install plan <catalog> <item-id> --json
 ```
 
-仍未实现：
-
 ```bash
 skillrun team catalog install apply <catalog> <item-id> --json
 ```
@@ -165,7 +163,8 @@ skillrun team catalog install apply <catalog> <item-id> --json
 
 - `inspect` 只读取 catalog，校验 schema，汇总 item，不下载或执行 item。
 - `install plan` 可以解析目标 item，检查 source 类型、checksum 是否存在、当前 registry 是否已有同 id entry，并给出将调用 import 还是 import --replace。
-- `install apply` 才可以下载或读取 `.skr`，必须先校验 `sha256`，再调用现有 import / import --replace 语义。
+- `install apply` 才可以读取 `.skr`，必须先校验 `sha256`，再调用现有 import / import --replace 语义。
+- 当前 `install apply` 仅支持 `file` source；`https` source fail closed，等待后续显式 Core downloader。
 - `install apply` 不自动 `switchboard enable`。
 - `install apply` 不自动 mount MCP client。
 - `install apply` 不自动安装 host dependencies。
@@ -241,6 +240,8 @@ JSON Schema：[`contracts/team-catalog-install-plan.schema.json`](contracts/team
 
 ### Install Apply
 
+JSON Schema：[`contracts/team-catalog-install-apply.schema.json`](contracts/team-catalog-install-apply.schema.json)。
+
 ```json
 {
   "command": "team catalog install apply",
@@ -249,12 +250,17 @@ JSON Schema：[`contracts/team-catalog-install-plan.schema.json`](contracts/team
   "catalog_id": "acme.internal",
   "item_id": "refund",
   "download": {
-    "source_type": "https",
+    "source_type": "file",
+    "package_path": "/path/to/refund-0.1.0.skr",
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "sha256_verified": true
   },
   "import": {
     "schema_version": "import.v1",
     "id": "refund",
+    "path": "/path/to/.skillrun/imports/refund",
+    "source_type": "imported_skr",
+    "enabled": false,
     "replaced": false
   },
   "next_steps": [
