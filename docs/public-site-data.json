@@ -2,7 +2,7 @@
   "schema_version": "skillrun.public_site.v1",
   "generated_from": {
     "repo": "https://github.com/iiwish/skillrun",
-    "source_commit": "d4dc521",
+    "source_commit": "7bab5cb",
     "updated_at": "2026-05-27"
   },
   "product": {
@@ -11,10 +11,10 @@
     "positioning": "SkillRun is the runtime / contract / evidence layer for executable Agent Skills. Agent Skills are the authoring and discovery layer; MCP is an invocation surface."
   },
   "release": {
-    "current_development_line": "v0.6.4",
-    "latest_public_release": "v0.6.4",
-    "version_command_output": "skillrun 0.6.4",
-    "release_url": "https://github.com/iiwish/skillrun/releases/tag/v0.6.4",
+    "current_development_line": "v0.6.5",
+    "latest_public_release": "v0.6.5",
+    "version_command_output": "skillrun 0.6.5",
+    "release_url": "https://github.com/iiwish/skillrun/releases/tag/v0.6.5",
     "latest_download_base_url": "https://github.com/iiwish/skillrun/releases/latest/download",
     "installers": {
       "shell": {
@@ -31,62 +31,63 @@
         "name": "sha256.sum",
         "kind": "checksum",
         "platform": "all",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/sha256.sum",
-        "digest": "sha256:247aa83241446cb1e78074d5a89575478b95dfd2659730f4e3c91b50f25dc1e0"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/sha256.sum",
+        "digest": "sha256:d8d24c26c9764278e6b190d94247f119acfb36e9b36c06a3082a1dd00fc16b4b"
       },
       {
         "name": "skillrun-installer.sh",
         "kind": "installer",
         "platform": "macOS / Linux",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-installer.sh",
-        "digest": "sha256:eec2c7816744836275b5b9f05bff8696f6512d7ff01909882303dbbf224c43cd"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-installer.sh",
+        "digest": "sha256:77b7dc49c176c90d9276490ea32b9406c92eadfd12438a2aea924c44c8b3806b"
       },
       {
         "name": "skillrun-installer.ps1",
         "kind": "installer",
         "platform": "Windows",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-installer.ps1",
-        "digest": "sha256:8dab2d8c966f23768d7290aa06745ce6b9af61888653fc8f575e116613fa0acc"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-installer.ps1",
+        "digest": "sha256:8bd7e7a0de82a88bc755328375066d63e0d2bb2d523c1ff88b5c57caf08924d8"
       },
       {
         "name": "skillrun-aarch64-apple-darwin.tar.xz",
         "kind": "archive",
         "platform": "macOS arm64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-aarch64-apple-darwin.tar.xz",
-        "digest": "sha256:36ae30cd50a6faf62a9ff0e45060cd7e47d04a4b2251fd9e16bc1e1498c5b143"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-aarch64-apple-darwin.tar.xz",
+        "digest": "sha256:4cdc87db735432ec696484e70b9fdfc60e0c282d67ae1c7a33928917b01ab809"
       },
       {
         "name": "skillrun-x86_64-apple-darwin.tar.xz",
         "kind": "archive",
         "platform": "macOS x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-apple-darwin.tar.xz",
-        "digest": "sha256:9290c14b515077e320fcf9ebff45dd1ec33421edcc381b9c4cfd2981dca29ade"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-x86_64-apple-darwin.tar.xz",
+        "digest": "sha256:a86ca7cdb9ca1d961c2f0d7850036f3cbea56e38e6079ebc63788fbab94dd530"
       },
       {
         "name": "skillrun-aarch64-unknown-linux-gnu.tar.xz",
         "kind": "archive",
         "platform": "Linux arm64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-aarch64-unknown-linux-gnu.tar.xz",
-        "digest": "sha256:ec9d6477621222d9a44fe68217d3cc7af76bb9bce5709fbeab0157b1d0dff0ad"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-aarch64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:7e628bb968284654fa05c0a396b8d93d566ca6e320712730c769665a07644c46"
       },
       {
         "name": "skillrun-x86_64-unknown-linux-gnu.tar.xz",
         "kind": "archive",
         "platform": "Linux x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-unknown-linux-gnu.tar.xz",
-        "digest": "sha256:2c2e565ca0fc514d94247856877208c89eb31a11bb645ce04728df007d709d70"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-x86_64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:970d146f7ee3920be8ffc0625eb2118f953dbf423ad40eb9e38f06aa7a700530"
       },
       {
         "name": "skillrun-x86_64-pc-windows-msvc.zip",
         "kind": "archive",
         "platform": "Windows x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-pc-windows-msvc.zip",
-        "digest": "sha256:0b56cd3fcd5a2965eacd3fb3cf8c02ea416a77b5dc280bcfd798772a219a99a0"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.5/skillrun-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:a8270bb59e7465f286aef82c82188303a5c3a22a66a0981b1fc88a8fffce73ab"
       }
     ],
     "current_capabilities": [
       "Native installers for macOS, Linux, and Windows",
       "Local .skr import, replace, registry, and switchboard",
+      "Team Catalog inspect, install plan, and guarded local install apply",
       "Router status, dry-run, and MCP mount plan/apply",
       "Run evidence filters and local metadata index",
       "Artifact containment",
@@ -135,8 +136,8 @@
     ]
   },
   "team_distribution": {
-    "status": "development_line",
-    "summary": "Team catalog inspect, install plan, and guarded install apply are available in the development line for Desktop Team Library. Team distribution is not a public marketplace.",
+    "status": "released",
+    "summary": "Team catalog inspect, install plan, and guarded install apply are available in v0.6.5 for Desktop Team Library. Team distribution is not a public marketplace.",
     "boundaries": [
       "Core verifies checksums and imports into the local registry.",
       "Enable and mount remain explicit user choices.",
