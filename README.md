@@ -50,15 +50,15 @@ The product route is to make this easier to adopt through team distribution: tea
 
 ## What Works Today
 
-Current development line: `v0.6.4`.
+Current development line: `v0.6.5`.
 
-Latest public release: `v0.6.4`.
+Latest public release: `v0.6.5`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.4
+# skillrun 0.6.5
 ```
 
 ## Install
@@ -95,6 +95,10 @@ Available today:
 - Local `.skr` import into the capsule registry:
   - `skillrun import <package.skr> --json`
   - `skillrun import <package.skr> --replace --json`
+- Team catalog inspection and guarded local `.skr` install flow for Team Library:
+  - `skillrun team catalog inspect <catalog> --json`
+  - `skillrun team catalog install plan <catalog> <item-id> --json`
+  - `skillrun team catalog install apply <catalog> <item-id> --json`
 - Local capsule `registry` and `switchboard`.
 - Local MCP Router for one-click mounting:
   - `skillrun router serve --mcp`
@@ -112,6 +116,8 @@ Available today:
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+
+v0.6.5 adds the first Team Catalog Core surfaces for Desktop Team Library. Core can inspect a local catalog, produce an explicit install plan, and apply a guarded local `.skr` import after checksum verification. This is a team distribution path, not a public marketplace: it does not download remote packages, install dependencies, run actions, start the MCP server, auto-enable exposure, auto-mount clients, or make trust / sandbox claims. See [Team Catalog Contract](docs/team-catalog-contract.md) for the boundary.
 
 v0.6.4 extends run evidence querying with summary filters and a rebuildable local metadata index. `consumer runs list` remains registry-scoped and summary-only, defaults to live registry scanning, and can explicitly read the local metadata index with `--source index`. The local index stores metadata and `run_ref` values rather than input, envelope bodies, stdout, or stderr content. See [Run Evidence and Local Index](docs/run-evidence-index.md) for the privacy and staleness boundaries.
 
