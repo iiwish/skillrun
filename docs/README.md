@@ -58,6 +58,7 @@
 - [Team Catalog Install Apply JSON Schema](contracts/team-catalog-install-apply.schema.json)：`team catalog install apply --json` 的 `team.catalog.install_apply.v1` 机器可读合同。
 - [Router MCP JSON Schema](contracts/router-mcp.schema.json)：`router serve --mcp --dry-run` 的 `router.mcp.v1` 机器可读合同。
 - [Router Status JSON Schema](contracts/router-status.schema.json)：`router status --json` 的 `router.status.v1` 路由快照合同。
+- [Public Site Data](public-site-data.json)：供 `skillrun-www` 同步的版本、安装、quickstart、trust boundary 与 team distribution 公开数据；schema 见 [Public Site Data JSON Schema](public-site-data.schema.json)。
 - [经典业务示例](business-examples.md)：SOP-backed capability 的业务样例。
 
 ## 维护者流程
@@ -75,3 +76,4 @@
 - README、issue template、PR template 等公开协作入口可以使用英文，以降低开源协作门槛。
 - 文档必须明确区分当前已实现能力、release candidate 行为和计划能力。
 - 当运行时契约、CLI 行为或安全边界变化时，同步更新 README、相关 docs 和 release notes。
+- 当 release、installer、公开 quickstart 或 trust boundary 文案变化时，同步更新 `public-site-data.json`，让官网不要继续手写漂移。
