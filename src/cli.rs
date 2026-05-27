@@ -1279,7 +1279,7 @@ fn parse_team_catalog_install(args: Vec<String>) -> Result<TeamCatalogCommand, S
     let rest = args[1..].to_vec();
     match command {
         "plan" => parse_team_catalog_install_plan(rest),
-        "apply" => Err("team catalog install apply is not implemented yet".to_string()),
+        "apply" => parse_team_catalog_install_apply(rest),
         value => Err(format!("unknown team catalog install subcommand: {value}")),
     }
 }
@@ -1316,6 +1316,44 @@ fn parse_team_catalog_install_plan(args: Vec<String>) -> Result<TeamCatalogComma
     let item_id =
         item_id.ok_or_else(|| "team catalog install plan requires <item-id>".to_string())?;
     Ok(TeamCatalogCommand::InstallPlan {
+        catalog,
+        item_id,
+        json,
+    })
+}
+
+fn parse_team_catalog_install_apply(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
+    let mut catalog = None;
+    let mut item_id = None;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!(
+                    "unexpected team catalog install apply argument: {value}"
+                ));
+            }
+            value => {
+                if catalog.is_none() {
+                    catalog = Some(PathBuf::from(value));
+                } else if item_id.is_none() {
+                    item_id = Some(value.to_string());
+                } else {
+                    return Err(format!(
+                        "unexpected team catalog install apply argument: {value}"
+                    ));
+                }
+            }
+        }
+    }
+
+    let catalog =
+        catalog.ok_or_else(|| "team catalog install apply requires <catalog>".to_string())?;
+    let item_id =
+        item_id.ok_or_else(|| "team catalog install apply requires <item-id>".to_string())?;
+    Ok(TeamCatalogCommand::InstallApply {
         catalog,
         item_id,
         json,
@@ -1676,6 +1714,7 @@ Implemented:
   mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
   team catalog inspect <catalog> [--json]
   team catalog install plan <catalog> <item-id> [--json]
+  team catalog install apply <catalog> <item-id> [--json]
   router serve --mcp [--dry-run]
   router status [--json]
   registry add/list/inspect/remove

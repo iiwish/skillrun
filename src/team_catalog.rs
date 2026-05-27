@@ -4,6 +4,8 @@ use serde_json::Value as JsonValue;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::capsule_import::{self, ImportOptions};
+use crate::hashing;
 use crate::registry;
 
 pub struct TeamCatalogOptions {
@@ -20,13 +22,19 @@ pub enum TeamCatalogCommand {
         item_id: String,
         json: bool,
     },
+    InstallApply {
+        catalog: PathBuf,
+        item_id: String,
+        json: bool,
+    },
 }
 
 impl TeamCatalogOptions {
     pub fn json(&self) -> bool {
         match &self.command {
             TeamCatalogCommand::Inspect { json, .. }
-            | TeamCatalogCommand::InstallPlan { json, .. } => *json,
+            | TeamCatalogCommand::InstallPlan { json, .. }
+            | TeamCatalogCommand::InstallApply { json, .. } => *json,
         }
     }
 
@@ -34,6 +42,7 @@ impl TeamCatalogOptions {
         match &self.command {
             TeamCatalogCommand::Inspect { .. } => "team catalog inspect",
             TeamCatalogCommand::InstallPlan { .. } => "team catalog install plan",
+            TeamCatalogCommand::InstallApply { .. } => "team catalog install apply",
         }
     }
 
@@ -41,6 +50,7 @@ impl TeamCatalogOptions {
         match &self.command {
             TeamCatalogCommand::Inspect { .. } => "team.catalog.inspect.v1",
             TeamCatalogCommand::InstallPlan { .. } => "team.catalog.install_plan.v1",
+            TeamCatalogCommand::InstallApply { .. } => "team.catalog.install_apply.v1",
         }
     }
 }
@@ -184,6 +194,38 @@ struct PlanActionView {
 }
 
 #[derive(Debug, Serialize)]
+struct InstallApplyView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    catalog_id: String,
+    item_id: String,
+    download: ApplyDownloadView,
+    import: ApplyImportView,
+    next_steps: Vec<String>,
+    warnings: Vec<WarningView>,
+    error: Option<ErrorView>,
+}
+
+#[derive(Debug, Serialize)]
+struct ApplyDownloadView {
+    source_type: String,
+    package_path: String,
+    sha256: String,
+    sha256_verified: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct ApplyImportView {
+    schema_version: String,
+    id: String,
+    path: String,
+    source_type: String,
+    enabled: bool,
+    replaced: bool,
+}
+
+#[derive(Debug, Serialize)]
 struct ErrorJsonView {
     command: &'static str,
     schema_version: &'static str,
@@ -212,6 +254,11 @@ pub fn run(options: &TeamCatalogOptions) -> Result<TeamCatalogOutput, TeamCatalo
             item_id,
             json,
         } => install_plan(catalog, item_id, *json),
+        TeamCatalogCommand::InstallApply {
+            catalog,
+            item_id,
+            json,
+        } => install_apply(catalog, item_id, *json),
     }
 }
 
@@ -324,7 +371,7 @@ fn install_plan(
         command: "team catalog install plan",
         schema_version: "team.catalog.install_plan.v1",
         ok: true,
-        catalog_id: catalog.catalog_id,
+        catalog_id: catalog.catalog_id.clone(),
         item: PlanItemView {
             id: item.id.clone(),
             kind: item.kind.clone(),
@@ -353,6 +400,118 @@ fn install_plan(
         output: format!(
             "SkillRun Team Catalog Install Plan\ncatalog: {}\nitem: {}\naction: import\nreplace: {}",
             view.catalog_id, view.item.id, replace
+        ),
+    })
+}
+
+fn install_apply(
+    path: &Path,
+    item_id: &str,
+    json: bool,
+) -> Result<TeamCatalogOutput, TeamCatalogError> {
+    let catalog = load_catalog(path)?;
+    let item = installable_item(&catalog, item_id)?;
+    validate_source_for_plan(&item.source)?;
+    validate_registry_for_install(&item.id)?;
+
+    let package_path = resolve_package_path(path, &item.source)?;
+    let expected_sha256 = item
+        .source
+        .sha256
+        .as_deref()
+        .ok_or_else(|| {
+            TeamCatalogError::new(
+                "catalog.source_checksum_required",
+                "install apply requires source.sha256".to_string(),
+            )
+        })?
+        .to_ascii_lowercase();
+    let actual_sha256 = hashing::sha256_file(&package_path)
+        .map_err(|error| TeamCatalogError::new("catalog.package_read_failed", error))?;
+    if actual_sha256 != expected_sha256 {
+        return Err(TeamCatalogError::new(
+            "catalog.package_checksum_mismatch",
+            format!(
+                "package checksum mismatch for {}: expected {}, got {}",
+                package_path.display(),
+                expected_sha256,
+                actual_sha256
+            ),
+        ));
+    }
+
+    let replace = registry::registry_entry_status(&item.id)
+        .map_err(|error| TeamCatalogError::new("catalog.registry_read_failed", error))?
+        .is_some();
+    let import_output = capsule_import::run(&ImportOptions {
+        package: package_path.clone(),
+        id: Some(item.id.clone()),
+        target_dir: None,
+        json: true,
+        replace,
+    })
+    .map_err(|error| TeamCatalogError::new("catalog.import_failed", error))?;
+    let import_json: JsonValue = serde_json::from_str(&import_output.output).map_err(|error| {
+        TeamCatalogError::new(
+            "catalog.import_failed",
+            format!("failed to parse import JSON: {error}"),
+        )
+    })?;
+    let capsule = import_json
+        .get("capsule")
+        .and_then(JsonValue::as_object)
+        .ok_or_else(|| {
+            TeamCatalogError::new(
+                "catalog.import_failed",
+                "import JSON is missing capsule".to_string(),
+            )
+        })?;
+
+    let view = InstallApplyView {
+        command: "team catalog install apply",
+        schema_version: "team.catalog.install_apply.v1",
+        ok: true,
+        catalog_id: catalog.catalog_id.clone(),
+        item_id: item.id.clone(),
+        download: ApplyDownloadView {
+            source_type: item.source.source_type.clone(),
+            package_path: display_path(&package_path),
+            sha256: expected_sha256,
+            sha256_verified: true,
+        },
+        import: ApplyImportView {
+            schema_version: import_json
+                .get("schema_version")
+                .and_then(JsonValue::as_str)
+                .unwrap_or("import.v1")
+                .to_string(),
+            id: json_string(capsule, "id")?,
+            path: json_string(capsule, "path")?,
+            source_type: json_string(capsule, "source_type")?,
+            enabled: json_bool(capsule, "enabled")?,
+            replaced: json_bool(capsule, "replaced")?,
+        },
+        next_steps: vec![
+            "Review the imported Capsule in `skillrun consumer inventory --json`.".to_string(),
+            "Explicitly enable exposure with `skillrun switchboard enable <id>` when ready."
+                .to_string(),
+            "Mount MCP clients separately with `skillrun mount plan/apply`.".to_string(),
+        ],
+        warnings: vec![WarningView {
+            code: "trust.not_proven",
+            message: "sha256 verifies integrity, not publisher identity.".to_string(),
+        }],
+        error: None,
+    };
+
+    if json {
+        return json_output(&view);
+    }
+
+    Ok(TeamCatalogOutput {
+        output: format!(
+            "SkillRun Team Catalog Install Apply\ncatalog: {}\nitem: {}\nimported: {}\nreplaced: {}\nenabled: {}",
+            view.catalog_id, view.item_id, view.import.id, view.import.replaced, view.import.enabled
         ),
     })
 }
@@ -430,6 +589,87 @@ fn validate_source_for_plan(source: &CatalogSource) -> Result<(), TeamCatalogErr
         ));
     }
     Ok(())
+}
+
+fn installable_item<'a>(
+    catalog: &'a CatalogFile,
+    item_id: &str,
+) -> Result<&'a CatalogItem, TeamCatalogError> {
+    let item = catalog
+        .items
+        .iter()
+        .find(|item| item.id == item_id)
+        .ok_or_else(|| {
+            TeamCatalogError::new(
+                "catalog.item_not_found",
+                format!("catalog item not found: {item_id}"),
+            )
+        })?;
+
+    if item.kind != "skillrun.skr" {
+        return Err(TeamCatalogError::new(
+            "catalog.item_not_installable",
+            format!(
+                "catalog item {} has kind {}; only skillrun.skr is installable in this phase",
+                item.id, item.kind
+            ),
+        ));
+    }
+    Ok(item)
+}
+
+fn validate_registry_for_install(item_id: &str) -> Result<(), TeamCatalogError> {
+    let Some(entry) = registry::registry_entry_status(item_id)
+        .map_err(|error| TeamCatalogError::new("catalog.registry_read_failed", error))?
+    else {
+        return Ok(());
+    };
+
+    if entry.source_type != registry::IMPORTED_SKR_SOURCE_TYPE {
+        return Err(TeamCatalogError::new(
+            "catalog.registry_conflict",
+            format!(
+                "catalog item {} is already registered with source_type {}; Team Catalog can only replace imported_skr entries",
+                item_id, entry.source_type
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn resolve_package_path(
+    catalog_path: &Path,
+    source: &CatalogSource,
+) -> Result<PathBuf, TeamCatalogError> {
+    if source.source_type == "https" {
+        return Err(TeamCatalogError::new(
+            "catalog.source_download_unsupported",
+            "install apply currently supports file sources only; https download will be added behind an explicit Core downloader".to_string(),
+        ));
+    }
+    if source.source_type != "file" {
+        return Err(TeamCatalogError::new(
+            "catalog.source_unsupported",
+            format!("unsupported catalog source type: {}", source.source_type),
+        ));
+    }
+
+    let raw_path = PathBuf::from(&source.url);
+    let package_path = if raw_path.is_absolute() {
+        raw_path
+    } else {
+        catalog_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(raw_path)
+    };
+    if !package_path.is_file() {
+        return Err(TeamCatalogError::new(
+            "catalog.package_not_found",
+            format!("catalog package not found: {}", package_path.display()),
+        ));
+    }
+    Ok(package_path)
 }
 
 fn inspect_item_view(item: &CatalogItem) -> Result<InspectItemView, TeamCatalogError> {
@@ -563,6 +803,41 @@ fn json_output<T: Serialize>(value: &T) -> Result<TeamCatalogOutput, TeamCatalog
             )
         })?,
     })
+}
+
+fn display_path(path: &Path) -> String {
+    path.display().to_string()
+}
+
+fn json_string(
+    object: &serde_json::Map<String, JsonValue>,
+    field: &'static str,
+) -> Result<String, TeamCatalogError> {
+    object
+        .get(field)
+        .and_then(JsonValue::as_str)
+        .map(ToString::to_string)
+        .ok_or_else(|| {
+            TeamCatalogError::new(
+                "catalog.import_failed",
+                format!("import JSON capsule is missing string field {field}"),
+            )
+        })
+}
+
+fn json_bool(
+    object: &serde_json::Map<String, JsonValue>,
+    field: &'static str,
+) -> Result<bool, TeamCatalogError> {
+    object
+        .get(field)
+        .and_then(JsonValue::as_bool)
+        .ok_or_else(|| {
+            TeamCatalogError::new(
+                "catalog.import_failed",
+                format!("import JSON capsule is missing boolean field {field}"),
+            )
+        })
 }
 
 impl TeamCatalogError {

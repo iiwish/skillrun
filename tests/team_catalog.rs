@@ -1,6 +1,9 @@
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::fs;
+use std::io::Read;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -70,6 +73,87 @@ fn write_catalog(path: &Path) {
   ]
 }
 "#,
+    )
+    .expect("catalog should be written");
+}
+
+fn archive_name(stem: &str) -> String {
+    format!("{stem}-{}.skr", env!("CARGO_PKG_VERSION"))
+}
+
+fn generated_package(label: &str) -> (PathBuf, PathBuf) {
+    let output_root = output_root(label);
+    let output_arg = output_root.to_string_lossy().to_string();
+    let author_home = output_root.join("author-home");
+
+    let init = run_skillrun(
+        &["init", "refund", "--python", "--output", &output_arg],
+        &author_home,
+    );
+    assert!(
+        init.status.success(),
+        "init should succeed\nstderr: {}",
+        String::from_utf8_lossy(&init.stderr)
+    );
+
+    let capsule = output_root.join("refund");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd_arg], &author_home);
+    assert!(
+        manifest.status.success(),
+        "manifest should succeed\nstderr: {}",
+        String::from_utf8_lossy(&manifest.stderr)
+    );
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd_arg], &author_home);
+    assert!(
+        pack.status.success(),
+        "pack should succeed\nstderr: {}",
+        String::from_utf8_lossy(&pack.stderr)
+    );
+
+    (
+        output_root,
+        capsule.join("dist").join(archive_name("refund")),
+    )
+}
+
+fn sha256_file(path: &Path) -> String {
+    let mut file = fs::File::open(path).expect("package should be readable");
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .expect("package should be read");
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn write_file_catalog(path: &Path, source_url: &str, sha256: &str) {
+    fs::write(
+        path,
+        format!(
+            r#"{{
+  "schema_version": "team.catalog.v1",
+  "catalog_id": "acme.internal",
+  "name": "Acme AI Capabilities",
+  "updated_at": "2026-05-26T10:00:00Z",
+  "items": [
+    {{
+      "id": "refund",
+      "kind": "skillrun.skr",
+      "name": "Refund Decision",
+      "description": "Evaluate refund requests.",
+      "version": "0.1.0",
+      "source": {{
+        "type": "file",
+        "url": "{source_url}",
+        "sha256": "{sha256}"
+      }}
+    }}
+  ]
+}}
+"#
+        ),
     )
     .expect("catalog should be written");
 }
@@ -275,4 +359,163 @@ fn team_catalog_install_plan_reports_replace_for_imported_skr_entry() {
     assert_eq!(output["registry"]["enabled"], true);
     assert_eq!(output["actions"][0]["replace"], true);
     assert_eq!(output["actions"][0]["requires_confirmation"], true);
+}
+
+#[test]
+fn team_catalog_install_apply_imports_file_source_after_checksum_verification() {
+    let (root, archive_path) = generated_package("apply-import");
+    let home = root.join("consumer-home");
+    let catalog = root.join("team-catalog.json");
+    let relative_package = archive_path
+        .strip_prefix(&root)
+        .expect("archive should be under root")
+        .to_string_lossy()
+        .replace('\\', "/");
+    write_file_catalog(&catalog, &relative_package, &sha256_file(&archive_path));
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_apply.v1");
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["catalog_id"], "acme.internal");
+    assert_eq!(output["item_id"], "refund");
+    assert_eq!(output["download"]["source_type"], "file");
+    assert_eq!(output["download"]["sha256_verified"], true);
+    assert_eq!(output["import"]["schema_version"], "import.v1");
+    assert_eq!(output["import"]["id"], "refund");
+    assert_eq!(output["import"]["source_type"], "imported_skr");
+    assert_eq!(output["import"]["enabled"], false);
+    assert_eq!(output["import"]["replaced"], false);
+
+    let inventory = assert_success_json(&run_skillrun(&["consumer", "inventory", "--json"], &home));
+    assert_eq!(inventory["capsules"][0]["id"], "refund");
+    assert_eq!(inventory["capsules"][0]["enabled"], false);
+    assert_eq!(inventory["capsules"][0]["source_type"], "imported_skr");
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn team_catalog_install_apply_replace_preserves_enabled_state() {
+    let (root, archive_path) = generated_package("apply-replace");
+    let home = root.join("consumer-home");
+    let catalog = root.join("team-catalog.json");
+    let relative_package = archive_path
+        .strip_prefix(&root)
+        .expect("archive should be under root")
+        .to_string_lossy()
+        .replace('\\', "/");
+    write_file_catalog(&catalog, &relative_package, &sha256_file(&archive_path));
+
+    let first = run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    );
+    assert!(first.status.success());
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &home);
+    assert!(enable.status.success());
+
+    let replaced = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(replaced["import"]["replaced"], true);
+    assert_eq!(replaced["import"]["enabled"], true);
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn team_catalog_install_apply_rejects_checksum_mismatch_without_importing() {
+    let (root, archive_path) = generated_package("apply-checksum");
+    let home = root.join("consumer-home");
+    let catalog = root.join("team-catalog.json");
+    let relative_package = archive_path
+        .strip_prefix(&root)
+        .expect("archive should be under root")
+        .to_string_lossy()
+        .replace('\\', "/");
+    write_file_catalog(
+        &catalog,
+        &relative_package,
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    );
+
+    let output = assert_failure_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_apply.v1");
+    assert_eq!(output["ok"], false);
+    assert_eq!(output["error"]["code"], "catalog.package_checksum_mismatch");
+    let inventory = assert_success_json(&run_skillrun(&["consumer", "inventory", "--json"], &home));
+    assert!(inventory["capsules"].as_array().unwrap().is_empty());
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn team_catalog_install_apply_fails_closed_for_https_until_downloader_exists() {
+    let root = output_root("apply-https");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+
+    let output = assert_failure_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_apply.v1");
+    assert_eq!(output["ok"], false);
+    assert_eq!(
+        output["error"]["code"],
+        "catalog.source_download_unsupported"
+    );
 }
