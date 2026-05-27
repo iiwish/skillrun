@@ -16,6 +16,7 @@ use crate::registry::{self, RegistryCommand, RegistryOptions};
 use crate::router::{self, RouterCommand, RouterOptions};
 use crate::runtime::{self, RunOptions, TestOptions};
 use crate::switchboard::{self, SwitchboardCommand, SwitchboardOptions};
+use crate::team_catalog::{self, TeamCatalogCommand, TeamCatalogOptions};
 use crate::validate::{self, ValidateOptions};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -207,6 +208,39 @@ where
             Err(error) => {
                 eprintln!("error: {error}");
                 eprintln!("usage: skillrun mount <plan|apply|rollback> --client <id> [options]");
+                ExitCode::from(2)
+            }
+        },
+        Some("team") => match parse_team(args.collect()) {
+            Ok(options) => match team_catalog::run(&options) {
+                Ok(output) => {
+                    println!("{}", output.output);
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    if options.json() {
+                        match team_catalog::error_json(
+                            options.command_name(),
+                            options.schema_version(),
+                            &error,
+                        ) {
+                            Ok(output) => println!("{output}"),
+                            Err(render_error) => {
+                                eprintln!("error: {}", error.message);
+                                eprintln!(
+                                    "error: failed to render team catalog JSON error: {render_error}"
+                                );
+                            }
+                        }
+                    } else {
+                        eprintln!("error: {}", error.message);
+                    }
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {error}");
+                eprintln!("usage: skillrun team catalog <inspect|install> [options]");
                 ExitCode::from(2)
             }
         },
@@ -1191,6 +1225,103 @@ fn parse_consumer_mount_rollback(args: Vec<String>) -> Result<ConsumerCommand, S
     }))
 }
 
+fn parse_team(args: Vec<String>) -> Result<TeamCatalogOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("team requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "catalog" => parse_team_catalog(rest),
+        value => Err(format!("unknown team subcommand: {value}")),
+    }
+}
+
+fn parse_team_catalog(args: Vec<String>) -> Result<TeamCatalogOptions, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("team catalog requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    let command = match command {
+        "inspect" => parse_team_catalog_inspect(rest)?,
+        "install" => parse_team_catalog_install(rest)?,
+        value => return Err(format!("unknown team catalog subcommand: {value}")),
+    };
+    Ok(TeamCatalogOptions { command })
+}
+
+fn parse_team_catalog_inspect(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
+    let mut catalog = None;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!("unexpected team catalog inspect argument: {value}"));
+            }
+            value => {
+                if catalog.is_some() {
+                    return Err(format!("unexpected team catalog inspect argument: {value}"));
+                }
+                catalog = Some(PathBuf::from(value));
+            }
+        }
+    }
+
+    let catalog = catalog.ok_or_else(|| "team catalog inspect requires <catalog>".to_string())?;
+    Ok(TeamCatalogCommand::Inspect { catalog, json })
+}
+
+fn parse_team_catalog_install(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
+    let Some(command) = args.first().map(String::as_str) else {
+        return Err("team catalog install requires a subcommand".to_string());
+    };
+    let rest = args[1..].to_vec();
+    match command {
+        "plan" => parse_team_catalog_install_plan(rest),
+        "apply" => Err("team catalog install apply is not implemented yet".to_string()),
+        value => Err(format!("unknown team catalog install subcommand: {value}")),
+    }
+}
+
+fn parse_team_catalog_install_plan(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
+    let mut catalog = None;
+    let mut item_id = None;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!(
+                    "unexpected team catalog install plan argument: {value}"
+                ));
+            }
+            value => {
+                if catalog.is_none() {
+                    catalog = Some(PathBuf::from(value));
+                } else if item_id.is_none() {
+                    item_id = Some(value.to_string());
+                } else {
+                    return Err(format!(
+                        "unexpected team catalog install plan argument: {value}"
+                    ));
+                }
+            }
+        }
+    }
+
+    let catalog =
+        catalog.ok_or_else(|| "team catalog install plan requires <catalog>".to_string())?;
+    let item_id =
+        item_id.ok_or_else(|| "team catalog install plan requires <item-id>".to_string())?;
+    Ok(TeamCatalogCommand::InstallPlan {
+        catalog,
+        item_id,
+        json,
+    })
+}
+
 fn parse_registry(args: Vec<String>) -> Result<RegistryOptions, String> {
     let Some(command) = args.first().map(String::as_str) else {
         return Err("registry requires a subcommand".to_string());
@@ -1512,6 +1643,7 @@ MVP commands:
   import     import a .skr package into the local capsule registry
   consumer   expose headless consumer control-plane JSON
   mount      plan, apply or rollback the SkillRun Router MCP client entry
+  team       inspect team catalogs and plan .skr imports
   registry   manage local capsule inventory
   switchboard enable or disable registered capsules
   test       run the default example through the runtime contract
@@ -1542,6 +1674,8 @@ Implemented:
   mount plan --client <id> [--config <path>] [--json]
   mount apply --client claude-desktop [--config <path>] [--json]
   mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
+  team catalog inspect <catalog> [--json]
+  team catalog install plan <catalog> <item-id> [--json]
   router serve --mcp [--dry-run]
   router status [--json]
   registry add/list/inspect/remove

@@ -1,0 +1,278 @@
+use serde_json::Value;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+fn run_skillrun(args: &[&str], skillrun_home: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_skillrun"))
+        .args(args)
+        .env("SKILLRUN_HOME", skillrun_home)
+        .output()
+        .expect("skillrun should run")
+}
+
+fn output_root(name: &str) -> std::path::PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!("skillrun-team-catalog-{name}-{nonce}"))
+}
+
+fn write_catalog(path: &Path) {
+    fs::write(
+        path,
+        r#"{
+  "schema_version": "team.catalog.v1",
+  "catalog_id": "acme.internal",
+  "name": "Acme AI Capabilities",
+  "description": "Internal team catalog.",
+  "updated_at": "2026-05-26T10:00:00Z",
+  "items": [
+    {
+      "id": "refund",
+      "kind": "skillrun.skr",
+      "name": "Refund Decision",
+      "description": "Evaluate refund requests.",
+      "version": "0.1.0",
+      "publisher": {
+        "name": "Acme Operations"
+      },
+      "source": {
+        "type": "https",
+        "url": "https://example.com/refund-0.1.0.skr",
+        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      },
+      "requirements": [
+        {
+          "kind": "python",
+          "summary": "Python 3.11+"
+        }
+      ],
+      "permissions_summary": [
+        "reads provided refund input"
+      ],
+      "trust_note": "Review before enabling.",
+      "tags": ["ops", "refund"]
+    },
+    {
+      "id": "plain-skill",
+      "kind": "agent.skill",
+      "name": "Plain Skill",
+      "description": "Display-only Agent Skill.",
+      "version": "0.1.0",
+      "source": {
+        "type": "file",
+        "url": "./skills/plain"
+      }
+    }
+  ]
+}
+"#,
+    )
+    .expect("catalog should be written");
+}
+
+fn assert_success_json(output: &std::process::Output) -> Value {
+    assert!(
+        output.status.success(),
+        "expected success\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout should be JSON")
+}
+
+fn assert_failure_json(output: &std::process::Output) -> Value {
+    assert!(
+        !output.status.success(),
+        "expected failure\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    serde_json::from_slice(&output.stdout).expect("stdout should be JSON")
+}
+
+#[test]
+fn team_catalog_inspect_reports_items_without_downloading_sources() {
+    let root = output_root("inspect");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "inspect",
+            catalog.to_str().unwrap(),
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.inspect.v1");
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["catalog"]["catalog_id"], "acme.internal");
+    assert_eq!(output["catalog"]["items"], 2);
+    assert_eq!(output["items"][0]["id"], "refund");
+    assert_eq!(output["items"][0]["installable"], true);
+    assert_eq!(output["items"][0]["installed"], false);
+    assert_eq!(output["items"][1]["id"], "plain-skill");
+    assert_eq!(output["items"][1]["installable"], false);
+    assert_eq!(
+        output["items"][1]["warnings"][0]["code"],
+        "catalog.item.display_only"
+    );
+}
+
+#[test]
+fn team_catalog_install_plan_reports_import_without_downloading_package() {
+    let root = output_root("plan-import");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "plan",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_plan.v1");
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["catalog_id"], "acme.internal");
+    assert_eq!(output["item"]["id"], "refund");
+    assert_eq!(output["item"]["source_type"], "https");
+    assert_eq!(output["registry"]["installed"], false);
+    assert_eq!(output["actions"][0]["type"], "import");
+    assert_eq!(output["actions"][0]["replace"], false);
+    assert_eq!(output["warnings"][0]["code"], "trust.not_proven");
+}
+
+#[test]
+fn team_catalog_install_plan_rejects_display_only_items() {
+    let root = output_root("plan-display-only");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+
+    let output = assert_failure_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "plan",
+            catalog.to_str().unwrap(),
+            "plain-skill",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_plan.v1");
+    assert_eq!(output["ok"], false);
+    assert_eq!(output["error"]["code"], "catalog.item_not_installable");
+}
+
+#[test]
+fn team_catalog_install_plan_fails_closed_on_local_path_registry_conflict() {
+    let root = output_root("plan-conflict");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        home.join("registry.json"),
+        r#"{
+  "version": 1,
+  "capsules": [
+    {
+      "id": "refund",
+      "path": "/tmp/refund-local",
+      "source_type": "local_path",
+      "enabled": false,
+      "registered_at": "2026-05-26T10:00:00Z"
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+
+    let output = assert_failure_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "plan",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["schema_version"], "team.catalog.install_plan.v1");
+    assert_eq!(output["ok"], false);
+    assert_eq!(output["error"]["code"], "catalog.registry_conflict");
+}
+
+#[test]
+fn team_catalog_install_plan_reports_replace_for_imported_skr_entry() {
+    let root = output_root("plan-replace");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        home.join("registry.json"),
+        r#"{
+  "version": 1,
+  "capsules": [
+    {
+      "id": "refund",
+      "path": "/tmp/refund-imported",
+      "source_type": "imported_skr",
+      "enabled": true,
+      "registered_at": "2026-05-26T10:00:00Z"
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "plan",
+            catalog.to_str().unwrap(),
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["registry"]["installed"], true);
+    assert_eq!(output["registry"]["source_type"], "imported_skr");
+    assert_eq!(output["registry"]["enabled"], true);
+    assert_eq!(output["actions"][0]["replace"], true);
+    assert_eq!(output["actions"][0]["requires_confirmation"], true);
+}

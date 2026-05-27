@@ -25,6 +25,7 @@ mod run_record;
 mod runtime;
 mod schemas;
 mod switchboard;
+mod team_catalog;
 mod validate;
 
 fn main() -> ExitCode {
