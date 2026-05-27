@@ -1,0 +1,146 @@
+{
+  "schema_version": "skillrun.public_site.v1",
+  "generated_from": {
+    "repo": "https://github.com/iiwish/skillrun",
+    "source_commit": "d4dc521",
+    "updated_at": "2026-05-27"
+  },
+  "product": {
+    "name": "SkillRun",
+    "repo_url": "https://github.com/iiwish/skillrun",
+    "positioning": "SkillRun is the runtime / contract / evidence layer for executable Agent Skills. Agent Skills are the authoring and discovery layer; MCP is an invocation surface."
+  },
+  "release": {
+    "current_development_line": "v0.6.4",
+    "latest_public_release": "v0.6.4",
+    "version_command_output": "skillrun 0.6.4",
+    "release_url": "https://github.com/iiwish/skillrun/releases/tag/v0.6.4",
+    "latest_download_base_url": "https://github.com/iiwish/skillrun/releases/latest/download",
+    "installers": {
+      "shell": {
+        "label": "macOS / Linux",
+        "command": "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.sh | sh\nskillrun --version"
+      },
+      "powershell": {
+        "label": "Windows PowerShell",
+        "command": "powershell -ExecutionPolicy Bypass -c \"irm https://github.com/iiwish/skillrun/releases/latest/download/skillrun-installer.ps1 | iex\"\nskillrun --version"
+      }
+    },
+    "assets": [
+      {
+        "name": "sha256.sum",
+        "kind": "checksum",
+        "platform": "all",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/sha256.sum",
+        "digest": "sha256:247aa83241446cb1e78074d5a89575478b95dfd2659730f4e3c91b50f25dc1e0"
+      },
+      {
+        "name": "skillrun-installer.sh",
+        "kind": "installer",
+        "platform": "macOS / Linux",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-installer.sh",
+        "digest": "sha256:eec2c7816744836275b5b9f05bff8696f6512d7ff01909882303dbbf224c43cd"
+      },
+      {
+        "name": "skillrun-installer.ps1",
+        "kind": "installer",
+        "platform": "Windows",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-installer.ps1",
+        "digest": "sha256:8dab2d8c966f23768d7290aa06745ce6b9af61888653fc8f575e116613fa0acc"
+      },
+      {
+        "name": "skillrun-aarch64-apple-darwin.tar.xz",
+        "kind": "archive",
+        "platform": "macOS arm64",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-aarch64-apple-darwin.tar.xz",
+        "digest": "sha256:36ae30cd50a6faf62a9ff0e45060cd7e47d04a4b2251fd9e16bc1e1498c5b143"
+      },
+      {
+        "name": "skillrun-x86_64-apple-darwin.tar.xz",
+        "kind": "archive",
+        "platform": "macOS x64",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-apple-darwin.tar.xz",
+        "digest": "sha256:9290c14b515077e320fcf9ebff45dd1ec33421edcc381b9c4cfd2981dca29ade"
+      },
+      {
+        "name": "skillrun-aarch64-unknown-linux-gnu.tar.xz",
+        "kind": "archive",
+        "platform": "Linux arm64",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-aarch64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:ec9d6477621222d9a44fe68217d3cc7af76bb9bce5709fbeab0157b1d0dff0ad"
+      },
+      {
+        "name": "skillrun-x86_64-unknown-linux-gnu.tar.xz",
+        "kind": "archive",
+        "platform": "Linux x64",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:2c2e565ca0fc514d94247856877208c89eb31a11bb645ce04728df007d709d70"
+      },
+      {
+        "name": "skillrun-x86_64-pc-windows-msvc.zip",
+        "kind": "archive",
+        "platform": "Windows x64",
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.4/skillrun-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:0b56cd3fcd5a2965eacd3fb3cf8c02ea416a77b5dc280bcfd798772a219a99a0"
+      }
+    ],
+    "current_capabilities": [
+      "Native installers for macOS, Linux, and Windows",
+      "Local .skr import, replace, registry, and switchboard",
+      "Router status, dry-run, and MCP mount plan/apply",
+      "Run evidence filters and local metadata index",
+      "Artifact containment",
+      "Dependency awareness",
+      "Structured error envelopes",
+      "Source and Manifest validation"
+    ]
+  },
+  "quickstart": {
+    "author_commands": [
+      "skillrun init refund --python --output tmp/quickstart",
+      "skillrun manifest --cwd tmp/quickstart/refund",
+      "skillrun check --cwd tmp/quickstart/refund",
+      "skillrun validate --cwd tmp/quickstart/refund",
+      "skillrun pack --cwd tmp/quickstart/refund"
+    ],
+    "consumer_commands": [
+      "skillrun import <package.skr> --id refund --json",
+      "skillrun consumer inventory --json",
+      "skillrun switchboard enable refund",
+      "skillrun consumer exposure --json"
+    ],
+    "router_commands": [
+      "skillrun router status --json",
+      "skillrun mount plan --client claude-desktop --json",
+      "skillrun mount apply --client claude-desktop --json"
+    ]
+  },
+  "trust_boundaries": {
+    "current": [
+      "Consumer Mode does not dynamically import untrusted source code for metadata extraction.",
+      "SkillRun fails closed if Manifest is missing, stale, or source hashes mismatch.",
+      "Core only injects business env variables declared in the Manifest.",
+      "stdout/stderr are treated only as logs; structured results must come from the output/error envelope.",
+      "Artifact paths are bound to the run-local artifact directory.",
+      ".skr is a source + Manifest archive, not a secure install format.",
+      "switchboard enabled=true is exposure intent, not proof of trust or sandboxing.",
+      "Runs list and local indexes stay summary-only by default; input, envelope bodies, stdout, and stderr are not copied into list output.",
+      "Structured errors provide recoverable behavior suggestions for Agents."
+    ],
+    "not_promised": [
+      "Full OS sandboxing or filesystem jails.",
+      "Network egress isolation or malicious code detection.",
+      "Automatic installation of Python, Node, npm, or pip packages.",
+      "Public marketplace trust, reproducible runtime images, or signed package trust."
+    ]
+  },
+  "team_distribution": {
+    "status": "development_line",
+    "summary": "Team catalog inspect, install plan, and guarded install apply are available in the development line for Desktop Team Library. Team distribution is not a public marketplace.",
+    "boundaries": [
+      "Core verifies checksums and imports into the local registry.",
+      "Enable and mount remain explicit user choices.",
+      "No downloader, dependency installation, action execution, MCP server start, trust decision, or sandbox promise is implied by catalog metadata."
+    ]
+  }
+}
