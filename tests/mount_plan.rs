@@ -1,6 +1,6 @@
 use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -9,6 +9,23 @@ fn run_skillrun(args: &[&str]) -> std::process::Output {
         .args(args)
         .output()
         .expect("skillrun binary should run")
+}
+
+fn run_skillrun_in_env(
+    args: &[&str],
+    current_dir: &Path,
+    envs: &[(&str, &Path)],
+    remove_envs: &[&str],
+) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_skillrun"));
+    command.args(args).current_dir(current_dir);
+    for key in remove_envs {
+        command.env_remove(key);
+    }
+    for (key, value) in envs {
+        command.env(key, value);
+    }
+    command.output().expect("skillrun binary should run")
 }
 
 fn temp_dir(label: &str) -> PathBuf {
@@ -32,6 +49,135 @@ fn assert_success_json(output: &std::process::Output) -> Value {
 fn json_file(path: &PathBuf) -> Value {
     serde_json::from_str(&fs::read_to_string(path).expect("json file should be readable"))
         .expect("json file should parse")
+}
+
+fn expected_claude_default_config(home: &Path) -> PathBuf {
+    if cfg!(target_os = "macos") {
+        home.join("Library")
+            .join("Application Support")
+            .join("Claude")
+            .join("claude_desktop_config.json")
+    } else {
+        home.join(".config")
+            .join("Claude")
+            .join("claude_desktop_config.json")
+    }
+}
+
+#[test]
+fn claude_desktop_default_mount_path_uses_home_location_not_cwd() {
+    let root = temp_dir("mount-claude-default-home");
+    let cwd = root.join("cwd");
+    let home = root.join("home");
+    fs::create_dir_all(&cwd).expect("test cwd should be created");
+    fs::create_dir_all(&home).expect("test home should be created");
+    let expected_config = expected_claude_default_config(&home);
+    let expected_path = expected_config.to_string_lossy().replace('\\', "/");
+
+    let planned = assert_success_json(&run_skillrun_in_env(
+        &[
+            "consumer",
+            "mount",
+            "plan",
+            "--client",
+            "claude-desktop",
+            "--json",
+        ],
+        &cwd,
+        &[("HOME", &home)],
+        &["APPDATA", "USERPROFILE", "XDG_CONFIG_HOME"],
+    ));
+    assert_eq!(planned["config"]["path_source"], "default");
+    assert_eq!(planned["config"]["path"], expected_path);
+    assert!(
+        !cwd.join("claude_desktop_config.json").exists(),
+        "mount plan must not use or create a cwd-relative Claude config path"
+    );
+
+    let applied = assert_success_json(&run_skillrun_in_env(
+        &[
+            "consumer",
+            "mount",
+            "apply",
+            "--client",
+            "claude-desktop",
+            "--json",
+        ],
+        &cwd,
+        &[("HOME", &home)],
+        &["APPDATA", "USERPROFILE", "XDG_CONFIG_HOME"],
+    ));
+    assert_eq!(applied["applied"], true);
+    assert_eq!(applied["config"]["path"], expected_path);
+    assert!(
+        expected_config.is_file(),
+        "mount apply should write the resolved home config path"
+    );
+    assert!(
+        !cwd.join("claude_desktop_config.json").exists(),
+        "mount apply must not write a cwd-relative Claude config path"
+    );
+
+    let backup_path = applied["backup"]["path"]
+        .as_str()
+        .expect("backup path should be present");
+    let rolled_back = assert_success_json(&run_skillrun_in_env(
+        &[
+            "consumer",
+            "mount",
+            "rollback",
+            "--client",
+            "claude-desktop",
+            "--backup",
+            backup_path,
+            "--json",
+        ],
+        &cwd,
+        &[("HOME", &home)],
+        &["APPDATA", "USERPROFILE", "XDG_CONFIG_HOME"],
+    ));
+    assert_eq!(rolled_back["rolled_back"], true);
+    assert!(
+        !expected_config.exists(),
+        "rollback should remove a config file created only for SkillRun"
+    );
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn claude_desktop_default_mount_path_ignores_empty_appdata() {
+    let root = temp_dir("mount-claude-empty-appdata");
+    let cwd = root.join("cwd");
+    let home = root.join("home");
+    let empty_root = root.join("empty-env");
+    fs::create_dir_all(&cwd).expect("test cwd should be created");
+    fs::create_dir_all(&home).expect("test home should be created");
+    fs::create_dir_all(&empty_root).expect("empty env root should be created");
+    let expected_config = expected_claude_default_config(&home);
+    let expected_path = expected_config.to_string_lossy().replace('\\', "/");
+
+    let planned = assert_success_json(&run_skillrun_in_env(
+        &[
+            "consumer",
+            "mount",
+            "plan",
+            "--client",
+            "claude-desktop",
+            "--json",
+        ],
+        &cwd,
+        &[("HOME", &home), ("APPDATA", Path::new(""))],
+        &["USERPROFILE", "XDG_CONFIG_HOME"],
+    ));
+
+    assert_eq!(planned["config"]["path"], expected_path);
+    assert!(
+        !cwd.join("Claude").exists(),
+        "empty APPDATA must not become a cwd-relative Claude config path"
+    );
+
+    fs::remove_dir_all(root).ok();
 }
 
 #[test]

@@ -234,7 +234,29 @@ fn build_plan(options: &MountPlanOptions) -> MountPlanView {
     } else {
         "default"
     };
-    let config_path = selected_config_path(&options.config, &spec);
+    let Some(config_path) = selected_config_path(&options.config, &spec) else {
+        return MountPlanView {
+            command: "consumer mount plan",
+            schema_version: "consumer.mount_plan.v1",
+            client: ClientView {
+                id: spec.id.to_string(),
+                name: spec.name.to_string(),
+                supported: true,
+                detected: false,
+            },
+            operation: "install_or_update_router",
+            config: None,
+            backup: None,
+            router,
+            changes: Vec::new(),
+            warnings: vec![WarningView {
+                code: "missing-default-config",
+                message:
+                    "client config path could not be resolved; pass --config <path> explicitly"
+                        .to_string(),
+            }],
+        };
+    };
     let exists = config_path.is_file();
     let mut warnings = Vec::new();
     let (parseable, changes) = plan_changes(&config_path, exists, &router, &mut warnings);
@@ -289,11 +311,16 @@ fn build_apply(options: &MountApplyOptions) -> Result<MountApplyView, String> {
     };
     let plan = build_plan(&plan_options);
     let Some(config) = plan.config.as_ref() else {
-        return Ok(apply_warning(
-            spec.id,
-            "unsupported-client",
-            "client is not supported by mount apply",
-        ));
+        return Ok(MountApplyView {
+            command: "consumer mount apply",
+            schema_version: "consumer.mount_apply.v1",
+            client: plan.client,
+            config: None,
+            backup: None,
+            applied: false,
+            changes: Vec::new(),
+            warnings: plan.warnings,
+        });
     };
     if !config.parseable {
         return Ok(MountApplyView {
@@ -338,7 +365,18 @@ fn build_apply(options: &MountApplyOptions) -> Result<MountApplyView, String> {
         });
     }
 
-    let config_path = selected_config_path(&options.config, &spec);
+    let Some(config_path) = selected_config_path(&options.config, &spec) else {
+        return Ok(MountApplyView {
+            command: "consumer mount apply",
+            schema_version: "consumer.mount_apply.v1",
+            client: plan.client,
+            config: None,
+            backup: None,
+            applied: false,
+            changes: Vec::new(),
+            warnings: plan.warnings,
+        });
+    };
     let original_exists = config_path.is_file();
     let original_config = if original_exists {
         Some(read_json(&config_path)?)
