@@ -40,13 +40,30 @@ release workflow 在推送 `vX.Y.Z` 形式 tag 时运行，并将 artifacts 上�
 - `LICENSE`
 - `README.md`
 
+## 用户下载选择
+
+Release 页面应把 installer 作为普通用户的主入口，把 archive 作为手动安装、离线安装、包管理器维护和 CI 固定版本的高级入口。
+
+| 场景 | 推荐 asset |
+| --- | --- |
+| macOS / Linux 普通安装或更新 | `skillrun-installer.sh` |
+| Windows 普通安装或更新 | `skillrun-installer.ps1` |
+| macOS Apple Silicon 手动安装 | `skillrun-aarch64-apple-darwin.tar.xz` |
+| macOS Intel 手动安装 | `skillrun-x86_64-apple-darwin.tar.xz` |
+| Linux arm64 手动安装 | `skillrun-aarch64-unknown-linux-gnu.tar.xz` |
+| Linux x64 手动安装 | `skillrun-x86_64-unknown-linux-gnu.tar.xz` |
+| Windows x64 手动安装 | `skillrun-x86_64-pc-windows-msvc.zip` |
+| archive checksum 校验 | `sha256.sum` |
+
+GitHub Release 页面会自动显示 `Source code (zip)` 和 `Source code (tar.gz)`。这些是 GitHub 生成的源码快照，不属于 SkillRun 原生 CLI binary 分发入口，也不应在安装文档中作为普通用户下载路径推荐。
+
 ## Checksum 产物
 
 每次 release 生成：
 
 - `sha256.sum`：汇总 checksum。
 
-用户可用 `sha256sum -c sha256.sum` 或平台等价工具校验下载文件。文档和 release notes 不应把 checksum 描述为代码签名或 notarization。
+`sha256.sum` 当前只覆盖平台 archive，不覆盖 installer。用户可用 `sha256sum -c sha256.sum` 或平台等价工具校验已下载的 archive；installer 的完整性可对照 GitHub Release asset digest。签名/provenance 机制尚未建立，文档和 release notes 不应把 checksum 描述为代码签名、publisher identity、notarization 或 sandbox 证明。
 
 GitHub Release 页面只展示面向用户的 assets：两个 installer、平台 archives 和 `sha256.sum`。cargo-dist 生成的内部 manifest、单个 archive `.sha256` 文件和重复 source tarball 会在上传前清理；GitHub 自动附带的 `Source code (zip)` 与 `Source code (tar.gz)` 保留。
 
