@@ -79,6 +79,17 @@ skillrun --version
 
 GitHub Release 同时提供按平台命名的 archive 与 checksum，例如 `skillrun-x86_64-unknown-linux-gnu.tar.xz` 和 `sha256.sum`。完整分发边界见 [原生二进制分发](docs/native-distribution.md)。
 
+普通安装优先选择对应系统的 installer：
+
+| 用户路径 | Release asset |
+| --- | --- |
+| macOS / Linux 安装或更新 | `skillrun-installer.sh` |
+| Windows 安装或更新 | `skillrun-installer.ps1` |
+| 手动/离线安装、包管理器维护或 CI 固定版本 | 对应平台 archive |
+| archive checksum 校验 | `sha256.sum` |
+
+GitHub Release 页面也可能显示 GitHub 自动生成的 `Source code` 下载项。它们是给开发者看的仓库源码快照，不是可直接运行的 SkillRun CLI binary。
+
 当前已经可用：
 
 - Python `action.py` 稳定 adapter target。
