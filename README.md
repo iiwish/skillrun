@@ -328,6 +328,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 
 The runnable examples are intentionally narrow. They prove SkillRun boundaries without turning the project into a general API wrapper.
 
+- [`examples/README.md`](examples/README.md) is the single examples index. Optional external-tool examples also live under `examples/` so the repository does not split sample capsules across duplicate top-level directories.
 - `examples/meeting_action_brief`: meeting notes to structured decisions, action items, risks, open questions, follow-up copy, markdown artifact, and `.skr` packaging.
 - `examples/refund`: refund decision with policy limits, approval boundaries, typed inputs, structured `PolicyViolation`, artifacts, run records, MCP exposure, and `.skr` packaging.
 - `examples/wecom_team_notice`: local notification workflow with dry-run preview, approval boundary, declared `WECOM_WEBHOOK_URL`, structured `DependencyError`, and markdown artifacts.
@@ -335,12 +336,7 @@ The runnable examples are intentionally narrow. They prove SkillRun boundaries w
 - `examples/bounded_file_patcher`: exact text replacement inside declared directories with patch artifacts.
 - `examples/readonly_diagnostics_runner`: named allowlist diagnostics without arbitrary shell strings.
 - `examples/command_hello`: Level 0 command adapter contract without a SkillRun SDK. Also serves as a Core test fixture.
-
-## Demo Capsules
-
-The `demos/` directory contains **demonstration capsules** that show how SkillRun wraps external CLI tools (e.g., `lark-cli`). These are **not part of Core CI** and may require external dependencies. See [`demos/README.md`](demos/README.md) for the full list and rules.
-
-- `demos/lark_notice_sender`: Feishu/Lark message sender with chat_id allowlist, dry-run default, sensitive word checks, and audit artifacts.
+- `examples/lark_notice_sender`: optional external-tool example for Feishu/Lark messages through `lark-cli`, with chat_id allowlist, dry-run default, sensitive content checks, and audit artifacts. It is not part of mandatory Core CI and may require external dependencies.
 
 Docs-level business patterns remain part of the narrative without expanding current runtime scope: Support Triage, Access Request Approval, and Vendor Risk Review show how a portable Agent skill can carry stable routing labels, approval boundaries, and artifact-backed review evidence.
 
