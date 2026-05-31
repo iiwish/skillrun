@@ -333,7 +333,13 @@ The runnable examples are intentionally narrow. They prove SkillRun boundaries w
 - `examples/commit_message_gate`: Conventional Commits validation without auto-staging files.
 - `examples/bounded_file_patcher`: exact text replacement inside declared directories with patch artifacts.
 - `examples/readonly_diagnostics_runner`: named allowlist diagnostics without arbitrary shell strings.
-- `examples/command_hello`: Level 0 command adapter contract without a SkillRun SDK.
+- `examples/command_hello`: Level 0 command adapter contract without a SkillRun SDK. Also serves as a Core test fixture.
+
+## Demo Capsules
+
+The `demos/` directory contains **demonstration capsules** that show how SkillRun wraps external CLI tools (e.g., `lark-cli`). These are **not part of Core CI** and may require external dependencies. See [`demos/README.md`](demos/README.md) for the full list and rules.
+
+- `demos/lark_notice_sender`: Feishu/Lark message sender with chat_id allowlist, dry-run default, sensitive word checks, and audit artifacts.
 
 Docs-level business patterns remain part of the narrative without expanding current runtime scope: Support Triage, Access Request Approval, and Vendor Risk Review show how a portable Agent skill can carry stable routing labels, approval boundaries, and artifact-backed review evidence.
 

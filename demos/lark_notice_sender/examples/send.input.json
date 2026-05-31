@@ -1,0 +1,6 @@
+{
+  "chat_id": "oc_demo_chat",
+  "content": "Team standup starts in 10 minutes.",
+  "urgency": "normal",
+  "dry_run": false
+}

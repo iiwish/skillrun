@@ -1,0 +1,19 @@
+{
+  "runtime": {
+    "adapter": "node",
+    "entrypoint": "action.mjs",
+    "timeout": "30s"
+  },
+  "permissions": {
+    "files": {
+      "read": [],
+      "write": [".skillrun/runs/**"]
+    },
+    "network": {
+      "outbound": ["open.feishu.cn", "open.larksuite.com"]
+    },
+    "env": {
+      "read": ["LARK_NOTICE_ALLOWLIST"]
+    }
+  }
+}

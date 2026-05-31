@@ -118,10 +118,21 @@ Move agent safety rules out of fragile prompts and into testable Skill Contracts
 
 官方参考胶囊不应该被称为 marketplace 或 store。v0.4.2 使用 **Official Example Capsules** 或 **Capsule Gallery**。
 
-第一批参考胶囊应优先证明 SkillRun 的核心，而不是证明它能包一切：
+### Reference Capsules (`examples/`)
+
+Reference capsules 是 Core 的测试 fixture，必须和 Rust Core 一起 CI 通过。它们优先证明 SkillRun 的核心，而不是证明它能包一切：
 
 - `commit_message_gate`：把提交规范变成 preflight。
 - `bounded_file_patcher`：把文件修改边界变成精确 patch contract。
 - `readonly_diagnostics_runner`：把高风险 shell 需求缩小成 allowlisted diagnostics。
+- `command_hello`：Level 0 command adapter 最小路径，同时作为 Core 测试 fixture。
 
 这些示例展示的是 Manifest-bound contracts，不是完整安全平台。
+
+### Demo Capsules (`demos/`)
+
+Demo capsules 展示"外部 CLI 如何被 SkillRun 化"，**不参与 Core CI**，可能依赖外部工具。它们用来演示和验证消费者闭环，而不是作为测试基础设施：
+
+- `lark_notice_sender`：证明飞书 CLI 可以被约束成 allowlist + dry-run + 敏感词检查的单动作 capsule。
+
+Demo capsules 的数量应硬上限为 6。维护成本超过价值的 demo 应标记为 deprecated。
