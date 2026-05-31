@@ -1,0 +1,6 @@
+{
+  "meeting_title": "Weekly Launch Review",
+  "notes": "Decision: keep the launch scoped to local Desktop import and Team Library install.\nAction: @Mina will prepare the release checklist by this week.\nAction: owner: Chen; due: 2026-06-05; review trust wording in the onboarding copy.\nRisk: onboarding copy could overstate sandbox or publisher identity guarantees.\nOpen question: do we need a separate support note for users without Python 3.13?",
+  "audience": "leadership",
+  "follow_up_style": "executive"
+}

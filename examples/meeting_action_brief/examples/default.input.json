@@ -1,0 +1,6 @@
+{
+  "meeting_title": "Desktop Beta Readiness",
+  "notes": "- Decision: ship the Desktop beta after the import and Team Library paths pass manual smoke.\n- Action: @Ada will verify the import drawer with a local .skr by 2026-06-03.\n- Action: owner: Ben; due: next week; prepare a short troubleshooting note for missing Python dependencies.\n- Risk: users may confuse checksum verification with publisher trust.\n- Question: should the first-run guide prefer Team Library catalog import or single .skr import?",
+  "audience": "team",
+  "follow_up_style": "concise"
+}

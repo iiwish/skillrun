@@ -13,13 +13,52 @@ SkillRun 的业务价值不是“把 Python 函数暴露给 Agent”。它证明
 
 > 一份业务 SOP 可以和一个可执行 Action 绑定成可检查、可测试、可运行、可分发的 Skill Capsule。
 
-本文件列出几个经典业务示例，用来解释 SkillRun 适合什么场景。v0.1 MVP 只要求完整实现 `refund`；v0.4.1 增加 `wecom_team_notice` 作为第一个更贴近日常工作流的正式可运行示例；v0.4.2 增加三个 official reference capsules，用来展示通用 preflight 模式。换句话说：v0.1 MVP only implements the refund capsule；v0.4.1 adds an official WeCom team notice capsule without expanding SkillRun into a WeCom adapter；v0.4.2 adds reference capsules without turning SkillRun into a registry, sandbox or shell runner。
+本文件列出几个经典业务示例，用来解释 SkillRun 适合什么场景。`meeting_action_brief` 是当前 product hero：它面向大多数知识工作者，适合 Desktop 首次手测和官网 quickstart；`refund` 保留为 contract hero：它更强地证明政策边界、审批和审计。v0.4.1 增加 `wecom_team_notice` 作为第一个更贴近日常工作流的正式可运行示例；v0.4.2 增加三个 official reference capsules，用来展示通用 preflight 模式。换句话说：meeting action brief is the adoption hero；refund remains the policy-boundary hero；v0.4.1 adds an official WeCom team notice capsule without expanding SkillRun into a WeCom adapter；v0.4.2 adds reference capsules without turning SkillRun into a registry, sandbox or shell runner。
 
 ---
 
-## 2. B001: Refund Decision
+## 2. B001: Meeting Action Brief
 
-**状态**：v0.1 hero example，必须完整实现。
+**状态**：当前 product hero example，适合 Desktop / Team Library 首次体验。
+
+### 业务问题
+
+几乎所有知识工作者都会把会议 notes、转写片段或手写 bullet 交给 Agent，让它整理下一步。但如果只靠 prompt，Agent 容易把 owner、due date、decision 和 risk 混在一起，甚至脑补没有出现的负责人或截止时间。
+
+### SkillRun 价值
+
+SkillRun 把“会议后 follow-up SOP”变成可运行合同：输入有 schema，preflight 拒绝 secrets 和过空 notes，输出是稳定字段，artifact 是可复制的 markdown brief，run record 可以回看当时生成的行动项和风险。
+
+### Capsule 输入
+
+- `meeting_title`
+- `notes`
+- `audience`: `self`、`team`、`leadership`、`customer`
+- `follow_up_style`: `concise`、`detailed`、`executive`
+
+### Capsule 输出
+
+- `summary`
+- `decisions`
+- `action_items`: task、owner、due、confidence
+- `risks`
+- `open_questions`
+- `follow_up_message`
+- artifact: markdown action brief
+
+### 必须证明
+
+- 默认输入不需要外部服务、API key 或网络。
+- owner / due 缺失时标记 TBD，不编造。
+- 疑似 secret、token、password、private key 或 webhook URL 返回 `PolicyViolation`。
+- 生成的 markdown artifact 可直接复制到团队 update。
+- `.skr` 可以被 Desktop import、Team Library install、Router expose，并产生 run evidence。
+
+---
+
+## 3. B002: Refund Decision
+
+**状态**：contract / policy-boundary hero example，保留完整实现。
 
 ### 业务问题
 
@@ -55,7 +94,7 @@ SkillRun 把退款 SOP、typed input/output、preflight、structured error、run
 
 ---
 
-## 3. B002: Support Triage
+## 4. B003: Support Triage
 
 **状态**：v0.1 docs-level example。
 
@@ -89,7 +128,7 @@ SkillRun 可以把客服 SOP 编译进 tool description、schema 和 preflight�
 
 ---
 
-## 4. B003: Access Request Approval
+## 5. B004: Access Request Approval
 
 **状态**：v0.1 docs-level example。
 
@@ -124,7 +163,7 @@ SkillRun 用 preflight 把审批边界变成硬约束：没有 approval id、tic
 
 ---
 
-## 5. B004: Vendor Risk Review
+## 6. B005: Vendor Risk Review
 
 **状态**：v0.1 docs-level example。
 
@@ -160,15 +199,15 @@ SkillRun 可以让 Action 产出结构化风险结论和 markdown/pdf artifact�
 
 ---
 
-## 6. v0.1 范围边界
+## 7. v0.1 范围边界
 
-- `refund` 必须实现为完整可运行 capsule。
+- `refund` 在 v0.1 必须实现为完整可运行 capsule；当前 product hero 已前移到 `meeting_action_brief`。
 - `support_triage`、`access_request_approval`、`vendor_risk_review` 只作为 README/docs 级示例。
 - 这些业务示例不能要求额外 runtime scope：除 v0.3 已定义的 JS Action Alpha (`action.mjs`) 之外，不引入 Node/TypeScript 工具链、OpenAPI wrapper、HTTP server、schedule/workflow 或 marketplace scope。
 
 ---
 
-## 7. B005: WeCom Team Notice
+## 8. B006: WeCom Team Notice
 
 **状态**：v0.4.1 official runnable example。
 
@@ -210,7 +249,7 @@ SkillRun 把“团队通知发布 SOP”封装成一个 Skill Capsule：Agent �
 
 ---
 
-## 8. B006: Commit Message Gate
+## 9. B007: Commit Message Gate
 
 **状态**：v0.4.2 official reference capsule。
 
@@ -243,7 +282,7 @@ SkillRun 把 Conventional Commits 规则放进 `preflight`，让提交规范成�
 
 ---
 
-## 9. B007: Bounded File Patcher
+## 10. B008: Bounded File Patcher
 
 **状态**：v0.4.2 official reference capsule。
 
@@ -277,7 +316,7 @@ SkillRun 用 schema 和 preflight 把文件修改约束变成硬边界：只允�
 
 ---
 
-## 10. B008: Read-only Diagnostics Runner
+## 11. B009: Read-only Diagnostics Runner
 
 **状态**：v0.4.2 official reference capsule。
 
@@ -312,7 +351,7 @@ SkillRun 不接受任意 shell 字符串，而是把诊断动作枚举进 schema
 
 ---
 
-## 11. B009: Command Hello
+## 12. B010: Command Hello
 
 **状态**：v0.5.0 Level 0 command adapter reference capsule。
 

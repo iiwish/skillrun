@@ -76,7 +76,84 @@ fn unpack_archive(path: &Path, target: &Path) {
 }
 
 #[test]
-fn refund_hero_example_proves_business_value_end_to_end() {
+fn meeting_action_brief_is_the_product_hero_example() {
+    let output_root = temp_dir("business-meeting-action-brief");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/meeting_action_brief");
+    let capsule = output_root.join("meeting_action_brief");
+    copy_dir(&source, &capsule);
+    let cwd = capsule.to_string_lossy().to_string();
+
+    let manifest = run_skillrun(&["manifest", "--cwd", &cwd]);
+    assert_success(&manifest, "meeting action brief manifest");
+
+    let inspect = run_skillrun(&["inspect", "--cwd", &cwd]);
+    let inspect_stdout = assert_success(&inspect, "meeting action brief inspect");
+    assert!(inspect_stdout.contains("MCP tool: meeting_action_brief"));
+
+    let test = run_skillrun(&["test", "--cwd", &cwd]);
+    let test_stdout = assert_success(&test, "meeting action brief test");
+    let test_envelope: Value = serde_json::from_str(&test_stdout).expect("test JSON");
+    assert_eq!(test_envelope["ok"], true);
+    assert_eq!(
+        test_envelope["output"]["brief_title"],
+        "Desktop Beta Readiness"
+    );
+    assert_eq!(test_envelope["output"]["action_items"][0]["owner"], "Ada");
+    assert_eq!(test_envelope["artifacts"][0]["kind"], "markdown");
+
+    let executive = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/executive.input.json",
+    ]);
+    let executive_stdout = assert_success(&executive, "meeting action brief executive");
+    let executive_envelope: Value =
+        serde_json::from_str(&executive_stdout).expect("executive JSON");
+    assert_eq!(
+        executive_envelope["output"]["action_items"][1]["owner"],
+        "Chen"
+    );
+    assert_eq!(
+        executive_envelope["output"]["action_items"][1]["due"],
+        "2026-06-05"
+    );
+
+    let secret = run_skillrun(&[
+        "run",
+        "--cwd",
+        &cwd,
+        "--input",
+        "examples/secret.input.json",
+    ]);
+    let secret_envelope = error_envelope(&secret, "PolicyViolation");
+    assert!(secret_envelope["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("secret"));
+
+    let serve = run_skillrun(&["serve", "--mcp", "--cwd", &cwd, "--dry-run"]);
+    let serve_stdout = assert_success(&serve, "meeting action brief serve dry-run");
+    let contract: Value = serde_json::from_str(&serve_stdout).expect("MCP JSON");
+    assert_eq!(contract["tools"][0]["name"], "meeting_action_brief");
+    assert!(contract["resources"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Meeting Action Brief"));
+
+    let pack = run_skillrun(&["pack", "--cwd", &cwd]);
+    assert_success(&pack, "meeting action brief pack");
+    assert!(capsule
+        .join("dist")
+        .join(archive_name("meeting_action_brief"))
+        .is_file());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn refund_contract_hero_example_proves_policy_boundaries_end_to_end() {
     let output_root = temp_dir("business-refund");
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/refund");
     let capsule = output_root.join("refund");
@@ -156,10 +233,13 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
     let cargo_toml = fs::read_to_string("Cargo.toml").expect("Cargo.toml readable");
 
     for expected in [
-        "B001: Refund Decision",
-        "B002: Support Triage",
-        "B003: Access Request Approval",
-        "B004: Vendor Risk Review",
+        "B001: Meeting Action Brief",
+        "B002: Refund Decision",
+        "B003: Support Triage",
+        "B004: Access Request Approval",
+        "B005: Vendor Risk Review",
+        "product hero",
+        "contract hero",
         "docs-level example",
         "does not vendor dependencies",
     ] {
@@ -169,10 +249,9 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
         );
     }
 
-    assert!(
-        docs.contains("v0.1 MVP only implements the refund capsule")
-            || docs.contains("v0.1 MVP 鍙姹傚畬鏁村疄鐜?`refund`")
-    );
+    assert!(docs.contains("meeting action brief is the adoption hero"));
+    assert!(docs.contains("refund remains the policy-boundary hero"));
+    assert!(readme.contains("meeting_action_brief"));
     assert!(readme.contains("Support Triage"));
     assert!(readme.contains("Access Request Approval"));
     assert!(readme.contains("Vendor Risk Review"));
