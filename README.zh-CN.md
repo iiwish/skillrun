@@ -328,6 +328,7 @@ SkillRun 同时存在几类版本：
 
 可运行示例刻意保持收敛，用来证明 SkillRun 的边界，而不是把项目变成通用 API wrapper。
 
+- [`examples/README.md`](examples/README.md) 是唯一的示例索引。需要外部 CLI 的可选示例也放在 `examples/` 下，避免仓库出现两个顶层示例目录。
 - `examples/meeting_action_brief`：把会议 notes 变成结构化决策、行动项、风险、待确认问题、follow-up 文案、markdown artifact 和 `.skr` package。
 - `examples/refund`：退款决策，包含政策限额、审批边界、类型化输入、结构化 `PolicyViolation`、artifact、run record、MCP 暴露和 `.skr` package。
 - `examples/wecom_team_notice`：本地通知工作流，包含 dry-run preview、审批边界、声明式 `WECOM_WEBHOOK_URL`、结构化 `DependencyError` 和 markdown artifact。
@@ -335,12 +336,7 @@ SkillRun 同时存在几类版本：
 - `examples/bounded_file_patcher`：在声明目录内执行精确文本替换，并记录 patch artifact。
 - `examples/readonly_diagnostics_runner`：只运行命名 allowlist 诊断，不接受任意 shell 字符串。
 - `examples/command_hello`：Level 0 command adapter contract，不依赖 SkillRun SDK。同时作为 Core 测试 fixture。
-
-## 演示胶囊
-
-`demos/` 目录存放**演示胶囊**，展示 SkillRun 如何封装外部 CLI 工具（例如 `lark-cli`）。这些 capsule**不参与 Core CI**，可能需要外部依赖。完整列表和规则见 [`demos/README.md`](demos/README.md)。
-
-- `demos/lark_notice_sender`：飞书/ Lark 消息发送器，包含 chat_id allowlist、dry-run 默认、敏感词检查和审计 artifact。
+- `examples/lark_notice_sender`：可选外部工具示例，通过 `lark-cli` 发送飞书 / Lark 消息，包含 chat_id allowlist、dry-run 默认、敏感内容检查和审计 artifact；它不属于 mandatory Core CI，可能需要外部依赖。
 
 文档级业务模式仍保留在项目叙事中，但不扩大当前 runtime scope：Support Triage、Access Request Approval 和 Vendor Risk Review 用来说明一个 portable Agent skill 如何携带稳定分流标签、审批边界和 artifact-backed review evidence。
 

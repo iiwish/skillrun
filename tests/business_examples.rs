@@ -264,6 +264,32 @@ fn docs_explain_b001_to_b004_without_expanding_v0_runtime_scope() {
 }
 
 #[test]
+fn examples_have_single_top_level_entrypoint() {
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    assert!(
+        repo_root.join("examples").is_dir(),
+        "official examples should live under examples/"
+    );
+    assert!(
+        !repo_root.join("demos").exists(),
+        "avoid a second top-level sample directory; optional external-tool examples belong under examples/"
+    );
+
+    let examples_readme =
+        fs::read_to_string(repo_root.join("examples/README.md")).expect("examples README readable");
+    let readme = fs::read_to_string(repo_root.join("README.md")).expect("README readable");
+    let zh_readme =
+        fs::read_to_string(repo_root.join("README.zh-CN.md")).expect("Chinese README readable");
+
+    assert!(examples_readme.contains("Optional External-Tool Examples"));
+    assert!(examples_readme.contains("examples/lark_notice_sender"));
+    assert!(readme.contains("examples/lark_notice_sender"));
+    assert!(zh_readme.contains("examples/lark_notice_sender"));
+    assert!(!readme.contains("demos/"));
+    assert!(!zh_readme.contains("demos/"));
+}
+
+#[test]
 fn wecom_team_notice_example_runs_locally_without_real_webhook() {
     let output_root = temp_dir("business-wecom");
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/wecom_team_notice");
