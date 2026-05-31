@@ -333,7 +333,13 @@ SkillRun 同时存在几类版本：
 - `examples/commit_message_gate`：校验 Conventional Commits，不自动 stage 文件。
 - `examples/bounded_file_patcher`：在声明目录内执行精确文本替换，并记录 patch artifact。
 - `examples/readonly_diagnostics_runner`：只运行命名 allowlist 诊断，不接受任意 shell 字符串。
-- `examples/command_hello`：Level 0 command adapter contract，不依赖 SkillRun SDK。
+- `examples/command_hello`：Level 0 command adapter contract，不依赖 SkillRun SDK。同时作为 Core 测试 fixture。
+
+## 演示胶囊
+
+`demos/` 目录存放**演示胶囊**，展示 SkillRun 如何封装外部 CLI 工具（例如 `lark-cli`）。这些 capsule**不参与 Core CI**，可能需要外部依赖。完整列表和规则见 [`demos/README.md`](demos/README.md)。
+
+- `demos/lark_notice_sender`：飞书/ Lark 消息发送器，包含 chat_id allowlist、dry-run 默认、敏感词检查和审计 artifact。
 
 文档级业务模式仍保留在项目叙事中，但不扩大当前 runtime scope：Support Triage、Access Request Approval 和 Vendor Risk Review 用来说明一个 portable Agent skill 如何携带稳定分流标签、审批边界和 artifact-backed review evidence。
 

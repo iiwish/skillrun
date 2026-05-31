@@ -1,0 +1,104 @@
+manifest_version: 0.1.0
+generated_by: skillrun@0.6.5
+generated_at: 2026-05-31T09:56:07.990204+00:00
+sources:
+  skill:
+    path: SKILL.md
+    sha256: 38e31f8fbaa00ec1bac39f5fdd814075936226c3ffdb20c7bf8192d142e7c8ce
+  action:
+    path: action.mjs
+    sha256: e41de0c5728c668336e40a5011feaf458baa4f4ed5f3ad36a376c60af7b42735
+  config:
+    path: skillrun.config.json
+    sha256: a39b04ca9aa57aa4ea16940ff4263015aa98c9c77a44134f3622c9e587373210
+skill:
+  name: lark_notice_sender
+  sop_summary: Lark Notice Sender
+  skill_hash: 38e31f8fbaa00ec1bac39f5fdd814075936226c3ffdb20c7bf8192d142e7c8ce
+tool:
+  name: lark_notice_sender
+  description: Execute the lark_notice_sender SkillRun capsule.
+schemas:
+  input:
+    additionalProperties: false
+    properties:
+      chat_id:
+        minLength: 1
+        type: string
+      content:
+        maxLength: 500
+        minLength: 1
+        type: string
+      dry_run:
+        default: true
+        type: boolean
+      urgency:
+        default: normal
+        enum:
+        - low
+        - normal
+        - high
+        type: string
+    required:
+    - chat_id
+    - content
+    type: object
+  output:
+    additionalProperties: false
+    properties:
+      artifact_path:
+        type: string
+      chat_id:
+        type: string
+      content_preview:
+        type: string
+      mode:
+        enum:
+        - dry_run
+        - live
+        type: string
+      sent:
+        type: boolean
+    required:
+    - sent
+    - chat_id
+    - content_preview
+    - mode
+    - artifact_path
+    type: object
+runtime:
+  adapter: node
+  entrypoint: action.mjs
+  timeout: 30s
+  requirements:
+    executable:
+      name: node
+      version: '>=18'
+    packages: []
+permissions:
+  files:
+    read: []
+    write:
+    - .skillrun/runs/**
+  network:
+    outbound:
+    - open.feishu.cn
+    - open.larksuite.com
+  env:
+    read:
+    - LARK_NOTICE_ALLOWLIST
+ipc:
+  protocol_version: 0.1.0
+examples:
+- id: default
+  input: examples/default.input.json
+artifacts:
+  allowed_kinds:
+  - json
+  - markdown
+  - html
+  - pdf
+  - text
+  - file
+errors:
+  envelope: true
