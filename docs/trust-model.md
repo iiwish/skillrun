@@ -114,6 +114,12 @@ skillrun test --cwd <capsule>
 
 然后再决定是否让 Agent 通过 MCP 调用。
 
+## 签名与 provenance 边界
+
+当前 `sha256`、Manifest source hashes、GitHub Release asset digest 和 Team Catalog checksum 都只证明完整性或合同一致性，不证明作者身份、发布者身份、代码安全、notarization 或 sandbox。
+
+签名、build provenance、publisher identity、notarization 和 package manager trust 是后续高风险设计议题。详细分层和文案规则见 [Provenance and Trust Design](provenance-trust-design.md)。
+
 ## 官方参考胶囊的边界
 
 官方示例胶囊用于展示 SkillRun 的约束模型，不代表完整安全产品。
