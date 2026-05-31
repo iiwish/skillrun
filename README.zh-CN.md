@@ -328,6 +328,7 @@ SkillRun 同时存在几类版本：
 
 可运行示例刻意保持收敛，用来证明 SkillRun 的边界，而不是把项目变成通用 API wrapper。
 
+- `examples/meeting_action_brief`：把会议 notes 变成结构化决策、行动项、风险、待确认问题、follow-up 文案、markdown artifact 和 `.skr` package。
 - `examples/refund`：退款决策，包含政策限额、审批边界、类型化输入、结构化 `PolicyViolation`、artifact、run record、MCP 暴露和 `.skr` package。
 - `examples/wecom_team_notice`：本地通知工作流，包含 dry-run preview、审批边界、声明式 `WECOM_WEBHOOK_URL`、结构化 `DependencyError` 和 markdown artifact。
 - `examples/commit_message_gate`：校验 Conventional Commits，不自动 stage 文件。

@@ -328,6 +328,7 @@ The current generated Manifest IR and IPC protocol versions remain `0.1.0`. v0.5
 
 The runnable examples are intentionally narrow. They prove SkillRun boundaries without turning the project into a general API wrapper.
 
+- `examples/meeting_action_brief`: meeting notes to structured decisions, action items, risks, open questions, follow-up copy, markdown artifact, and `.skr` packaging.
 - `examples/refund`: refund decision with policy limits, approval boundaries, typed inputs, structured `PolicyViolation`, artifacts, run records, MCP exposure, and `.skr` packaging.
 - `examples/wecom_team_notice`: local notification workflow with dry-run preview, approval boundary, declared `WECOM_WEBHOOK_URL`, structured `DependencyError`, and markdown artifacts.
 - `examples/commit_message_gate`: Conventional Commits validation without auto-staging files.
