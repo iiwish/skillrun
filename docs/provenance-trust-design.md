@@ -102,6 +102,7 @@ L4 Runtime Isolation
 - 使用 GitHub Actions artifact attestations 为 release artifacts 生成 provenance。
 - 将 attestation 绑定到具体 artifact，而不是只绑定 release tag。
 - 在 release checklist 中增加验证步骤，例如用 GitHub CLI 验证 artifact attestation。
+- R2 设计 spike 详见 [Release Provenance Attestation Spike](release-provenance-attestation-spike.md)。
 
 约束：
 
