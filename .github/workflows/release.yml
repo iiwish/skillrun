@@ -234,6 +234,11 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-22.04"
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     outputs:
       val: ${{ steps.host.outputs.manifest }}
     steps:
@@ -284,6 +289,34 @@ jobs:
           rm -f artifacts/*.sha256
           rm -f artifacts/source.tar.gz
           rm -f artifacts/source.tar.gz.sha256
+      - name: Verify public artifact staging set
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for path in artifacts/*; do
+            if [[ -f "$path" ]]; then
+              basename "$path"
+            fi
+          done | sort > actual-assets.txt
+
+          cat > expected-assets.txt <<'EOF'
+          sha256.sum
+          skillrun-aarch64-apple-darwin.tar.xz
+          skillrun-aarch64-unknown-linux-gnu.tar.xz
+          skillrun-installer.ps1
+          skillrun-installer.sh
+          skillrun-x86_64-apple-darwin.tar.xz
+          skillrun-x86_64-pc-windows-msvc.zip
+          skillrun-x86_64-unknown-linux-gnu.tar.xz
+          EOF
+          sed -i 's/^          //' expected-assets.txt
+          sort -o expected-assets.txt expected-assets.txt
+          diff -u expected-assets.txt actual-assets.txt
+      - name: Generate release asset attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/*
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ fromJson(steps.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"
@@ -301,6 +334,10 @@ jobs:
       - host
     if: ${{ always() && needs.host.result == 'success' && needs.plan.outputs.publishing == 'true' }}
     runs-on: "ubuntu-22.04"
+    permissions:
+      contents: read
+      attestations: read
+      artifact-metadata: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.plan.outputs.tag }}
@@ -361,6 +398,25 @@ jobs:
           sed -i 's/^          //' expected-checksum-assets.txt
           sort -o expected-checksum-assets.txt expected-checksum-assets.txt
           diff -u expected-checksum-assets.txt checksum-assets.txt
+
+      - name: Verify release asset attestations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-attestations"
+
+          while read -r asset; do
+            gh release download "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "$asset" \
+              --dir "$RUNNER_TEMP/release-attestations"
+
+            gh attestation verify "$RUNNER_TEMP/release-attestations/$asset" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "iiwish/skillrun/.github/workflows/release.yml" \
+              --source-ref "refs/tags/$RELEASE_TAG" \
+              --format json > "$RUNNER_TEMP/release-attestations/$asset.attestation.json"
+          done < expected-assets.txt
 
       - name: Smoke shell installer
         shell: bash

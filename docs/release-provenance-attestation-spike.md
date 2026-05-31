@@ -56,7 +56,7 @@ skillrun-x86_64-unknown-linux-gnu.tar.xz
 
 ## GitHub artifact attestations 接入点
 
-GitHub 当前官方路径是使用 `actions/attest@v4` 对 `subject-path` 指向的 artifact 生成 build provenance attestation。官方文档要求 workflow 具备 `id-token: write`、`contents: read`、`attestations: write` 权限；`gh attestation verify` 默认验证 `https://slsa.dev/provenance/v1` predicate。
+GitHub 当前官方路径是使用 `actions/attest@v4` 对 `subject-path` 指向的 artifact 生成 build provenance attestation。官方文档要求 workflow 具备 `id-token: write`、`contents: read`、`attestations: write` 权限；`actions/attest` README 还要求 `artifact-metadata: write` 用于创建 artifact storage record。`gh attestation verify` 默认验证 `https://slsa.dev/provenance/v1` predicate。
 
 推荐的 implementation shape：
 
@@ -66,6 +66,7 @@ GitHub 当前官方路径是使用 `actions/attest@v4` 对 `subject-path` 指向
       contents: write
       id-token: write
       attestations: write
+      artifact-metadata: write
     steps:
       # existing checkout / dist / download / cleanup steps
       - name: Generate release asset attestations
@@ -120,7 +121,7 @@ done < expected-assets.txt
 
 - `--source-ref "refs/tags/$RELEASE_TAG"` 是否匹配 tag-triggered release run 的 certificate/source metadata。
 - `--signer-workflow "iiwish/skillrun/.github/workflows/release.yml"` 是否是当前 `gh` 版本接受的精确格式；必要时改用 `--cert-identity` 或 `--cert-identity-regex`。
-- 是否需要在 `verify-release-assets` job 显式声明 `attestations: read`；当前 GitHub CLI 可读取 public repo attestation，但 workflow token 最小权限应在实现 PR 中实测。
+- `verify-release-assets` job 使用 `contents: read`、`attestations: read` 和 `artifact-metadata: read` 是否足够；implementation PR 和下一次真实 tag release 应继续实测。
 - `subject-path: artifacts/*` 是否在当前 `actions/attest@v4` 版本下为每个 public asset 生成可由 `gh attestation verify <downloaded-file>` 找到的 subject。
 
 ## Release checklist 变更范围
@@ -145,8 +146,8 @@ Checklist 文案必须保留边界：
 
 预计最小权限变化：
 
-- `host` job：`contents: write`、`id-token: write`、`attestations: write`。
-- `verify-release-assets` job：至少 `contents: read`，可能需要 `attestations: read`。
+- `host` job：`contents: write`、`id-token: write`、`attestations: write`、`artifact-metadata: write`。
+- `verify-release-assets` job：`contents: read`、`attestations: read`、`artifact-metadata: read`。
 
 风险点：
 
@@ -164,7 +165,7 @@ Checklist 文案必须保留边界：
 
 ## Recommendation
 
-推荐下一步不是直接合并 workflow 变更，而是向用户确认是否进入 R2 implementation PR。若确认，最小 PR 应只做：
+用户确认后，R2 implementation 的最小 PR 应只做：
 
 1. 在 `host` job 为 cleaned `artifacts/*` 生成 artifact attestations。
 2. 在 `verify-release-assets` job 下载最终 release assets 并逐个 `gh attestation verify`。
