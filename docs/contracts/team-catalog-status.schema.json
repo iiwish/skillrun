@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skillrun.local/schemas/team-catalog-status.v1.schema.json",
+  "title": "SkillRun Team Catalog status contract",
+  "type": "object",
+  "required": [
+    "command",
+    "schema_version",
+    "ok",
+    "catalog",
+    "summary",
+    "items",
+    "warnings",
+    "error"
+  ],
+  "properties": {
+    "command": {
+      "const": "team catalog status"
+    },
+    "schema_version": {
+      "const": "team.catalog.status.v1"
+    },
+    "ok": {
+      "const": true
+    },
+    "catalog": {
+      "type": "object",
+      "required": ["catalog_id", "name", "description", "updated_at", "homepage", "items"],
+      "properties": {
+        "catalog_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": ["string", "null"]
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "homepage": {
+          "type": ["string", "null"]
+        },
+        "items": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "object",
+      "required": ["items", "missing", "installed", "replace_available", "blocked"],
+      "properties": {
+        "items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "installed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "replace_available": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "version",
+          "installable",
+          "status",
+          "recommended_action",
+          "install_plan_available",
+          "registry",
+          "source_type",
+          "sha256",
+          "warnings"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": ["skillrun.skr", "agent.skill", "mcp.server"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "installable": {
+            "type": "boolean"
+          },
+          "status": {
+            "enum": ["missing", "installed", "replace_available", "blocked"]
+          },
+          "recommended_action": {
+            "enum": ["none", "install", "replace", "resolve_conflict"]
+          },
+          "install_plan_available": {
+            "type": "boolean"
+          },
+          "registry": {
+            "type": "object",
+            "required": ["installed", "source_type", "enabled", "path"],
+            "properties": {
+              "installed": {
+                "type": "boolean"
+              },
+              "source_type": {
+                "type": ["string", "null"]
+              },
+              "enabled": {
+                "type": ["boolean", "null"]
+              },
+              "path": {
+                "type": ["string", "null"]
+              }
+            },
+            "additionalProperties": true
+          },
+          "source_type": {
+            "enum": ["file", "https"]
+          },
+          "sha256": {
+            "type": ["string", "null"]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/warning"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/warning"
+      }
+    },
+    "error": {
+      "type": "null"
+    }
+  },
+  "$defs": {
+    "warning": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

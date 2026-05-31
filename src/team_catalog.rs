@@ -17,6 +17,10 @@ pub enum TeamCatalogCommand {
         catalog: PathBuf,
         json: bool,
     },
+    Status {
+        catalog: PathBuf,
+        json: bool,
+    },
     InstallPlan {
         catalog: PathBuf,
         item_id: String,
@@ -33,6 +37,7 @@ impl TeamCatalogOptions {
     pub fn json(&self) -> bool {
         match &self.command {
             TeamCatalogCommand::Inspect { json, .. }
+            | TeamCatalogCommand::Status { json, .. }
             | TeamCatalogCommand::InstallPlan { json, .. }
             | TeamCatalogCommand::InstallApply { json, .. } => *json,
         }
@@ -41,6 +46,7 @@ impl TeamCatalogOptions {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             TeamCatalogCommand::Inspect { .. } => "team catalog inspect",
+            TeamCatalogCommand::Status { .. } => "team catalog status",
             TeamCatalogCommand::InstallPlan { .. } => "team catalog install plan",
             TeamCatalogCommand::InstallApply { .. } => "team catalog install apply",
         }
@@ -49,6 +55,7 @@ impl TeamCatalogOptions {
     pub fn schema_version(&self) -> &'static str {
         match &self.command {
             TeamCatalogCommand::Inspect { .. } => "team.catalog.inspect.v1",
+            TeamCatalogCommand::Status { .. } => "team.catalog.status.v1",
             TeamCatalogCommand::InstallPlan { .. } => "team.catalog.install_plan.v1",
             TeamCatalogCommand::InstallApply { .. } => "team.catalog.install_apply.v1",
         }
@@ -156,6 +163,43 @@ struct InspectItemView {
 }
 
 #[derive(Debug, Serialize)]
+struct StatusView {
+    command: &'static str,
+    schema_version: &'static str,
+    ok: bool,
+    catalog: CatalogSummaryView,
+    summary: StatusSummaryView,
+    items: Vec<StatusItemView>,
+    warnings: Vec<WarningView>,
+    error: Option<ErrorView>,
+}
+
+#[derive(Debug, Serialize, Default)]
+struct StatusSummaryView {
+    items: usize,
+    missing: usize,
+    installed: usize,
+    replace_available: usize,
+    blocked: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct StatusItemView {
+    id: String,
+    kind: String,
+    name: String,
+    version: String,
+    installable: bool,
+    status: &'static str,
+    recommended_action: &'static str,
+    install_plan_available: bool,
+    registry: PlanRegistryView,
+    source_type: String,
+    sha256: Option<String>,
+    warnings: Vec<WarningView>,
+}
+
+#[derive(Debug, Serialize)]
 struct InstallPlanView {
     command: &'static str,
     schema_version: &'static str,
@@ -249,6 +293,7 @@ struct WarningView {
 pub fn run(options: &TeamCatalogOptions) -> Result<TeamCatalogOutput, TeamCatalogError> {
     match &options.command {
         TeamCatalogCommand::Inspect { catalog, json } => inspect(catalog, *json),
+        TeamCatalogCommand::Status { catalog, json } => status(catalog, *json),
         TeamCatalogCommand::InstallPlan {
             catalog,
             item_id,
@@ -308,6 +353,42 @@ fn inspect(path: &Path, json: bool) -> Result<TeamCatalogOutput, TeamCatalogErro
     })
 }
 
+fn status(path: &Path, json: bool) -> Result<TeamCatalogOutput, TeamCatalogError> {
+    let catalog = load_catalog(path)?;
+    let items = catalog
+        .items
+        .iter()
+        .map(status_item_view)
+        .collect::<Result<Vec<_>, _>>()?;
+    let summary = status_summary(&items);
+    let view = StatusView {
+        command: "team catalog status",
+        schema_version: "team.catalog.status.v1",
+        ok: true,
+        catalog: catalog_summary(&catalog),
+        summary,
+        items,
+        warnings: Vec::new(),
+        error: None,
+    };
+
+    if json {
+        return json_output(&view);
+    }
+
+    Ok(TeamCatalogOutput {
+        output: format!(
+            "SkillRun Team Catalog Status\ncatalog: {}\nitems: {}\nmissing: {}\ninstalled: {}\nreplace_available: {}\nblocked: {}",
+            view.catalog.catalog_id,
+            view.summary.items,
+            view.summary.missing,
+            view.summary.installed,
+            view.summary.replace_available,
+            view.summary.blocked
+        ),
+    })
+}
+
 fn install_plan(
     path: &Path,
     item_id: &str,
@@ -338,20 +419,7 @@ fn install_plan(
 
     let registry_entry = registry::registry_entry_status(&item.id)
         .map_err(|error| TeamCatalogError::new("catalog.registry_read_failed", error))?;
-    let registry = match registry_entry {
-        Some(entry) => PlanRegistryView {
-            installed: true,
-            source_type: Some(entry.source_type),
-            enabled: Some(entry.enabled),
-            path: Some(entry.path),
-        },
-        None => PlanRegistryView {
-            installed: false,
-            source_type: None,
-            enabled: None,
-            path: None,
-        },
-    };
+    let registry = registry_status_view(registry_entry);
 
     if registry.installed
         && registry.source_type.as_deref() != Some(registry::IMPORTED_SKR_SOURCE_TYPE)
@@ -695,6 +763,88 @@ fn inspect_item_view(item: &CatalogItem) -> Result<InspectItemView, TeamCatalogE
         tags: item.tags.clone(),
         warnings: item_warnings(item),
     })
+}
+
+fn status_item_view(item: &CatalogItem) -> Result<StatusItemView, TeamCatalogError> {
+    let registry_entry = registry::registry_entry_status(&item.id)
+        .map_err(|error| TeamCatalogError::new("catalog.registry_read_failed", error))?;
+    let registry = registry_status_view(registry_entry);
+    let mut warnings = item_warnings(item);
+    let installable = item.kind == "skillrun.skr";
+    let has_checksum = item.source.sha256.is_some();
+
+    let (status, recommended_action, install_plan_available) = if !installable {
+        ("blocked", "none", false)
+    } else if registry.installed
+        && registry.source_type.as_deref() != Some(registry::IMPORTED_SKR_SOURCE_TYPE)
+    {
+        warnings.push(WarningView {
+            code: "catalog.registry_conflict",
+            message: format!(
+                "catalog item {} is already registered with source_type {}; Team Catalog can only replace imported_skr entries",
+                item.id,
+                registry.source_type.as_deref().unwrap_or("<unknown>")
+            ),
+        });
+        ("blocked", "resolve_conflict", false)
+    } else if registry.installed && has_checksum {
+        ("replace_available", "replace", true)
+    } else if registry.installed {
+        ("installed", "none", false)
+    } else if has_checksum {
+        ("missing", "install", true)
+    } else {
+        ("blocked", "none", false)
+    };
+
+    Ok(StatusItemView {
+        id: item.id.clone(),
+        kind: item.kind.clone(),
+        name: item.name.clone(),
+        version: item.version.clone(),
+        installable,
+        status,
+        recommended_action,
+        install_plan_available,
+        registry,
+        source_type: item.source.source_type.clone(),
+        sha256: item.source.sha256.clone(),
+        warnings,
+    })
+}
+
+fn registry_status_view(entry: Option<registry::RegistryEntryStatus>) -> PlanRegistryView {
+    match entry {
+        Some(entry) => PlanRegistryView {
+            installed: true,
+            source_type: Some(entry.source_type),
+            enabled: Some(entry.enabled),
+            path: Some(entry.path),
+        },
+        None => PlanRegistryView {
+            installed: false,
+            source_type: None,
+            enabled: None,
+            path: None,
+        },
+    }
+}
+
+fn status_summary(items: &[StatusItemView]) -> StatusSummaryView {
+    let mut summary = StatusSummaryView {
+        items: items.len(),
+        ..StatusSummaryView::default()
+    };
+    for item in items {
+        match item.status {
+            "missing" => summary.missing += 1,
+            "installed" => summary.installed += 1,
+            "replace_available" => summary.replace_available += 1,
+            "blocked" => summary.blocked += 1,
+            _ => {}
+        }
+    }
+    summary
 }
 
 fn item_warnings(item: &CatalogItem) -> Vec<WarningView> {

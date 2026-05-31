@@ -56,6 +56,7 @@
 - [Run Evidence and Local Index](run-evidence-index.md)：说明 `consumer runs list/inspect/index` 的稳定 surface、summary-only 隐私边界和 index staleness 诊断。
 - [Team Catalog Draft JSON Schema](contracts/team-catalog.draft.schema.json)：`team.catalog.v1` catalog 文件的草案 schema；用于已实现 inspect/plan 和后续 apply 的输入校验基线。
 - [Team Catalog Inspect JSON Schema](contracts/team-catalog-inspect.schema.json)：`team catalog inspect --json` 的 `team.catalog.inspect.v1` 机器可读合同。
+- [Team Catalog Status JSON Schema](contracts/team-catalog-status.schema.json)：`team catalog status --json` 的 `team.catalog.status.v1` 机器可读合同。
 - [Team Catalog Install Plan JSON Schema](contracts/team-catalog-install-plan.schema.json)：`team catalog install plan --json` 的 `team.catalog.install_plan.v1` 机器可读合同。
 - [Team Catalog Install Apply JSON Schema](contracts/team-catalog-install-apply.schema.json)：`team catalog install apply --json` 的 `team.catalog.install_apply.v1` 机器可读合同。
 - [Router MCP JSON Schema](contracts/router-mcp.schema.json)：`router serve --mcp --dry-run` 的 `router.mcp.v1` 机器可读合同。

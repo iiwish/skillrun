@@ -240,7 +240,7 @@ where
             },
             Err(error) => {
                 eprintln!("error: {error}");
-                eprintln!("usage: skillrun team catalog <inspect|install> [options]");
+                eprintln!("usage: skillrun team catalog <inspect|status|install> [options]");
                 ExitCode::from(2)
             }
         },
@@ -1243,6 +1243,7 @@ fn parse_team_catalog(args: Vec<String>) -> Result<TeamCatalogOptions, String> {
     let rest = args[1..].to_vec();
     let command = match command {
         "inspect" => parse_team_catalog_inspect(rest)?,
+        "status" => parse_team_catalog_status(rest)?,
         "install" => parse_team_catalog_install(rest)?,
         value => return Err(format!("unknown team catalog subcommand: {value}")),
     };
@@ -1270,6 +1271,29 @@ fn parse_team_catalog_inspect(args: Vec<String>) -> Result<TeamCatalogCommand, S
 
     let catalog = catalog.ok_or_else(|| "team catalog inspect requires <catalog>".to_string())?;
     Ok(TeamCatalogCommand::Inspect { catalog, json })
+}
+
+fn parse_team_catalog_status(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
+    let mut catalog = None;
+    let mut json = false;
+
+    for value in args {
+        match value.as_str() {
+            "--json" => json = true,
+            value if value.starts_with('-') => {
+                return Err(format!("unexpected team catalog status argument: {value}"));
+            }
+            value => {
+                if catalog.is_some() {
+                    return Err(format!("unexpected team catalog status argument: {value}"));
+                }
+                catalog = Some(PathBuf::from(value));
+            }
+        }
+    }
+
+    let catalog = catalog.ok_or_else(|| "team catalog status requires <catalog>".to_string())?;
+    Ok(TeamCatalogCommand::Status { catalog, json })
 }
 
 fn parse_team_catalog_install(args: Vec<String>) -> Result<TeamCatalogCommand, String> {
@@ -1713,6 +1737,7 @@ Implemented:
   mount apply --client claude-desktop [--config <path>] [--json]
   mount rollback --client claude-desktop --backup <path> [--config <path>] [--json]
   team catalog inspect <catalog> [--json]
+  team catalog status <catalog> [--json]
   team catalog install plan <catalog> <item-id> [--json]
   team catalog install apply <catalog> <item-id> [--json]
   router serve --mcp [--dry-run]

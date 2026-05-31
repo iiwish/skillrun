@@ -35,6 +35,12 @@
       "schema_version": "consumer.exposure.v1"
     },
     {
+      "command": "team catalog status <catalog> --json",
+      "name": "team_catalog_status",
+      "process": "short_running",
+      "schema_version": "team.catalog.status.v1"
+    },
+    {
       "command": "router serve --mcp --dry-run",
       "name": "router_dry_run",
       "process": "short_running",

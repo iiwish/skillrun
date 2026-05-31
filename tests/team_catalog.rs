@@ -213,6 +213,143 @@ fn team_catalog_inspect_reports_items_without_downloading_sources() {
 }
 
 #[test]
+fn team_catalog_status_reports_missing_and_display_only_items() {
+    let root = output_root("status-missing");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "status",
+            catalog.to_str().unwrap(),
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["command"], "team catalog status");
+    assert_eq!(output["schema_version"], "team.catalog.status.v1");
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["summary"]["items"], 2);
+    assert_eq!(output["summary"]["missing"], 1);
+    assert_eq!(output["summary"]["blocked"], 1);
+    assert_eq!(output["items"][0]["id"], "refund");
+    assert_eq!(output["items"][0]["status"], "missing");
+    assert_eq!(output["items"][0]["recommended_action"], "install");
+    assert_eq!(output["items"][0]["install_plan_available"], true);
+    assert_eq!(output["items"][0]["registry"]["installed"], false);
+    assert_eq!(output["items"][1]["id"], "plain-skill");
+    assert_eq!(output["items"][1]["status"], "blocked");
+    assert_eq!(output["items"][1]["recommended_action"], "none");
+    assert_eq!(output["items"][1]["install_plan_available"], false);
+    assert_eq!(
+        output["items"][1]["warnings"][0]["code"],
+        "catalog.item.display_only"
+    );
+}
+
+#[test]
+fn team_catalog_status_reports_replace_available_for_imported_skr_entry() {
+    let root = output_root("status-replace");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        home.join("registry.json"),
+        r#"{
+  "version": 1,
+  "capsules": [
+    {
+      "id": "refund",
+      "path": "/tmp/refund-imported",
+      "source_type": "imported_skr",
+      "enabled": true,
+      "registered_at": "2026-05-26T10:00:00Z"
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "status",
+            catalog.to_str().unwrap(),
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["summary"]["replace_available"], 1);
+    assert_eq!(output["items"][0]["status"], "replace_available");
+    assert_eq!(output["items"][0]["recommended_action"], "replace");
+    assert_eq!(output["items"][0]["install_plan_available"], true);
+    assert_eq!(output["items"][0]["registry"]["installed"], true);
+    assert_eq!(
+        output["items"][0]["registry"]["source_type"],
+        "imported_skr"
+    );
+    assert_eq!(output["items"][0]["registry"]["enabled"], true);
+}
+
+#[test]
+fn team_catalog_status_reports_blocked_for_local_path_registry_conflict() {
+    let root = output_root("status-conflict");
+    fs::create_dir_all(&root).unwrap();
+    let catalog = root.join("team-catalog.json");
+    write_catalog(&catalog);
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        home.join("registry.json"),
+        r#"{
+  "version": 1,
+  "capsules": [
+    {
+      "id": "refund",
+      "path": "/tmp/refund-local",
+      "source_type": "local_path",
+      "enabled": false,
+      "registered_at": "2026-05-26T10:00:00Z"
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "status",
+            catalog.to_str().unwrap(),
+            "--json",
+        ],
+        &home,
+    ));
+
+    assert_eq!(output["summary"]["blocked"], 2);
+    assert_eq!(output["items"][0]["status"], "blocked");
+    assert_eq!(output["items"][0]["recommended_action"], "resolve_conflict");
+    assert_eq!(output["items"][0]["install_plan_available"], false);
+    assert_eq!(output["items"][0]["registry"]["source_type"], "local_path");
+    assert_eq!(
+        output["items"][0]["warnings"][0]["code"],
+        "catalog.registry_conflict"
+    );
+}
+
+#[test]
 fn team_catalog_install_plan_reports_import_without_downloading_package() {
     let root = output_root("plan-import");
     fs::create_dir_all(&root).unwrap();

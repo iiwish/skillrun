@@ -183,6 +183,12 @@ fn desktop_capabilities() -> Vec<CapabilityView> {
             schema_version: Some("consumer.exposure.v1"),
         },
         CapabilityView {
+            name: "team_catalog_status",
+            command: "team catalog status <catalog> --json",
+            process: "short_running",
+            schema_version: Some("team.catalog.status.v1"),
+        },
+        CapabilityView {
             name: "router_dry_run",
             command: "router serve --mcp --dry-run",
             process: "short_running",
