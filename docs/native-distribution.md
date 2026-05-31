@@ -63,7 +63,7 @@ GitHub Release 页面会自动显示 `Source code (zip)` 和 `Source code (tar.g
 
 - `sha256.sum`：汇总 checksum。
 
-`sha256.sum` 当前只覆盖平台 archive，不覆盖 installer。用户可用 `sha256sum -c sha256.sum` 或平台等价工具校验已下载的 archive；installer 的完整性可对照 GitHub Release asset digest。签名/provenance 机制尚未建立，文档和 release notes 不应把 checksum 描述为代码签名、publisher identity、notarization 或 sandbox 证明。后续设计见 [Provenance and Trust Design](provenance-trust-design.md)。
+`sha256.sum` 当前只覆盖平台 archive，不覆盖 installer。用户可用 `sha256sum -c sha256.sum` 或平台等价工具校验已下载的 archive；installer 的完整性可对照 GitHub Release asset digest。从启用 release asset attestations 的 release 起，维护者还会用 GitHub artifact attestations 验证公开 assets 与 GitHub Actions release workflow / tag source ref 的 provenance 绑定。checksum 和 provenance 都不应被描述为代码签名、publisher identity、notarization 或 sandbox 证明。后续设计见 [Provenance and Trust Design](provenance-trust-design.md)。
 
 GitHub Release 页面只展示面向用户的 assets：两个 installer、平台 archives 和 `sha256.sum`。cargo-dist 生成的内部 manifest、单个 archive `.sha256` 文件和重复 source tarball 会在上传前清理；GitHub 自动附带的 `Source code (zip)` 与 `Source code (tar.gz)` 保留。
 
@@ -120,6 +120,7 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 cargo run -- --version
 dist plan
+gh --version
 ```
 
-本地只能验证当前 host 能构建的 artifact。跨平台 binary 和 installer 以 GitHub Actions release matrix 为准。
+本地只能验证当前 host 能构建的 artifact。跨平台 binary、installer、GitHub Release asset attestations 和 release smoke 以 GitHub Actions release matrix 为准。发布后可下载具体 asset 并用 `gh attestation verify --repo iiwish/skillrun --signer-workflow iiwish/skillrun/.github/workflows/release.yml --source-ref refs/tags/vX.Y.Z <asset>` 复核 provenance。

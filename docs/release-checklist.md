@@ -49,6 +49,7 @@ cargo clippy --all-targets -- -D warnings
 git diff --check
 cargo run --quiet -- --version
 dist plan
+gh --version
 ```
 
 必须满足：
@@ -56,6 +57,7 @@ dist plan
 - 所有命令退出码为 0。
 - `skillrun --version` 输出与 `Cargo.toml` 和 `RELEASE_NOTES.md` 一致。
 - `dist plan` 列出当前版本 tag 对应的 GitHub Release archives、checksum、`skillrun-installer.sh` 和 `skillrun-installer.ps1`。
+- `gh --version` 可用，且支持 `gh attestation verify`，用于发布后验证 release asset provenance。
 - 如果只做文档变更，可以不强制跑全量 Rust 测试，但 release/tag 前必须在 `main` 上跑完整 validation。
 
 ## Phase 2: 推送 release branch 并等待 CI
@@ -162,7 +164,7 @@ git ls-remote --tags origin vX.Y.Z
 必须满足：
 
 - tag 对应 commit 已通过 release PR CI 和 `main` CI。
-- GitHub Release 已创建为同 tag draft，等待 cargo-dist workflow 上传产物并公开。
+- GitHub Release 已创建为同 tag draft，等待 cargo-dist workflow 生成 release asset attestations、上传产物并公开。
 - tag 名称使用 `vX.Y.Z`。
 - 如果 `Release-plz` workflow 的 release consistency guard 已因缺少 tag / release 失败，创建 tag 和 draft release 后应 rerun 该 workflow，确认 guard 变绿。
 
@@ -186,6 +188,8 @@ GitHub Release 内容应来自已 review 的 changelog 或 release notes 摘要�
 - tag 指向 release PR 合并后的正确 commit。
 - `draft=false`。
 - `prerelease` 按 release 决策设置；普通稳定 patch 使用 `false`。
+- Release workflow 的 `Verify release assets` job 已验证公开 assets 的 GitHub artifact attestations。
+- Provenance 只说明 asset 与 GitHub Actions release workflow / tag source ref 绑定；不得写成 code signing、verified publisher、notarization、sandbox 或 safe execution。
 
 ## Phase 7: 发布后核对
 
@@ -195,6 +199,7 @@ GitHub Release 创建后，核对 release PR 已经包含必要的 release notes
 - `Publication:` 明确 main merge、remote push、tag、GitHub Release 是否完成。
 - 明确 package registry publication 是否执行。
 - validation 中的远端 CI 条目是已完成事实。
+- 对至少一个 installer、一个 archive 和 `sha256.sum` 下载后执行 `gh attestation verify --repo iiwish/skillrun --signer-workflow iiwish/skillrun/.github/workflows/release.yml --source-ref refs/tags/vX.Y.Z <asset>`，确认 artifact provenance 可由用户复现。
 
 默认不要在 GitHub Release 创建后再向 `main` 追加纯发布回写 commit；这类 commit 会触发下一轮 `release-plz-pr`。如确实发现 release metadata 错误，应通过新的修正文档 PR 处理，并明确它可能进入下一次 release notes。
 
@@ -231,6 +236,12 @@ git log --oneline -5
 - 不重写 tag。
 - 创建 GitHub Release。
 - 回写 release notes。
+
+### attestation 缺失或 identity mismatch
+
+- 不把 checksum 通过当成 provenance 通过。
+- 如果 release 仍是 draft，先保持 draft，修复 release workflow 后重跑。
+- 如果 release 已公开，记录真实风险，优先发布修复版本或补充维护者说明；不得把缺失 provenance 描述为已验证。
 
 ### GitHub Release 已发布但发现严重问题
 
