@@ -69,11 +69,16 @@ impl RunsListSource {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExposedCapsule {
+pub struct RouterCandidate {
     pub id: String,
     pub path: PathBuf,
-    pub tool_name: String,
-    pub manifest_hash: String,
+    pub enabled: bool,
+    pub readiness_ok: bool,
+    pub readiness_status: String,
+    pub readiness_reason: Option<String>,
+    pub readiness_next_step: String,
+    pub tool_name: Option<String>,
+    pub manifest_hash: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -828,39 +833,44 @@ pub fn consumer_exposure(json: bool) -> Result<RegistryOutput, String> {
     Ok(RegistryOutput { output })
 }
 
-pub fn exposed_capsules() -> Result<Vec<ExposedCapsule>, String> {
+pub fn router_candidates() -> Result<Vec<RouterCandidate>, String> {
     let registry = load_registry()?;
-    let mut capsules = Vec::new();
+    let mut candidates = Vec::new();
 
     for entry in &registry.capsules {
         let capsule = capsule_view(entry)?;
-        if !capsule.enabled || !capsule.readiness.ok {
+        if !capsule.enabled {
             continue;
         }
 
-        let Some(tool) = &capsule.tool else {
-            continue;
+        let capsule_path = PathBuf::from(&entry.path);
+        let manifest_hash = if capsule.readiness.ok && capsule.tool.is_some() {
+            let manifest_path = manifest::generated_manifest_path(&capsule_path);
+            Some(hashing::sha256_file(&manifest_path).map_err(|error| {
+                format!(
+                    "failed to hash exposed Manifest for {} at {}: {error}",
+                    entry.id,
+                    manifest_path.display()
+                )
+            })?)
+        } else {
+            None
         };
 
-        let capsule_path = PathBuf::from(&entry.path);
-        let manifest_path = manifest::generated_manifest_path(&capsule_path);
-        let manifest_hash = hashing::sha256_file(&manifest_path).map_err(|error| {
-            format!(
-                "failed to hash exposed Manifest for {} at {}: {error}",
-                entry.id,
-                manifest_path.display()
-            )
-        })?;
-
-        capsules.push(ExposedCapsule {
+        candidates.push(RouterCandidate {
             id: entry.id.clone(),
             path: capsule_path,
-            tool_name: tool.name.clone(),
+            enabled: capsule.enabled,
+            readiness_ok: capsule.readiness.ok,
+            readiness_status: capsule.readiness.status,
+            readiness_reason: capsule.readiness.reason,
+            readiness_next_step: capsule.readiness.next_step,
+            tool_name: capsule.tool.map(|tool| tool.name),
             manifest_hash,
         });
     }
 
-    Ok(capsules)
+    Ok(candidates)
 }
 
 pub fn consumer_runs_list(options: ConsumerRunsListOptions<'_>) -> Result<RegistryOutput, String> {

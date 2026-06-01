@@ -287,6 +287,8 @@ fn router_dry_run_exposes_only_enabled_ready_capsules() {
     assert_eq!(disabled["ok"], true);
     assert_eq!(disabled["router"]["snapshot"], true);
     assert_eq!(disabled["tools"].as_array().unwrap().len(), 0);
+    assert_eq!(disabled["routes"].as_array().unwrap().len(), 0);
+    assert_eq!(disabled["issues"].as_array().unwrap().len(), 0);
 
     let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
     assert!(enable.status.success());
@@ -316,6 +318,14 @@ fn router_dry_run_exposes_only_enabled_ready_capsules() {
             .as_str()
             .unwrap_or_default()
             .contains(".skillrun")));
+    assert_eq!(enabled["routes"][0]["capsule_id"], "refund");
+    assert_eq!(enabled["routes"][0]["state"], "routable");
+    assert_eq!(enabled["routes"][0]["tool_name"], "refund");
+    assert_eq!(
+        enabled["routes"][0]["uri_prefix"],
+        "skillrun://router/refund/"
+    );
+    assert_eq!(enabled["issues"].as_array().unwrap().len(), 0);
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -345,7 +355,58 @@ fn router_status_reports_machine_readable_route_snapshot() {
         status["resources"][0]["uri_prefix"],
         "skillrun://router/refund/"
     );
+    assert_eq!(status["routes"][0]["capsule_id"], "refund");
+    assert_eq!(status["routes"][0]["state"], "routable");
+    assert_eq!(status["routes"][0]["tool_name"], "refund");
+    assert_eq!(
+        status["routes"][0]["uri_prefix"],
+        "skillrun://router/refund/"
+    );
+    assert_eq!(status["routes"][0]["issue"], Value::Null);
+    assert_eq!(status["issues"].as_array().unwrap().len(), 0);
     assert!(status["error"].is_null());
+
+    fs::remove_dir_all(output_root).ok();
+}
+
+#[test]
+fn router_reports_enabled_not_ready_route_with_recovery_hint() {
+    let (output_root, capsule, skillrun_home) = generated_capsule("router-not-ready");
+    let cwd_arg = capsule.to_string_lossy().to_string();
+
+    let add = run_skillrun(&["registry", "add", "--cwd", &cwd_arg], &skillrun_home);
+    assert!(add.status.success());
+    let enable = run_skillrun(&["switchboard", "enable", "refund"], &skillrun_home);
+    assert!(enable.status.success());
+    fs::remove_file(capsule.join("action.sh")).expect("action should be removable");
+
+    let status = assert_success_json(&run_skillrun(
+        &["router", "status", "--json"],
+        &skillrun_home,
+    ));
+    assert_eq!(status["ok"], true);
+    assert_eq!(status["tools"].as_array().unwrap().len(), 0);
+    assert_eq!(status["resources"].as_array().unwrap().len(), 0);
+    assert_eq!(status["routes"][0]["capsule_id"], "refund");
+    assert_eq!(status["routes"][0]["state"], "blocked");
+    assert_eq!(status["routes"][0]["issue"]["code"], "capsule-not-ready");
+    assert_eq!(status["routes"][0]["issue"]["severity"], "warning");
+    assert!(status["routes"][0]["recommended_action"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("skillrun manifest --cwd"));
+    assert_eq!(status["issues"][0]["code"], "capsule-not-ready");
+    assert_eq!(status["issues"][0]["severity"], "warning");
+    assert!(status["error"].is_null());
+
+    let dry_run = assert_success_json(&run_skillrun(
+        &["router", "serve", "--mcp", "--dry-run"],
+        &skillrun_home,
+    ));
+    assert_eq!(dry_run["ok"], true);
+    assert_eq!(dry_run["routes"][0]["state"], "blocked");
+    assert_eq!(dry_run["issues"][0]["code"], "capsule-not-ready");
+    assert_eq!(dry_run["issues"][0]["severity"], "warning");
 
     fs::remove_dir_all(output_root).ok();
 }
@@ -384,6 +445,18 @@ fn router_dry_run_failure_uses_structured_error_contract() {
         .as_str()
         .unwrap_or_default()
         .contains("duplicate MCP tool name refund"));
+    assert_eq!(dry_run["routes"].as_array().unwrap().len(), 2);
+    assert!(dry_run["routes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|route| route["state"] == "blocked"));
+    assert_eq!(dry_run["issues"].as_array().unwrap().len(), 2);
+    assert!(dry_run["issues"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|issue| issue["code"] == "duplicate-tool-name" && issue["severity"] == "error"));
 
     let status = assert_failure_json(&run_skillrun(
         &["router", "status", "--json"],
@@ -393,6 +466,8 @@ fn router_dry_run_failure_uses_structured_error_contract() {
     assert_eq!(status["schema_version"], "router.status.v1");
     assert_eq!(status["ok"], false);
     assert_eq!(status["error"]["code"], "duplicate-tool-name");
+    assert_eq!(status["routes"].as_array().unwrap().len(), 2);
+    assert_eq!(status["issues"].as_array().unwrap().len(), 2);
 
     fs::remove_dir_all(first_root).ok();
     fs::remove_dir_all(second_root).ok();

@@ -67,7 +67,14 @@ pub fn dry_run_contract(capsule_dir: &Path, manifest: &ValidManifest) -> Result<
         .map_err(|error| format!("failed to serialize MCP dry-run contract: {error}"))
 }
 
-pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
+pub fn router_dry_run_contract_with_diagnostics(
+    command: &'static str,
+    ok: bool,
+    routes: &[McpRoute],
+    route_diagnostics: JsonValue,
+    issues: JsonValue,
+    error: JsonValue,
+) -> Result<String, String> {
     let tools = routes
         .iter()
         .map(|route| {
@@ -113,10 +120,10 @@ pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
         })
         .collect::<Vec<_>>();
 
-    let contract = json!({
-        "command": "router serve --mcp",
+    let mut contract = json!({
+        "command": command,
         "schema_version": "router.mcp.v1",
-        "ok": true,
+        "ok": ok,
         "mcp": {
             "dry_run": true,
             "transport": "stdio",
@@ -127,8 +134,13 @@ pub fn router_dry_run_contract(routes: &[McpRoute]) -> Result<String, String> {
             "capsules": routes.len()
         },
         "tools": tools,
-        "resources": resources
+        "resources": resources,
+        "routes": route_diagnostics,
+        "issues": issues
     });
+    if !error.is_null() {
+        contract["error"] = error;
+    }
 
     serde_json::to_string_pretty(&contract)
         .map_err(|error| format!("failed to serialize Router dry-run contract: {error}"))
@@ -155,6 +167,8 @@ pub fn router_error_contract(
         },
         "tools": [],
         "resources": [],
+        "routes": [],
+        "issues": [],
         "error": {
             "code": code,
             "message": message
