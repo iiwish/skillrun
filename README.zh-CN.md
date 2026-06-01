@@ -50,15 +50,15 @@ SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
 
 ## 当前状态
 
-当前开发线：`v0.6.6`。
+当前开发线：`v0.6.7`。
 
-最新公开 release：`v0.6.6`。
+最新公开 release：`v0.6.7`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.6.6
+# skillrun 0.6.7
 ```
 
 ## 安装
@@ -128,6 +128,8 @@ GitHub Release 页面也可能显示 GitHub 自动生成的 `Source code` 下载
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+
+v0.6.7 增加 Router 路由诊断，服务 Desktop 和 Agent 自动化。`router status --json` 与 `router serve --mcp --dry-run` 现在会追加 `routes` 和 `issues` 数组，让客户端在不启动长运行 Router 的情况下展示 enabled capsule 是 `routable` 还是 `blocked`，解释 warning/error 原因，并给出恢复建议。现有 `tools`、`resources`、`ok` 和 `error` 语义保持不变。
 
 v0.6.6 补齐第一轮 Team Library 状态闭环。Core 可以检查本地 catalog，基于 registry 报告 missing / installed / replace-available / blocked 状态，产出显式 install plan，并在 checksum 校验后执行 guarded local `.skr` import；release assets 也会生成 GitHub artifact attestations。它是团队分发路径，不是 Public Marketplace：不会下载远程 package、不会安装依赖、不会运行 action、不会启动 MCP server、不会自动 enable exposure、不会自动 mount client，也不做 trust / sandbox 承诺。边界见 [Team Catalog Contract](docs/team-catalog-contract.md) 和 [原生二进制分发](docs/native-distribution.md)。
 

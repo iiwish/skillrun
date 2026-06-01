@@ -13,10 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - *(router)* add route diagnostics contracts
 
-### Other
-
-- *(release)* update public site data for v0.6.6
-
 ## [0.6.6](https://github.com/iiwish/skillrun/compare/v0.6.5...v0.6.6) - 2026-06-01
 
 ### Added

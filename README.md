@@ -50,15 +50,15 @@ The product route is to make this easier to adopt through team distribution: tea
 
 ## What Works Today
 
-Current development line: `v0.6.6`.
+Current development line: `v0.6.7`.
 
-Latest public release: `v0.6.6`.
+Latest public release: `v0.6.7`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.6
+# skillrun 0.6.7
 ```
 
 ## Install
@@ -128,6 +128,8 @@ Available today:
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+
+v0.6.7 adds Router route diagnostics for Desktop and agent automation. `router status --json` and `router serve --mcp --dry-run` now include additive `routes` and `issues` arrays so clients can show enabled capsules as `routable` or `blocked`, explain warning/error causes, and suggest recovery actions without starting the long-running Router. Existing `tools`, `resources`, `ok`, and `error` semantics are preserved.
 
 v0.6.6 completes the first Team Library status loop. Core can inspect a local catalog, report local missing / installed / replace-available / blocked status from the registry, produce an explicit install plan, and apply a guarded local `.skr` import after checksum verification. Release assets are also produced with GitHub artifact attestations. This is a team distribution path, not a public marketplace: it does not download remote packages, install dependencies, run actions, start the MCP server, auto-enable exposure, auto-mount clients, or make trust / sandbox claims. See [Team Catalog Contract](docs/team-catalog-contract.md) and [Native Binary Distribution](docs/native-distribution.md) for the boundary.
 
