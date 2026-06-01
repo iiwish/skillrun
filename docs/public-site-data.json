@@ -2,7 +2,7 @@
   "schema_version": "skillrun.public_site.v1",
   "generated_from": {
     "repo": "https://github.com/iiwish/skillrun",
-    "source_commit": "41565c3",
+    "source_commit": "bf739f5",
     "updated_at": "2026-06-01"
   },
   "product": {
@@ -11,10 +11,10 @@
     "positioning": "SkillRun is the runtime / contract / evidence layer for executable Agent Skills. Agent Skills are the authoring and discovery layer; MCP is an invocation surface."
   },
   "release": {
-    "current_development_line": "v0.6.6",
-    "latest_public_release": "v0.6.6",
-    "version_command_output": "skillrun 0.6.6",
-    "release_url": "https://github.com/iiwish/skillrun/releases/tag/v0.6.6",
+    "current_development_line": "v0.6.7",
+    "latest_public_release": "v0.6.7",
+    "version_command_output": "skillrun 0.6.7",
+    "release_url": "https://github.com/iiwish/skillrun/releases/tag/v0.6.7",
     "latest_download_base_url": "https://github.com/iiwish/skillrun/releases/latest/download",
     "installers": {
       "shell": {
@@ -31,64 +31,64 @@
         "name": "sha256.sum",
         "kind": "checksum",
         "platform": "all",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/sha256.sum",
-        "digest": "sha256:7a2f1adcbce23274894f09d6929ed077c75725fd64876020100244c1aef3d422"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/sha256.sum",
+        "digest": "sha256:f1cc451005270b2b98a06a220e47554ca79fd893cd029c8bee6e24446caf12a6"
       },
       {
         "name": "skillrun-installer.sh",
         "kind": "installer",
         "platform": "macOS / Linux",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-installer.sh",
-        "digest": "sha256:bfec93af7c7bc7de5078779870acaca366c1536be9f65a1f1311ea06adfeba5e"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-installer.sh",
+        "digest": "sha256:7bc0cbdc2932fead7c79c22fa7fe9b1d81e650ad4048781193a6f94925f09941"
       },
       {
         "name": "skillrun-installer.ps1",
         "kind": "installer",
         "platform": "Windows",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-installer.ps1",
-        "digest": "sha256:82182a89eed7371253a0009aff81e692e47c8975e7ea200d28c8cc53def00e65"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-installer.ps1",
+        "digest": "sha256:14a377f92352a3a048ee897018e5acee4b71ab06962ab9d990a084b866666cd7"
       },
       {
         "name": "skillrun-aarch64-apple-darwin.tar.xz",
         "kind": "archive",
         "platform": "macOS arm64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-aarch64-apple-darwin.tar.xz",
-        "digest": "sha256:ceaff4988df9de30403bf6253641509665ff8a05b27319524b03e02ec14fc0dd"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-aarch64-apple-darwin.tar.xz",
+        "digest": "sha256:82fe84114c634ff6f032ebed186ef1ecef69a9e1430e739eebaabf415014a360"
       },
       {
         "name": "skillrun-x86_64-apple-darwin.tar.xz",
         "kind": "archive",
         "platform": "macOS x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-x86_64-apple-darwin.tar.xz",
-        "digest": "sha256:21f7ef01c7e21272da307d5d9ec6b10242df9ab2d14b115c20f5a36b61957dee"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-x86_64-apple-darwin.tar.xz",
+        "digest": "sha256:d4d286970e0e3a4fcb941deb8c6f1dd5f637b5a130b66e3661ac4d452a0673be"
       },
       {
         "name": "skillrun-aarch64-unknown-linux-gnu.tar.xz",
         "kind": "archive",
         "platform": "Linux arm64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-aarch64-unknown-linux-gnu.tar.xz",
-        "digest": "sha256:526af80760a2caa03ef0f1b08b3485269d904418f0101df309d022715d6be306"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-aarch64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:c842185a3541c4fddebd945380ecc514c172898bb1871988f9aaade1cadeff22"
       },
       {
         "name": "skillrun-x86_64-unknown-linux-gnu.tar.xz",
         "kind": "archive",
         "platform": "Linux x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-x86_64-unknown-linux-gnu.tar.xz",
-        "digest": "sha256:9f37d1686600c7722276e18049d6add276605ed0d2bfccca6f8399097550921d"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-x86_64-unknown-linux-gnu.tar.xz",
+        "digest": "sha256:bd7138dda677cc64e7792c0309fe4ffdc32e731a35e6e7c4810a198a547033c8"
       },
       {
         "name": "skillrun-x86_64-pc-windows-msvc.zip",
         "kind": "archive",
         "platform": "Windows x64",
-        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.6/skillrun-x86_64-pc-windows-msvc.zip",
-        "digest": "sha256:d22a5837e10ed3451cac3530c0a37f3b2342eff0b11d744c42e263cc7ebaf545"
+        "url": "https://github.com/iiwish/skillrun/releases/download/v0.6.7/skillrun-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:e9a5c1028300475ef5ba7f9b9e2057544ff4addf1aeebf04a83ffa7130c56c30"
       }
     ],
     "current_capabilities": [
       "Native installers for macOS, Linux, and Windows",
       "Local .skr import, replace, registry, and switchboard",
       "Team Catalog inspect, local status, install plan, and guarded local install apply",
-      "Router status, dry-run, and MCP mount plan/apply",
+      "Router status, dry-run, route diagnostics, and MCP mount plan/apply",
       "Run evidence filters and local metadata index",
       "GitHub artifact attestations for public release assets",
       "Artifact containment",
