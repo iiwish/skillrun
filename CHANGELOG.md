@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6](https://github.com/iiwish/skillrun/compare/v0.6.5...v0.6.6) - 2026-06-01
+
+### Added
+
+- *(team-catalog)* add read-only status surface
+
+### Other
+
+- attest release assets
+- audit release provenance attestation path
+- consolidate examples directory
+- define provenance trust boundaries
+- *(examples)* add meeting action brief hero capsule ([#60](https://github.com/iiwish/skillrun/pull/60))
+- add Lark demo capsule ([#59](https://github.com/iiwish/skillrun/pull/59))
+- clarify release artifact selection
+- *(deps)* bump serde_json from 1.0.149 to 1.0.150
+- *(mount)* resolve Claude Desktop config path safely
+- update public site data for v0.6.5
+
 ## [0.6.5](https://github.com/iiwish/skillrun/compare/v0.6.4...v0.6.5) - 2026-05-27
 
 ### Added
