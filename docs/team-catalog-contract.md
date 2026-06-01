@@ -152,6 +152,7 @@ Optional display fields:
 
 ```bash
 skillrun team catalog inspect <catalog> --json
+skillrun team catalog status <catalog> --json
 skillrun team catalog install plan <catalog> <item-id> --json
 ```
 
@@ -162,6 +163,7 @@ skillrun team catalog install apply <catalog> <item-id> --json
 原则：
 
 - `inspect` 只读取 catalog，校验 schema，汇总 item，不下载或执行 item。
+- `status` 只读取 catalog 和本地 registry，对每个 item 输出 `missing` / `installed` / `replace_available` / `blocked`，不读取 package、不下载、不导入、不执行。
 - `install plan` 可以解析目标 item，检查 source 类型、checksum 是否存在、当前 registry 是否已有同 id entry，并给出将调用 import 还是 import --replace。
 - `install apply` 才可以读取 `.skr`，必须先校验 `sha256`，再调用现有 import / import --replace 语义。
 - 当前 `install apply` 仅支持 `file` source；`https` source fail closed，等待后续显式 Core downloader。
@@ -197,6 +199,84 @@ JSON Schema：[`contracts/team-catalog-inspect.schema.json`](contracts/team-cata
       "warnings": []
     }
   ],
+  "error": null
+}
+```
+
+### Status
+
+JSON Schema：[`contracts/team-catalog-status.schema.json`](contracts/team-catalog-status.schema.json)。
+
+`status` 面向 Desktop Team Library 的列表态和 inspector 态。它复用 catalog validation 和 registry 读取逻辑，但不会读取 `.skr`、下载 source、调用 import、enable、mount、action、test、validate 或 MCP server。
+
+`replace_available` 只表示 Core 可以为当前 catalog item 生成 `import --replace` 计划；它不是“远端版本更新、更可信或更安全”的证明。当前 registry 不保存原始 catalog source digest，因此 Desktop 不应把它展示成已经证明的新版本差异。
+
+```json
+{
+  "command": "team catalog status",
+  "schema_version": "team.catalog.status.v1",
+  "ok": true,
+  "catalog": {
+    "catalog_id": "acme.internal",
+    "name": "Acme AI Capabilities",
+    "description": null,
+    "updated_at": "2026-05-26T10:00:00Z",
+    "homepage": null,
+    "items": 2
+  },
+  "summary": {
+    "items": 2,
+    "missing": 1,
+    "installed": 0,
+    "replace_available": 0,
+    "blocked": 1
+  },
+  "items": [
+    {
+      "id": "refund",
+      "kind": "skillrun.skr",
+      "name": "Refund Decision",
+      "version": "0.1.0",
+      "installable": true,
+      "status": "missing",
+      "recommended_action": "install",
+      "install_plan_available": true,
+      "registry": {
+        "installed": false,
+        "source_type": null,
+        "enabled": null,
+        "path": null
+      },
+      "source_type": "https",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "warnings": []
+    },
+    {
+      "id": "plain-skill",
+      "kind": "agent.skill",
+      "name": "Plain Skill",
+      "version": "0.1.0",
+      "installable": false,
+      "status": "blocked",
+      "recommended_action": "none",
+      "install_plan_available": false,
+      "registry": {
+        "installed": false,
+        "source_type": null,
+        "enabled": null,
+        "path": null
+      },
+      "source_type": "file",
+      "sha256": null,
+      "warnings": [
+        {
+          "code": "catalog.item.display_only",
+          "message": "agent.skill items are display-only until Core supports them"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
   "error": null
 }
 ```
@@ -301,6 +381,7 @@ Suggested error code families:
 Desktop Team Library 必须：
 
 - 调用 Core 的 `team catalog inspect --json` 展示 catalog。
+- 调用 Core 的 `team catalog status --json` 展示 installed、replace-available 和 blocked 状态。
 - 调用 Core 的 plan surface 展示 install / update 影响。
 - 只在用户确认后调用 apply。
 - 安装完成后引导用户显式 enable 和 mount。
