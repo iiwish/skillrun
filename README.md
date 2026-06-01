@@ -206,8 +206,8 @@ Use `skillrun registry remove <id>` to remove a capsule from the local registry 
 
 Router short-running machine-readable contracts:
 
-- `skillrun router serve --mcp --dry-run` emits `router.mcp.v1` with `ok`, `router.snapshot`, `tools`, `resources`, and `error.code` / `error.message` on failure.
-- `skillrun router status --json` emits `router.status.v1` so Desktop / agents can inspect the route snapshot without starting the long-running MCP stdio server.
+- `skillrun router serve --mcp --dry-run` emits `router.mcp.v1` with `ok`, `router.snapshot`, `tools`, `resources`, `routes`, `issues`, and `error.code` / `error.message` on failure.
+- `skillrun router status --json` emits `router.status.v1` so Desktop / agents can inspect the route snapshot without starting the long-running MCP stdio server. `routes` reports every enabled capsule considered by the Router as `routable` or `blocked`, with machine-readable issue codes, `warning` / `error` severity, and recovery suggestions; disabled capsules remain intentionally omitted.
 - JSON Schemas live at `docs/contracts/router-mcp.schema.json` and `docs/contracts/router-status.schema.json`.
 
 This task does not introduce Desktop UI, marketplace behavior, daemon behavior, OS sandboxing, dependency installation, runtime images, or package-manager ownership. Future grouping commands or aliases must preserve the stable entrypoints above and leave a compatibility window for JSON consumers.

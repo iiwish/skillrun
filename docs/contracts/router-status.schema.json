@@ -10,6 +10,8 @@
     "router",
     "tools",
     "resources",
+    "routes",
+    "issues",
     "error"
   ],
   "properties": {
@@ -76,6 +78,20 @@
         "additionalProperties": true
       }
     },
+    "routes": {
+      "type": "array",
+      "description": "Per enabled-capsule Router diagnostics. Disabled capsules are intentionally omitted.",
+      "items": {
+        "$ref": "#/$defs/route"
+      }
+    },
+    "issues": {
+      "type": "array",
+      "description": "Machine-readable warnings and errors for enabled capsules considered by the Router.",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
     "error": {
       "oneOf": [
         {
@@ -96,6 +112,80 @@
           "type": "string"
         },
         "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "issue": {
+      "type": "object",
+      "required": ["code", "severity", "message", "recommended_action"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": ["warning", "error"]
+        },
+        "message": {
+          "type": "string"
+        },
+        "capsule_id": {
+          "type": ["string", "null"]
+        },
+        "tool_name": {
+          "type": ["string", "null"]
+        },
+        "recommended_action": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "route": {
+      "type": "object",
+      "required": [
+        "capsule_id",
+        "capsule_path",
+        "enabled",
+        "state",
+        "readiness_status",
+        "recommended_action"
+      ],
+      "properties": {
+        "capsule_id": {
+          "type": "string"
+        },
+        "capsule_path": {
+          "type": "string"
+        },
+        "enabled": {
+          "const": true
+        },
+        "state": {
+          "enum": ["routable", "blocked"]
+        },
+        "readiness_status": {
+          "type": "string"
+        },
+        "readiness_reason": {
+          "type": "string"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "uri_prefix": {
+          "type": "string",
+          "pattern": "^skillrun://router/"
+        },
+        "issue": {
+          "$ref": "#/$defs/issue"
+        },
+        "recommended_action": {
           "type": "string"
         }
       },

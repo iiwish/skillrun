@@ -206,8 +206,8 @@ skillrun mount apply --client claude-desktop --json
 
 Router 的短跑机器可读合同：
 
-- `skillrun router serve --mcp --dry-run` 输出 `router.mcp.v1`，包含 `ok`、`router.snapshot`、`tools`、`resources` 和失败时的 `error.code` / `error.message`。
-- `skillrun router status --json` 输出 `router.status.v1`，用于 Desktop / Agent 在不启动长运行 MCP stdio server 的情况下检查当前路由快照。
+- `skillrun router serve --mcp --dry-run` 输出 `router.mcp.v1`，包含 `ok`、`router.snapshot`、`tools`、`resources`、`routes`、`issues` 和失败时的 `error.code` / `error.message`。
+- `skillrun router status --json` 输出 `router.status.v1`，用于 Desktop / Agent 在不启动长运行 MCP stdio server 的情况下检查当前路由快照。`routes` 会把 Router 考虑的每个 enabled capsule 标成 `routable` 或 `blocked`，并附带机器可读 issue code、`warning` / `error` severity 和恢复建议；disabled capsule 仍然有意不输出。
 - 对应 JSON Schema 位于 `docs/contracts/router-mcp.schema.json` 和 `docs/contracts/router-status.schema.json`。
 
 本任务不引入新的 Desktop UI、marketplace、daemon、OS sandbox、dependency installation、runtime image 或 package-manager ownership。未来若新增分组命令或 alias，必须保留上述稳定入口，并给 JSON consumer 留出兼容窗口。
