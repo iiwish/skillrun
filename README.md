@@ -50,15 +50,15 @@ The product route is to make this easier to adopt through team distribution: tea
 
 ## What Works Today
 
-Current development line: `v0.6.5`.
+Current development line: `v0.6.6`.
 
-Latest public release: `v0.6.5`.
+Latest public release: `v0.6.6`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.5
+# skillrun 0.6.6
 ```
 
 ## Install
@@ -129,7 +129,9 @@ Available today:
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.6.5 adds the first Team Catalog Core surfaces for Desktop Team Library. Core can inspect a local catalog, produce an explicit install plan, and apply a guarded local `.skr` import after checksum verification. The current development line also reports local installed / replace-available / blocked status from the registry. This is a team distribution path, not a public marketplace: it does not download remote packages, install dependencies, run actions, start the MCP server, auto-enable exposure, auto-mount clients, or make trust / sandbox claims. See [Team Catalog Contract](docs/team-catalog-contract.md) for the boundary.
+v0.6.6 completes the first Team Library status loop. Core can inspect a local catalog, report local missing / installed / replace-available / blocked status from the registry, produce an explicit install plan, and apply a guarded local `.skr` import after checksum verification. Release assets are also produced with GitHub artifact attestations. This is a team distribution path, not a public marketplace: it does not download remote packages, install dependencies, run actions, start the MCP server, auto-enable exposure, auto-mount clients, or make trust / sandbox claims. See [Team Catalog Contract](docs/team-catalog-contract.md) and [Native Binary Distribution](docs/native-distribution.md) for the boundary.
+
+v0.6.5 adds the first Team Catalog Core surfaces for Desktop Team Library. Core can inspect a local catalog, produce an explicit install plan, and apply a guarded local `.skr` import after checksum verification.
 
 v0.6.4 extends run evidence querying with summary filters and a rebuildable local metadata index. `consumer runs list` remains registry-scoped and summary-only, defaults to live registry scanning, and can explicitly read the local metadata index with `--source index`. The local index stores metadata and `run_ref` values rather than input, envelope bodies, stdout, or stderr content. See [Run Evidence and Local Index](docs/run-evidence-index.md) for the privacy and staleness boundaries.
 
