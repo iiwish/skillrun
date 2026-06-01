@@ -50,15 +50,15 @@ SkillRun    = 可执行能力如何被检查、运行、打包、留证和挂载
 
 ## 当前状态
 
-当前开发线：`v0.6.5`。
+当前开发线：`v0.6.6`。
 
-最新公开 release：`v0.6.5`。
+最新公开 release：`v0.6.6`。
 
 当前 binary/crate 版本：
 
 ```bash
 skillrun --version
-# skillrun 0.6.5
+# skillrun 0.6.6
 ```
 
 ## 安装
@@ -129,7 +129,9 @@ GitHub Release 页面也可能显示 GitHub 自动生成的 `Source code` 下载
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
 
-v0.6.5 增加 Team Library 所需的第一组 Team Catalog Core surface。Core 可以检查本地 catalog，产出显式 install plan，并在 checksum 校验后执行 guarded local `.skr` import；当前开发线还会基于 registry 报告本地 installed / replace-available / blocked 状态。它是团队分发路径，不是 Public Marketplace：不会下载远程 package、不会安装依赖、不会运行 action、不会启动 MCP server、不会自动 enable exposure、不会自动 mount client，也不做 trust / sandbox 承诺。边界见 [Team Catalog Contract](docs/team-catalog-contract.md)。
+v0.6.6 补齐第一轮 Team Library 状态闭环。Core 可以检查本地 catalog，基于 registry 报告 missing / installed / replace-available / blocked 状态，产出显式 install plan，并在 checksum 校验后执行 guarded local `.skr` import；release assets 也会生成 GitHub artifact attestations。它是团队分发路径，不是 Public Marketplace：不会下载远程 package、不会安装依赖、不会运行 action、不会启动 MCP server、不会自动 enable exposure、不会自动 mount client，也不做 trust / sandbox 承诺。边界见 [Team Catalog Contract](docs/team-catalog-contract.md) 和 [原生二进制分发](docs/native-distribution.md)。
+
+v0.6.5 增加 Team Library 所需的第一组 Team Catalog Core surface。Core 可以检查本地 catalog，产出显式 install plan，并在 checksum 校验后执行 guarded local `.skr` import。
 
 v0.6.4 扩展 run evidence 查询能力，新增摘要过滤和可重建的本地 metadata index。`consumer runs list` 仍是 registry-scoped、summary-only，默认实时扫描 registry，也可以通过 `--source index` 显式读取本地 metadata index；本地 index 只保存 metadata 和 `run_ref`，不保存 input、envelope body、stdout 或 stderr 内容。隐私与 staleness 边界见 [Run Evidence and Local Index](docs/run-evidence-index.md)。
 
