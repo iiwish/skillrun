@@ -14,6 +14,27 @@ These examples are self-contained and participate in Core validation or local re
 - `readonly_diagnostics_runner`: named allowlist diagnostics without arbitrary shell strings.
 - `command_hello`: Level 0 command adapter contract without a SkillRun SDK.
 
+## Desktop Hero Catalog
+
+Generate the local Team Library hero catalog used by Desktop smoke and manual
+testing:
+
+```bash
+scripts/generate-desktop-hero-catalog.sh
+```
+
+The generated catalog is written to `target/desktop-hero-skr/catalog.json` and
+uses local file-source `.skr` packages with sha256 checksums. It includes
+`command_hello` as the low-friction default smoke item and
+`meeting_action_brief` as the product hero item when Python 3.13+ and pydantic
+2.x are available for packaging.
+
+The script copies tracked example files into `target` before running
+`skillrun manifest` and `skillrun pack`, so generated manifests and packages do
+not become source files. The catalog is for local inspection, install-plan, and
+guarded apply testing only; it does not install dependencies, enable capsules,
+mount clients, run actions, or mark packages trusted.
+
 ## Optional External-Tool Examples
 
 These examples also live under `examples/` so the repository has one examples entry point. They may require external CLIs, credentials, or network access, and are not part of the mandatory Core CI path.
