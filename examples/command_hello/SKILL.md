@@ -23,6 +23,6 @@ inspect the run logs and ensure the command writes a valid SkillRun envelope.
 ## Boundary
 
 This is not a new Python adapter and does not use the SkillRun Python SDK. The
-`python action.py` command is just a portable executable command for the example.
+`python3 action.py` command is just a portable executable command for the example.
 Any language or binary can use the same Level 0 contract when it reads the IPC
 paths and writes the standard output envelope.

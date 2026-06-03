@@ -1,7 +1,7 @@
 {
   "runtime": {
     "adapter": "command",
-    "command": ["python", "action.py"],
+    "command": ["python3", "action.py"],
     "timeout": "10s"
   },
   "permissions": {

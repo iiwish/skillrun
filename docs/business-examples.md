@@ -361,7 +361,7 @@ SkillRun 不接受任意 shell 字符串，而是把诊断动作枚举进 schema
 
 ### SkillRun 价值
 
-`command_hello` 展示 `runtime.adapter = "command"` 的最小路径：Manifest 里声明 argv command，schema 来自 `skillrun.config.json`，Core 创建 IPC 文件和 artifact 目录，action 进程只负责读取 env path 并写标准 output envelope。
+`command_hello` 展示 `runtime.adapter = "command"` 的最小路径：Manifest 里声明 argv command，schema 来自 `skillrun.config.json`，Core 创建 IPC 文件和 artifact 目录，action 进程只负责读取 env path 并写标准 output envelope。示例使用 `python3 action.py`，避免依赖 macOS 上通常不存在的 `python` 命令；它仍然只是 command adapter 示例，不是 Python SDK 示例。
 
 ### Capsule 输入
 
