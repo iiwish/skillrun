@@ -508,7 +508,7 @@ fn command_adapter_example_capsule_proves_level_zero_ipc() {
         fs::read_to_string(capsule.join(".skillrun/manifest.generated.yaml")).unwrap();
     assert!(manifest_yaml.contains("adapter: command"));
     assert!(manifest_yaml.contains("protocol_version: adapter.v1"));
-    assert!(manifest_yaml.contains("- python"));
+    assert!(manifest_yaml.contains("- python3"));
     assert!(manifest_yaml.contains("- action.py"));
 
     let check = run_skillrun(&["check", "--cwd", &cwd]);
