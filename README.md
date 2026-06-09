@@ -50,15 +50,15 @@ The product route is to make this easier to adopt through team distribution: tea
 
 ## What Works Today
 
-Current development line: `v0.6.7`.
+Current development line: `v0.6.8`.
 
-Latest public release: `v0.6.7`.
+Latest public release: `v0.6.8`.
 
 Current binary/crate version:
 
 ```bash
 skillrun --version
-# skillrun 0.6.7
+# skillrun 0.6.8
 ```
 
 ## Install
@@ -129,6 +129,8 @@ Available today:
   - `skillrun consumer runs index status --json`
   - `skillrun consumer runs inspect <run-id> --json`
   - `skillrun consumer mount plan --client <id> --json`
+
+v0.6.8 makes remote team catalog URLs inspectable without turning them into install sources. `team catalog inspect`, `team catalog status`, and `team catalog install plan` now accept local catalog paths or `http(s)` catalog URLs. Remote URLs are read-only: Core fetches catalog metadata for schema, registry, and plan checks, while `install apply` still requires a local catalog path and does not download packages.
 
 v0.6.7 adds Router route diagnostics for Desktop and agent automation. `router status --json` and `router serve --mcp --dry-run` now include additive `routes` and `issues` arrays so clients can show enabled capsules as `routable` or `blocked`, explain warning/error causes, and suggest recovery actions without starting the long-running Router. Existing `tools`, `resources`, `ok`, and `error` semantics are preserved.
 
