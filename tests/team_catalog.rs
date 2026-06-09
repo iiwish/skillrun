@@ -2,9 +2,12 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read;
+use std::io::Write;
+use std::net::TcpListener;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn run_skillrun(args: &[&str], skillrun_home: &Path) -> std::process::Output {
@@ -23,10 +26,8 @@ fn output_root(name: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("skillrun-team-catalog-{name}-{nonce}"))
 }
 
-fn write_catalog(path: &Path) {
-    fs::write(
-        path,
-        r#"{
+fn catalog_json() -> &'static str {
+    r#"{
   "schema_version": "team.catalog.v1",
   "catalog_id": "acme.internal",
   "name": "Acme AI Capabilities",
@@ -72,9 +73,33 @@ fn write_catalog(path: &Path) {
     }
   ]
 }
-"#,
-    )
-    .expect("catalog should be written");
+"#
+}
+
+fn write_catalog(path: &Path) {
+    fs::write(path, catalog_json()).expect("catalog should be written");
+}
+
+fn serve_catalog_once() -> (String, thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+    let url = format!(
+        "http://{}/team-catalog.json",
+        listener.local_addr().expect("local addr should resolve")
+    );
+    let handle = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("client should connect");
+        let mut buffer = [0_u8; 2048];
+        let _ = stream.read(&mut buffer);
+        let body = catalog_json();
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        )
+        .expect("response should be written");
+    });
+    (url, handle)
 }
 
 fn archive_name(stem: &str) -> String {
@@ -210,6 +235,102 @@ fn team_catalog_inspect_reports_items_without_downloading_sources() {
         output["items"][1]["warnings"][0]["code"],
         "catalog.item.display_only"
     );
+}
+
+#[test]
+fn team_catalog_inspect_reads_remote_catalog_metadata_without_downloading_sources() {
+    let root = output_root("remote-inspect");
+    fs::create_dir_all(&root).unwrap();
+    let home = root.join("home");
+    let (catalog_url, server) = serve_catalog_once();
+
+    let output = assert_success_json(&run_skillrun(
+        &["team", "catalog", "inspect", &catalog_url, "--json"],
+        &home,
+    ));
+    server.join().expect("test server should exit");
+
+    assert_eq!(output["schema_version"], "team.catalog.inspect.v1");
+    assert_eq!(output["ok"], true);
+    assert_eq!(output["catalog"]["catalog_id"], "acme.internal");
+    assert_eq!(output["catalog"]["items"], 2);
+    assert_eq!(output["items"][0]["id"], "refund");
+    assert_eq!(output["items"][0]["source_type"], "https");
+}
+
+#[test]
+fn team_catalog_status_reads_remote_catalog_without_installing_items() {
+    let root = output_root("remote-status");
+    fs::create_dir_all(&root).unwrap();
+    let home = root.join("home");
+    let (catalog_url, server) = serve_catalog_once();
+
+    let output = assert_success_json(&run_skillrun(
+        &["team", "catalog", "status", &catalog_url, "--json"],
+        &home,
+    ));
+    server.join().expect("test server should exit");
+
+    assert_eq!(output["schema_version"], "team.catalog.status.v1");
+    assert_eq!(output["summary"]["missing"], 1);
+    assert_eq!(output["items"][0]["status"], "missing");
+    let inventory = assert_success_json(&run_skillrun(&["consumer", "inventory", "--json"], &home));
+    assert!(inventory["capsules"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn team_catalog_install_plan_reads_remote_catalog_but_does_not_download_package() {
+    let root = output_root("remote-plan");
+    fs::create_dir_all(&root).unwrap();
+    let home = root.join("home");
+    let (catalog_url, server) = serve_catalog_once();
+
+    let output = assert_success_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "plan",
+            &catalog_url,
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+    server.join().expect("test server should exit");
+
+    assert_eq!(output["schema_version"], "team.catalog.install_plan.v1");
+    assert_eq!(output["item"]["source_type"], "https");
+    assert_eq!(output["actions"][0]["type"], "import");
+    let inventory = assert_success_json(&run_skillrun(&["consumer", "inventory", "--json"], &home));
+    assert!(inventory["capsules"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn team_catalog_install_apply_rejects_remote_catalog_without_fetching_package() {
+    let root = output_root("remote-apply");
+    fs::create_dir_all(&root).unwrap();
+    let home = root.join("home");
+    let (catalog_url, server) = serve_catalog_once();
+
+    let output = assert_failure_json(&run_skillrun(
+        &[
+            "team",
+            "catalog",
+            "install",
+            "apply",
+            &catalog_url,
+            "refund",
+            "--json",
+        ],
+        &home,
+    ));
+    server.join().expect("test server should exit");
+
+    assert_eq!(output["schema_version"], "team.catalog.install_apply.v1");
+    assert_eq!(output["error"]["code"], "catalog.remote_apply_unsupported");
+    let inventory = assert_success_json(&run_skillrun(&["consumer", "inventory", "--json"], &home));
+    assert!(inventory["capsules"].as_array().unwrap().is_empty());
 }
 
 #[test]

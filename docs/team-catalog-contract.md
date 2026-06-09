@@ -45,6 +45,10 @@ Team Catalog 不替代 Manifest。运行时权威仍来自 `.skr` 内的 Manifes
 
 ## Catalog 文件
 
+`<catalog>` 可以是本地 JSON 文件路径，也可以是 `http://` / `https://` catalog URL。远程 catalog 读取只用于 Team Library / Desktop 的只读浏览与验证路径：Core 会读取 catalog JSON metadata 并执行 schema / registry / install-plan 检查，但不会下载 item package、解包 `.skr`、导入、enable、mount、运行 action、启动 MCP server 或把 catalog source 标记为可信。
+
+远程 catalog 读取的目标路径包括 GitHub raw URL 和 GitHub Release asset URL。团队分发应优先使用 HTTPS；`http://` 主要用于本地开发和测试。当前实现通过系统 `curl` 读取远程 catalog metadata；如果当前 host 没有可用 `curl`，Core 会以 `catalog.remote_fetch_unavailable` fail closed。
+
 建议文件 schema version：
 
 ```json
@@ -151,21 +155,22 @@ Optional display fields:
 当前实现：
 
 ```bash
-skillrun team catalog inspect <catalog> --json
-skillrun team catalog status <catalog> --json
-skillrun team catalog install plan <catalog> <item-id> --json
+skillrun team catalog inspect <catalog-path-or-url> --json
+skillrun team catalog status <catalog-path-or-url> --json
+skillrun team catalog install plan <catalog-path-or-url> <item-id> --json
 ```
 
 ```bash
-skillrun team catalog install apply <catalog> <item-id> --json
+skillrun team catalog install apply <catalog-path> <item-id> --json
 ```
 
 原则：
 
-- `inspect` 只读取 catalog，校验 schema，汇总 item，不下载或执行 item。
-- `status` 只读取 catalog 和本地 registry，对每个 item 输出 `missing` / `installed` / `replace_available` / `blocked`，不读取 package、不下载、不导入、不执行。
-- `install plan` 可以解析目标 item，检查 source 类型、checksum 是否存在、当前 registry 是否已有同 id entry，并给出将调用 import 还是 import --replace。
+- `inspect` 只读取 catalog，校验 schema，汇总 item，不下载 package 或执行 item。
+- `status` 只读取 catalog 和本地 registry，对每个 item 输出 `missing` / `installed` / `replace_available` / `blocked`，不读取 package、不下载 package、不导入、不执行。
+- `install plan` 可以解析目标 item，检查 source 类型、checksum 是否存在、当前 registry 是否已有同 id entry，并给出将调用 import 还是 import --replace；对远程 catalog URL 仍保持只读，不下载 package。
 - `install apply` 才可以读取 `.skr`，必须先校验 `sha256`，再调用现有 import / import --replace 语义。
+- 当前 `install apply` 不支持远程 catalog URL，必须使用本地 catalog 文件路径，避免把可分享 URL 入口误变成下载 / 安装入口。
 - 当前 `install apply` 仅支持 `file` source；`https` source fail closed，等待后续显式 Core downloader。
 - `install apply` 不自动 `switchboard enable`。
 - `install apply` 不自动 mount MCP client。
@@ -359,6 +364,9 @@ Suggested error code families:
 - `catalog.read_failed`
 - `catalog.schema_unsupported`
 - `catalog.schema_invalid`
+- `catalog.remote_fetch_unavailable`
+- `catalog.remote_fetch_failed`
+- `catalog.remote_apply_unsupported`
 - `catalog.item_not_found`
 - `catalog.item_not_installable`
 - `catalog.source_unsupported`
