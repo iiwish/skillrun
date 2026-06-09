@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8](https://github.com/iiwish/skillrun/compare/v0.6.7...v0.6.8) - 2026-06-09
+
+### Added
+
+- support remote team catalog read-only checks
+
+### Other
+
+- add desktop hero catalog generator
+- use python3 for command hello example
+- *(release)* update public site data for v0.6.7
+
 ## [0.6.7](https://github.com/iiwish/skillrun/compare/v0.6.6...v0.6.7) - 2026-06-01
 
 ### Added
