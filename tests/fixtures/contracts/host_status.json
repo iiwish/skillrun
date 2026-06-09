@@ -35,7 +35,7 @@
       "schema_version": "consumer.exposure.v1"
     },
     {
-      "command": "team catalog status <catalog> --json",
+      "command": "team catalog status <catalog-path-or-url> --json",
       "name": "team_catalog_status",
       "process": "short_running",
       "schema_version": "team.catalog.status.v1"

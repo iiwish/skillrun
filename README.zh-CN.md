@@ -107,10 +107,11 @@ GitHub Release 页面也可能显示 GitHub 自动生成的 `Source code` 下载
   - `skillrun import <package.skr> --json`
   - `skillrun import <package.skr> --replace --json`
 - 面向 Team Library 的 team catalog inspect 和 guarded local `.skr` install 流程：
-  - `skillrun team catalog inspect <catalog> --json`
-  - `skillrun team catalog status <catalog> --json`
-  - `skillrun team catalog install plan <catalog> <item-id> --json`
-  - `skillrun team catalog install apply <catalog> <item-id> --json`
+  - `skillrun team catalog inspect <catalog-path-or-url> --json`
+  - `skillrun team catalog status <catalog-path-or-url> --json`
+  - `skillrun team catalog install plan <catalog-path-or-url> <item-id> --json`
+  - `skillrun team catalog install apply <catalog-path> <item-id> --json`
+  - 远程 catalog URL 只用于 inspect/status/plan 的只读验证；apply 仍要求本地 catalog 路径，且不会下载 package。
 - 本地 capsule `registry` 和 `switchboard`。
 - 用于一键挂载的本地 MCP Router：
   - `skillrun router serve --mcp`

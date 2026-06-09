@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use crate::capsule_import::{self, ImportOptions};
 use crate::hashing;
@@ -70,6 +71,16 @@ pub struct TeamCatalogOutput {
 pub struct TeamCatalogError {
     pub code: &'static str,
     pub message: String,
+}
+
+enum CatalogLocation {
+    File,
+    Remote { url: String },
+}
+
+struct LoadedCatalog {
+    catalog: CatalogFile,
+    location: CatalogLocation,
 }
 
 #[derive(Debug, Deserialize)]
@@ -326,7 +337,8 @@ pub fn error_json(
 }
 
 fn inspect(path: &Path, json: bool) -> Result<TeamCatalogOutput, TeamCatalogError> {
-    let catalog = load_catalog(path)?;
+    let loaded = load_catalog(path)?;
+    let catalog = loaded.catalog;
     let items = catalog
         .items
         .iter()
@@ -354,7 +366,8 @@ fn inspect(path: &Path, json: bool) -> Result<TeamCatalogOutput, TeamCatalogErro
 }
 
 fn status(path: &Path, json: bool) -> Result<TeamCatalogOutput, TeamCatalogError> {
-    let catalog = load_catalog(path)?;
+    let loaded = load_catalog(path)?;
+    let catalog = loaded.catalog;
     let items = catalog
         .items
         .iter()
@@ -394,7 +407,8 @@ fn install_plan(
     item_id: &str,
     json: bool,
 ) -> Result<TeamCatalogOutput, TeamCatalogError> {
-    let catalog = load_catalog(path)?;
+    let loaded = load_catalog(path)?;
+    let catalog = loaded.catalog;
     let item = catalog
         .items
         .iter()
@@ -477,7 +491,16 @@ fn install_apply(
     item_id: &str,
     json: bool,
 ) -> Result<TeamCatalogOutput, TeamCatalogError> {
-    let catalog = load_catalog(path)?;
+    let loaded = load_catalog(path)?;
+    if let CatalogLocation::Remote { url } = &loaded.location {
+        return Err(TeamCatalogError::new(
+            "catalog.remote_apply_unsupported",
+            format!(
+                "install apply does not support remote catalog URLs yet: {url}; run install plan first, then use an explicit local catalog/package path"
+            ),
+        ));
+    }
+    let catalog = loaded.catalog;
     let item = installable_item(&catalog, item_id)?;
     validate_source_for_plan(&item.source)?;
     validate_registry_for_install(&item.id)?;
@@ -584,13 +607,17 @@ fn install_apply(
     })
 }
 
-fn load_catalog(path: &Path) -> Result<CatalogFile, TeamCatalogError> {
-    let text = fs::read_to_string(path).map_err(|error| {
-        TeamCatalogError::new(
-            "catalog.read_failed",
-            format!("failed to read catalog {}: {error}", path.display()),
-        )
-    })?;
+fn load_catalog(path: &Path) -> Result<LoadedCatalog, TeamCatalogError> {
+    let location = catalog_location(path);
+    let text = match &location {
+        CatalogLocation::File => fs::read_to_string(path).map_err(|error| {
+            TeamCatalogError::new(
+                "catalog.read_failed",
+                format!("failed to read catalog {}: {error}", path.display()),
+            )
+        })?,
+        CatalogLocation::Remote { url } => fetch_remote_catalog(url)?,
+    };
     let catalog: CatalogFile = serde_json::from_str(&text).map_err(|error| {
         TeamCatalogError::new(
             "catalog.schema_invalid",
@@ -598,7 +625,64 @@ fn load_catalog(path: &Path) -> Result<CatalogFile, TeamCatalogError> {
         )
     })?;
     validate_catalog(&catalog)?;
-    Ok(catalog)
+    Ok(LoadedCatalog { catalog, location })
+}
+
+fn catalog_location(path: &Path) -> CatalogLocation {
+    let value = path.to_string_lossy();
+    if value.starts_with("https://") || value.starts_with("http://") {
+        CatalogLocation::Remote {
+            url: value.into_owned(),
+        }
+    } else {
+        CatalogLocation::File
+    }
+}
+
+fn fetch_remote_catalog(url: &str) -> Result<String, TeamCatalogError> {
+    let output = Command::new("curl")
+        .args([
+            "--fail",
+            "--silent",
+            "--show-error",
+            "--location",
+            "--max-time",
+            "15",
+            "--max-filesize",
+            "1048576",
+            "--proto",
+            "=http,https",
+            url,
+        ])
+        .output()
+        .map_err(|error| {
+            TeamCatalogError::new(
+                "catalog.remote_fetch_unavailable",
+                format!("failed to start curl for remote catalog {url}: {error}"),
+            )
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(TeamCatalogError::new(
+            "catalog.remote_fetch_failed",
+            format!(
+                "failed to fetch remote catalog {url}: {}",
+                if stderr.is_empty() {
+                    format!("curl exited with status {}", output.status)
+                } else {
+                    stderr
+                }
+            ),
+        ));
+    }
+
+    String::from_utf8(output.stdout).map_err(|error| {
+        TeamCatalogError::new(
+            "catalog.remote_fetch_failed",
+            format!("remote catalog {url} is not valid UTF-8: {error}"),
+        )
+    })
 }
 
 fn validate_catalog(catalog: &CatalogFile) -> Result<(), TeamCatalogError> {

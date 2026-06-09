@@ -184,7 +184,7 @@ fn desktop_capabilities() -> Vec<CapabilityView> {
         },
         CapabilityView {
             name: "team_catalog_status",
-            command: "team catalog status <catalog> --json",
+            command: "team catalog status <catalog-path-or-url> --json",
             process: "short_running",
             schema_version: Some("team.catalog.status.v1"),
         },

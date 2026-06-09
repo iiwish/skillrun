@@ -107,10 +107,11 @@ Available today:
   - `skillrun import <package.skr> --json`
   - `skillrun import <package.skr> --replace --json`
 - Team catalog inspection and guarded local `.skr` install flow for Team Library:
-  - `skillrun team catalog inspect <catalog> --json`
-  - `skillrun team catalog status <catalog> --json`
-  - `skillrun team catalog install plan <catalog> <item-id> --json`
-  - `skillrun team catalog install apply <catalog> <item-id> --json`
+  - `skillrun team catalog inspect <catalog-path-or-url> --json`
+  - `skillrun team catalog status <catalog-path-or-url> --json`
+  - `skillrun team catalog install plan <catalog-path-or-url> <item-id> --json`
+  - `skillrun team catalog install apply <catalog-path> <item-id> --json`
+  - Remote catalog URLs are read-only for inspect/status/plan; apply still requires a local catalog path and does not download packages.
 - Local capsule `registry` and `switchboard`.
 - Local MCP Router for one-click mounting:
   - `skillrun router serve --mcp`
